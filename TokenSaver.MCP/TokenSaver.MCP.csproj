@@ -1,0 +1,80 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>TokenSaver.MCP</AssemblyName>
+    <RootNamespace>TokenSaver.MCP</RootNamespace>
+    <DefaultItemExcludes>$(DefaultItemExcludes);bin\**;obj\**</DefaultItemExcludes>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="ModelContextProtocol.AspNetCore" Version="1.4.0" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="10.0.9" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\Core\TokenSaver.CodeHelper\TokenSaver.CodeHelper.csproj" />
+    <ProjectReference Include="..\..\Core\TokenSaver.Config\TokenSaver.Config.csproj" />
+    <ProjectReference Include="..\..\Core\TokenSaver.ContextHelper\TokenSaver.ContextHelper.csproj" />
+    <ProjectReference Include="..\..\Core\TokenSaver.Docs\TokenSaver.Docs.csproj" />
+    <ProjectReference Include="..\..\Core\TokenSaver.Library\TokenSaver.Library.csproj" />
+    <ProjectReference Include="..\..\AgentHelpers\TokenSaver.AgentHelpers.Core\TokenSaver.AgentHelpers.Core.csproj" />
+    <ProjectReference Include="..\..\AgentHelpers\TokenSaver.AgentHelpers.Anthropic\TokenSaver.AgentHelpers.Anthropic.csproj" />
+    <ProjectReference Include="..\..\AgentHelpers\TokenSaver.AgentHelpers.Qwen\TokenSaver.AgentHelpers.Qwen.csproj" />
+    <ProjectReference Include="..\..\AgentHelpers\TokenSaver.AgentHelpers.DeepSeek\TokenSaver.AgentHelpers.DeepSeek.csproj" />
+    <ProjectReference Include="..\..\AgentHelpers\TokenSaver.AgentHelpers.OpenSource\TokenSaver.AgentHelpers.OpenSource.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Update="Nerdbank.GitVersioning" Version="3.10.85" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- UnhandledFaultTracker, FaultTrackingMiddleware, UnhandledFaultHealthCheck, and
+         SelfTestHealthCheck are all internal — deliberately not public API. TokenSaver.MCP.Tests
+         needs to construct/reference them directly (and reach SelfTestHealthCheck.ExtraChecks to
+         inject a deliberately-failing check) to exercise the degraded-health wiring end to end
+         without needing to break real config/wiring, so assembly-level access is granted here
+         rather than making any of these types public. -->
+    <InternalsVisibleTo Include="TokenSaver.MCP.Tests" />
+  </ItemGroup>
+
+  <!--
+    Opt in hook to build the WiX installer immediately after "dotnet publish".
+
+    Deliberately NOT wired to run on every publish or on "dotnet build" (including a
+    solution wide build of TokenSaverMCP.slnx): this shells out to a separate
+    publish-tokensaver-for-wix.ps1 script that does its own dotnet publish into
+    build\staging\TokenSaver.MCP and then builds src\Installers\TokenSaver.Setup, which is a
+    much heavier and slower step than a normal build and requires the WiX .NET tool
+    (dotnet tool install -g wix). That would be a surprising side effect of an
+    ordinary build or of CI publishing this project. This only fires when the caller
+    explicitly opts in by setting the BuildInstaller MSBuild property to "true" on the
+    publish command line. The version baked into the installer can be overridden via the
+    InstallerVersion MSBuild property; it otherwise defaults to whatever
+    publish-tokensaver-for-wix.ps1 itself defaults to.
+
+    See src/Installers/TokenSaver.Setup and scripts/publish-tokensaver-for-wix.ps1 for
+    what this actually does and why it's a separate script rather than being inlined here.
+  -->
+  <PropertyGroup>
+    <BuildInstaller Condition="'$(BuildInstaller)' == ''">false</BuildInstaller>
+    <InstallerVersion Condition="'$(InstallerVersion)' == ''"></InstallerVersion>
+  </PropertyGroup>
+
+  <Target Name="BuildTokenSaverInstaller" AfterTargets="Publish" Condition="'$(BuildInstaller)' == 'true'">
+    <Error Text="BuildInstaller is only supported on Windows (it packages a Windows service installer via WiX)." Condition="'$(OS)' != 'Windows_NT'" />
+    <PropertyGroup>
+      <_InstallerVersionArg Condition="'$(InstallerVersion)' != ''">-Version $(InstallerVersion)</_InstallerVersionArg>
+    </PropertyGroup>
+    <Message Importance="high" Text="BuildInstaller=true - invoking publish-tokensaver-for-wix.ps1 $(_InstallerVersionArg) -Pack" />
+    <!--
+      Deliberately does NOT reuse $(PublishDir) from this MSBuild-triggered publish: that
+      directory is this project's own build output folder, not the installer's expected
+      staging location (build\staging\TokenSaver.MCP). publish-tokensaver-for-wix.ps1 owns
+      publishing into its own staging directory and then building the WiX project - let it
+      do that itself, exactly as if it had been run manually, rather than trying to reuse
+      this publish's output in place. This makes the publish that produced $(PublishDir)
+      here redundant with the one the script performs, but keeps the staging path correct
+      and identical to a manual run of the script.
+    -->
+    <Exec Command="pwsh -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildThisFileDirectory)..\..\..\scripts\publish-tokensaver-for-wix.ps1&quot; $(_InstallerVersionArg) -Pack" Condition="'$(OS)' == 'Windows_NT'" />
+  </Target>
+</Project>
