@@ -42,6 +42,7 @@ internal sealed class LocalModelHelperTools
     private readonly WorkspaceConfigManager _workspaceConfig;
     private readonly ContextPipelineService _contextPipeline;
     private readonly BehaviorConfigService _behaviorConfig;
+    private readonly LazyContextResolver _lazyContext;
 
     public LocalModelHelperTools(
         OllamaService ollama,
@@ -57,7 +58,8 @@ internal sealed class LocalModelHelperTools
         McpContextService mcpContext,
         DeferredNotificationService deferred,
         OllamaEndpointRegistry endpoints,
-        BehaviorConfigService behaviorConfig)
+        BehaviorConfigService behaviorConfig,
+        LazyContextResolver lazyContext)
     {
         _behaviorConfig = behaviorConfig;
         _ollama = ollama;
@@ -73,6 +75,7 @@ internal sealed class LocalModelHelperTools
         _mcpContext = mcpContext;
         _deferred = deferred;
         _endpoints = endpoints;
+        _lazyContext = lazyContext;
     }
 
     // ── CleanAndChat ──────────────────────────────────────────────────────────
@@ -253,6 +256,23 @@ internal sealed class LocalModelHelperTools
         (IAgentAdapter? modelAdapter, IAgentAdapter? clientAdapter) = _registry.ResolveBoth(caller);
         ContextFormat format = modelAdapter.GetFormat(caller)
             .WithClientOverrides(clientAdapter.GetFormat(caller));
+
+        // No hardcoded OpenSource client adapter (Cursor/Copilot/Continue) claimed this caller —
+        // clientAdapter fell through to DefaultAgentAdapter, whose WillAskForMissingContext=true
+        // is just ContextFormat.Default's C# property default, not a measured or configurable
+        // decision. For that case only, let lazyContext config (LazyContextResolver) decide
+        // instead — this is what makes "treat my custom/unrecognized MCP client as lazy-safe"
+        // configurable instead of requiring a new hardcoded IAgentAdapter. Clients already
+        // claimed by a real client adapter are untouched: LazyContextResolver's own resolution
+        // order already defers to Cursor/Copilot/Continue's hardcoded value first, so this branch
+        // and that resolver always agree for those three — but we skip calling it at all here to
+        // make the "adapter's decision is untouched" guarantee obvious at the call site, not just
+        // inside the resolver.
+        if (clientAdapter.Kind != AdapterKind.Client)
+        {
+            LazyContextResolution lazyResolution = _lazyContext.Resolve(caller, root);
+            format = format with { WillAskForMissingContext = lazyResolution.WillAskForMissingContext };
+        }
 
         BuildContextResult result = await _contextPipeline.BuildConciseContextAsync(
             prompt, history, sessionId, resolvedFiles.ToArray(), root,

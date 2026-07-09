@@ -239,7 +239,20 @@ builder.Services.PostConfigure<TokenSaverConfig>(cfg => cfg.Endpoints = resolved
         ? ollamaConfig.WorkspaceRoot
         : builder.Environment.ContentRootPath;
 
-    ollamaConfig.WorkspaceRoot = WorkspaceRootResolver.FindRepoRoot(searchFrom) ?? ollamaConfig.WorkspaceRoot;
+    string? resolved = WorkspaceRootResolver.FindRepoRoot(searchFrom);
+
+    // The Windows service is always started by the SCM from C:\Windows\System32 — the walk
+    // above finds nothing from there. Fall back to whatever a previous, cwd-aware launch
+    // (stdio from inside the repo, or the VS Code extension) persisted to a small dedicated
+    // bootstrap file — separate from the user-facing behavior config.json (see
+    // WorkspaceRootResolver's doc comment for why it doesn't belong there).
+    resolved ??= WorkspaceRootResolver.ReadPersistedWorkspaceRoot();
+
+    if (resolved is not null)
+    {
+        ollamaConfig.WorkspaceRoot = resolved;
+        WorkspaceRootResolver.PersistWorkspaceRoot(resolved);
+    }
 }
 
 if (!string.IsNullOrWhiteSpace(ollamaConfig.WorkspaceRoot))
@@ -264,6 +277,7 @@ builder.Services.AddSingleton<OllamaEndpointRegistry>();
 builder.Services.AddTransient<EndpointRoutingHandler>();
 builder.Services.AddHostedService<EndpointHealthMonitor>();
 builder.Services.AddHostedService<GitignoreWatcherService>();
+builder.Services.AddHostedService<McpRegistrationCheckService>();
 
 builder.Services.AddHttpClient<OllamaService>(client =>
 {
@@ -332,6 +346,20 @@ builder.Services
     .AddAdapter<DeepSeekAgentAdapter>()
     .AddAdapter<OpenSourceAgentAdapter>();
 
+// Bridges caller detection (AgentHelpers.Core) to behavior config (TokenSaver.Config) — the two
+// projects don't reference each other, so this resolver lives in the Host. Detects the calling
+// model family per-request and resolves the effective agentConfig section for it. See
+// AgentConfigResolver for why this runs per-request instead of once at session start: the server
+// has no MCP session store, so "session start" and "this request" are the same thing here.
+builder.Services.AddSingleton<AgentConfigResolver>();
+
+// Same bridge pattern as AgentConfigResolver, but for the lazyContext section: decides
+// ContextFormat.WillAskForMissingContext per calling client, so context-building tools know
+// whether it's safe to send summaries and let the client re-fetch, or whether they must send
+// complete content because nothing omitted is ever seen again. See LazyContextResolver's doc
+// comment for why Cursor/Copilot/Continue are excluded from user override entirely.
+builder.Services.AddSingleton<LazyContextResolver>();
+
 // ── Fault tracking ──
 // Records unhandled exceptions from any request (MCP tools/call included) so /health can
 // reflect "something threw recently" even when DraftModel/models are otherwise reachable.
@@ -386,6 +414,12 @@ WebApplication app = builder.Build();
 // is to catch an unhandled exception from anywhere on this server, not just one subsystem.
 // Re-throws after recording, so response behavior (500, etc.) is unchanged.
 app.UseMiddleware<FaultTrackingMiddleware>();
+
+// ── Agent detection middleware ──
+// Runs before ContextInterceptMiddleware; peeks the MCP initialize handshake to detect the
+// calling model family and log the agentConfig settings that now apply (prompt caching, context
+// editing, KV-cache tuning — see AgentConfigResolver). Observational only; never blocks.
+app.UseMiddleware<AgentDetectionMiddleware>();
 
 // ── Context intercept middleware ──
 app.UseMiddleware<ContextInterceptMiddleware>();
@@ -457,10 +491,11 @@ if (!string.IsNullOrWhiteSpace(config.WorkspaceRoot))
 {
     Environment.SetEnvironmentVariable("DRAFTMODEL_WORKSPACE", config.WorkspaceRoot);
 
-    // First-load bootstrap: create .tokensaver/config.json, .ignore-additional, .ignore-bypass,
-    // and context-exclusions.json with empty defaults if they don't exist yet, so the workspace
-    // has discoverable/editable config files from the start instead of relying purely on
-    // missing-file-means-default behavior.
+    // Process-start bootstrap: create .tokensaver/config.json (fully commented template),
+    // .ignore-additional, and .ignore-bypass if they don't exist yet, so the workspace has
+    // discoverable/editable config files from the start instead of relying purely on
+    // missing-file-means-default behavior. Also re-run on every later MCP session connect (see
+    // AgentDetectionMiddleware) so a file deleted after startup gets recreated too.
     WorkspaceConfigDefaults.EnsureDefaults(config.WorkspaceRoot, logger);
 }
 
@@ -494,34 +529,39 @@ if (!string.IsNullOrWhiteSpace(config.WorkspaceRoot))
     });
 
     // Context warm-up calls the full pipeline (PromptAssessor, SemanticFilter, etc.)
-    // which all need DraftModel — wait until it's reachable before proceeding.
-    _ = Task.Run(async () =>
+    // which all need DraftModel — wait until it's reachable before proceeding. Gated by
+    // ContextHelperConfig.AutoWarmOnStartup (behavior-config field "context.autoWarmOnStartup",
+    // on by default — see BehaviorConfigOverlay.Apply() above, which already ran).
+    if (app.Services.GetRequiredService<IOptions<ContextHelperConfig>>().Value.AutoWarmOnStartup)
     {
-        try
+        _ = Task.Run(async () =>
         {
-            OllamaService ollama = app.Services.GetRequiredService<OllamaService>();
-            bool ready = await ollama.WaitForReadyAsync(
-                TimeSpan.FromMinutes(10),
-                TimeSpan.FromSeconds(10),
-                logger);
-
-            if (!ready)
+            try
             {
-                Program.LogDraftModelNotAvailable(logger);
-                return;
-            }
+                OllamaService ollama = app.Services.GetRequiredService<OllamaService>();
+                bool ready = await ollama.WaitForReadyAsync(
+                    TimeSpan.FromMinutes(10),
+                    TimeSpan.FromSeconds(10),
+                    logger);
 
-            ContextPipelineService contextPipeline = app.Services.GetRequiredService<ContextPipelineService>();
-            BuildContextResult result = await contextPipeline.BuildConciseContextAsync(
-                "[agent boot] initialize context cache",
-                sessionId: "agent-boot");
-            Program.LogAgentContextWarmed(logger, result.GeneratedFiles.Count, result.TokenCount);
-        }
-        catch (Exception ex)
-        {
-            Program.LogContextWarmupSkipped(logger, ex);
-        }
-    });
+                if (!ready)
+                {
+                    Program.LogDraftModelNotAvailable(logger);
+                    return;
+                }
+
+                ContextPipelineService contextPipeline = app.Services.GetRequiredService<ContextPipelineService>();
+                BuildContextResult result = await contextPipeline.BuildConciseContextAsync(
+                    "[agent boot] initialize context cache",
+                    sessionId: "agent-boot");
+                Program.LogAgentContextWarmed(logger, result.GeneratedFiles.Count, result.TokenCount);
+            }
+            catch (Exception ex)
+            {
+                Program.LogContextWarmupSkipped(logger, ex);
+            }
+        });
+    }
 }
 else
 {

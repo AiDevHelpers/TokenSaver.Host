@@ -1,5 +1,6 @@
 using TokenSaver.CodeHelper.AutoWorkflow;
 using TokenSaver.CodeHelper.Configuration;
+using TokenSaver.ContextHelper.Configuration;
 using TokenSaver.ContextHelper.Models;
 using TokenSaver.ContextHelper.Pipeline;
 using TokenSaver.Library.Configuration;
@@ -75,10 +76,17 @@ internal sealed partial class ContextInterceptMiddleware
     public async Task InvokeAsync(
         HttpContext context,
         IOptions<CodeHelperConfig> codeHelperOpts,
+        IOptions<ContextHelperConfig> contextHelperOpts,
         ContextCleanerService cleaner,
         DraftModelInterceptorService draftModelInterceptor)
     {
-        if (!codeHelperOpts.Value.AutoEnabled ||
+        bool autoIntercept = contextHelperOpts.Value.AutoIntercept;
+        bool autoEnabled = codeHelperOpts.Value.AutoEnabled;
+
+        // Each step below is independently gated (autoIntercept for context cleaning,
+        // autoEnabled for draft-model interception) — bail out only when neither is on, so we
+        // don't pay the buffering/parsing cost for a request nothing here will touch.
+        if ((!autoIntercept && !autoEnabled) ||
             context.Request.Method != HttpMethods.Post ||
             !context.Request.Path.StartsWithSegments("/mcp", StringComparison.OrdinalIgnoreCase))
         {
@@ -152,41 +160,63 @@ internal sealed partial class ContextInterceptMiddleware
             return;
         }
 
-        // Step 1: Run context cleaning pipeline
-        string cleanedPrompt;
-        try
+        // Step 1: Run context cleaning pipeline (gated on autoIntercept, independent of Step 2)
+        string cleanedPrompt = prompt;
+        if (autoIntercept)
         {
-            // Extract optional history array
-            string[]? history = null;
-            if (args?["history"] is JsonArray historyNode)
+            try
             {
-                history = historyNode
-                    .Select(n => n?.GetValue<string>())
-                    .Where(s => s != null)
-                    .ToArray()!;
+                // Extract optional history array
+                string[]? history = null;
+                if (args?["history"] is JsonArray historyNode)
+                {
+                    history = historyNode
+                        .Select(n => n?.GetValue<string>())
+                        .Where(s => s != null)
+                        .ToArray()!;
+                }
+
+                PipelineResult ctxResult = await cleaner.CleanContextAsync(prompt, history);
+                cleanedPrompt = ctxResult.ContextText;
+
+                if (!string.IsNullOrWhiteSpace(cleanedPrompt) && cleanedPrompt != prompt)
+                {
+                    args!["prompt"] = JsonValue.Create(cleanedPrompt);
+                    // Remove history from args — it's been folded into the cleaned prompt
+                    _ = args.Remove("history");
+
+                    LogContextCleaned(_logger, toolName, prompt.Length, cleanedPrompt.Length);
+                }
             }
-
-            PipelineResult ctxResult = await cleaner.CleanContextAsync(prompt, history);
-            cleanedPrompt = ctxResult.ContextText;
-
-            if (!string.IsNullOrWhiteSpace(cleanedPrompt) && cleanedPrompt != prompt)
+            catch (Exception ex)
             {
-                args!["prompt"] = JsonValue.Create(cleanedPrompt);
-                // Remove history from args — it's been folded into the cleaned prompt
-                _ = args.Remove("history");
-
-                LogContextCleaned(_logger, toolName, prompt.Length, cleanedPrompt.Length);
+                // Pipeline failure — don't block the tool call
+                LogContextCleaningFailed(_logger, ex, toolName);
+                cleanedPrompt = prompt;
+                context.Request.Body.Position = 0;
             }
         }
-        catch (Exception ex)
+
+        // Step 1's mutation of args["prompt"] only lives in the parsed rpc tree so far — write it
+        // back to the actual request body now so it reaches the downstream tool even when Step 2
+        // is off (previously this rewrite only happened inside Step 2's "deferred" branch, so a
+        // cleaned-but-not-deferred prompt silently never took effect).
+        if (cleanedPrompt != prompt)
         {
-            // Pipeline failure — don't block the tool call
-            LogContextCleaningFailed(_logger, ex, toolName);
-            cleanedPrompt = prompt;
-            context.Request.Body.Position = 0;
+            string cleanedBody = rpc!.ToJsonString();
+            byte[] cleanedBytes = Encoding.UTF8.GetBytes(cleanedBody);
+            context.Request.Body = new MemoryStream(cleanedBytes);
+            context.Request.ContentLength = cleanedBytes.Length;
         }
 
-        // Step 2: Draft model interception — for code-writing prompts, try the local model first
+        // Step 2: Draft model interception (gated on autoEnabled) — for code-writing prompts,
+        // try the local model first
+        if (!autoEnabled)
+        {
+            await _next(context);
+            return;
+        }
+
         try
         {
             string workspaceRoot = context.RequestServices

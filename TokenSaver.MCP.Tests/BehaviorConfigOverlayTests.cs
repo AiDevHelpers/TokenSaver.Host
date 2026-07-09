@@ -3,6 +3,7 @@ using Microsoft.Extensions.Options;
 
 using TokenSaver.CodeHelper.Configuration;
 using TokenSaver.Config;
+using TokenSaver.ContextHelper.Configuration;
 using TokenSaver.Library.Configuration;
 
 using Xunit;
@@ -41,7 +42,8 @@ public sealed class BehaviorConfigOverlayTests : IDisposable
         BehaviorConfigOverlay overlay = new(
             _service,
             Options.Create(codeHelper),
-            Options.Create(tokenSaver));
+            Options.Create(tokenSaver),
+            Options.Create(new ContextHelperConfig()));
         overlay.Apply();
 
         Assert.False(codeHelper.AutoEnabled);
@@ -54,7 +56,12 @@ public sealed class BehaviorConfigOverlayTests : IDisposable
     {
         string localPath = BehaviorConfigService.LocalConfigPath(_workspaceRoot);
         _ = Directory.CreateDirectory(Path.GetDirectoryName(localPath)!);
-        File.WriteAllText(localPath, """{ "autoCodeHelperEnabled": true, "wasteThreshold": 0.75, "enableTerse": false }""");
+        File.WriteAllText(localPath, """
+            {
+              "codeHelper": { "autoEnabled": true, "calibration": { "wasteThreshold": 0.75 } },
+              "tokenEconomy": { "allowTerse": false }
+            }
+            """);
 
         CodeHelperConfig codeHelper = new() { AutoEnabled = false, WasteThreshold = 0.40 };
         TokenSaverConfig tokenSaver = new() { WorkspaceRoot = _workspaceRoot };
@@ -63,7 +70,8 @@ public sealed class BehaviorConfigOverlayTests : IDisposable
         BehaviorConfigOverlay overlay = new(
             _service,
             Options.Create(codeHelper),
-            Options.Create(tokenSaver));
+            Options.Create(tokenSaver),
+            Options.Create(new ContextHelperConfig()));
         overlay.Apply();
 
         Assert.True(codeHelper.AutoEnabled);
@@ -76,7 +84,8 @@ public sealed class BehaviorConfigOverlayTests : IDisposable
     {
         // Go through BehaviorConfigService.Set (not a raw file write) so the cache/ConfigChanged
         // update happens synchronously instead of depending on FileSystemWatcher timing.
-        _service.Set(_workspaceRoot, ConfigScope.Local, c => c with { RequireAnchorMatch = false });
+        _service.Set(_workspaceRoot, ConfigScope.Local,
+            c => c with { CodeHelper = (c.CodeHelper ?? new CodeHelperBehaviorConfig()) with { RequireAnchorMatch = false } });
 
         CodeHelperConfig codeHelper = new() { RequireAnchorMatch = true };
         TokenSaverConfig tokenSaver = new() { WorkspaceRoot = _workspaceRoot };
@@ -84,12 +93,45 @@ public sealed class BehaviorConfigOverlayTests : IDisposable
         BehaviorConfigOverlay overlay = new(
             _service,
             Options.Create(codeHelper),
-            Options.Create(tokenSaver));
+            Options.Create(tokenSaver),
+            Options.Create(new ContextHelperConfig()));
         overlay.Apply();
         Assert.False(codeHelper.RequireAnchorMatch);
 
-        _service.Set(_workspaceRoot, ConfigScope.Local, c => c with { RequireAnchorMatch = null });
+        _service.Set(_workspaceRoot, ConfigScope.Local,
+            c => c with { CodeHelper = (c.CodeHelper ?? new CodeHelperBehaviorConfig()) with { RequireAnchorMatch = null } });
         overlay.Apply();
         Assert.True(codeHelper.RequireAnchorMatch);
+    }
+
+    [Fact]
+    public void Apply_WithContextDebugOverride_MutatesSharedContextHelperConfigInstance()
+    {
+        string localPath = BehaviorConfigService.LocalConfigPath(_workspaceRoot);
+        _ = Directory.CreateDirectory(Path.GetDirectoryName(localPath)!);
+        File.WriteAllText(localPath, """
+            {
+              "context": { "debug": true }
+            }
+            """);
+
+        CodeHelperConfig codeHelper = new();
+        TokenSaverConfig tokenSaver = new() { WorkspaceRoot = _workspaceRoot };
+        ContextHelperConfig contextHelper = new() { Debug = false };
+
+        BehaviorConfigOverlay overlay = new(
+            _service,
+            Options.Create(codeHelper),
+            Options.Create(tokenSaver),
+            Options.Create(contextHelper));
+        overlay.Apply();
+
+        Assert.True(contextHelper.Debug);
+
+        _service.Set(_workspaceRoot, ConfigScope.Local,
+            c => c with { Context = (c.Context ?? new ContextBehaviorConfig()) with { Debug = null } });
+        overlay.Apply();
+
+        Assert.False(contextHelper.Debug);
     }
 }

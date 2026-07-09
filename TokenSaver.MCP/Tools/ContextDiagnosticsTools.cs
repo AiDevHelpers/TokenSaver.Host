@@ -1,4 +1,5 @@
 using TokenSaver.CodeHelper.Indexing;
+using TokenSaver.Config;
 using TokenSaver.ContextHelper.Models.Diagnostics;
 using TokenSaver.ContextHelper.Pipeline;
 using TokenSaver.Library.Services;
@@ -37,8 +38,8 @@ internal sealed class ContextDiagnosticsTools(
         "Grouped by: confirmed issues (known patterns) and suspicious (heuristic, show confidence %).\n" +
         "  gitignore-add    — add all missing known + suspicious-gitignore entries to .gitignore. " +
         "Requires confirmed=true.\n" +
-        "  context-exclude  — save paths to .tokensaver/context-exclusions.json so they are skipped during " +
-        "context building and code indexing, WITHOUT adding them to .gitignore. " +
+        "  context-exclude  — append paths to .tokensaver/.ignore-additional (gitignore syntax) so they " +
+        "are skipped during context building and code indexing, WITHOUT adding them to .gitignore. " +
         "Requires confirmed=true and a paths[] array of workspace-relative directories.")]
     public async Task<string> ContextDiag(
         [Description(
@@ -57,7 +58,8 @@ internal sealed class ContextDiagnosticsTools(
         [Description("Workspace root override; defaults to the configured workspace root")]
         string? root = null,
         [Description("Paths to exclude for 'context-exclude' action (workspace-relative directories)")]
-        string[]? paths = null)
+        string[]? paths = null,
+        CancellationToken ct = default)
     {
         return action.Trim().ToUpperInvariant() switch
         {
@@ -69,6 +71,7 @@ internal sealed class ContextDiagnosticsTools(
             "GITIGNORE" => DoGitignoreCheck(root),
             "GITIGNORE-ADD" => DoGitignoreAdd(confirmed, root),
             "CONTEXT-EXCLUDE" => DoContextExclude(confirmed, paths, root),
+            "SELF-TEST" when cleaner.IsDebugEnabled => await DoSelfTestAsync(ct),
             _ =>
                 "Unknown action. Use 'describe', 'block', 'stats', 'file', 'index', 'gitignore', 'gitignore-add', or 'context-exclude'."
         };
@@ -178,6 +181,24 @@ internal sealed class ContextDiagnosticsTools(
                 _ = sb.AppendLine(CultureInfo.InvariantCulture, $"  ↳ {note}");
             }
         }
+
+        return sb.ToString().TrimEnd();
+    }
+
+    // ── Self-test ─────────────────────────────────────────────────────────────
+
+    private async Task<string> DoSelfTestAsync(CancellationToken ct)
+    {
+        ContextSelfTestResult result = await cleaner.RunSelfTestAsync(ct);
+
+        string verdict = result.Passed
+            ? string.Format(CultureInfo.InvariantCulture, "✓ PASS — synthetic payload shrank {0:N0} → {1:N0} tokens (saved {2}%).", result.RawTokens, result.CleanedTokens, result.SavingsPercent)
+            : string.Format(CultureInfo.InvariantCulture, "✗ FAIL — synthetic payload did NOT shrink: {0:N0} → {1:N0} tokens. The cleaning pipeline appears broken (a stage may have regressed to a no-op).", result.RawTokens, result.CleanedTokens);
+
+        StringBuilder sb = new();
+        _ = sb.AppendLine(verdict);
+        _ = sb.AppendLine();
+        _ = sb.AppendLine(result.Narrative);
 
         return sb.ToString().TrimEnd();
     }
@@ -293,7 +314,7 @@ internal sealed class ContextDiagnosticsTools(
             _ = sb.AppendLine(CultureInfo.InvariantCulture,
                 $"  ContextDiag(action='context-exclude', confirmed=true, paths=[{string.Join(", ", paths)}])");
             _ = sb.AppendLine(
-                "  — save to .local-mcp/context-exclusions.json (keeps them in git but hides from AI context)");
+                "  — append to .tokensaver/.ignore-additional (keeps them in git but hides from AI context)");
         }
 
         return sb.ToString().TrimEnd();
@@ -370,13 +391,28 @@ internal sealed class ContextDiagnosticsTools(
 
         try
         {
-            ContextExclusions.Add(workspaceRoot, paths);
+            // Directory paths are turned into gitignore-syntax directory patterns (trailing "/")
+            // and appended to .tokensaver/.ignore-additional — the same file/format ManageConfig's
+            // "ignore-additional" action writes to, so there's a single gitignore-style mechanism
+            // for "exclude from indexing/context but not from git" instead of two.
+            string[] patterns = paths
+                .Select(p => p.Replace('\\', '/').Trim('/') + "/")
+                .ToArray();
+            string filePath = WorkspaceIgnoreFilter.AdditionalPath(workspaceRoot);
+            IReadOnlyList<string> added = WorkspaceIgnoreFilter.Append(filePath, patterns);
 
             StringBuilder sb = new();
-            _ = sb.AppendLine(CultureInfo.InvariantCulture, $"✓ Saved {paths.Length} context exclusion(s) to .local-mcp/context-exclusions.json:");
-            foreach (string p in paths)
+            if (added.Count == 0)
             {
-                _ = sb.AppendLine(CultureInfo.InvariantCulture, $"  {p.Replace('\\', '/').Trim('/')}/");
+                _ = sb.AppendLine("Nothing added — all supplied paths were already present in .ignore-additional.");
+            }
+            else
+            {
+                _ = sb.AppendLine(CultureInfo.InvariantCulture, $"✓ Appended {added.Count} pattern(s) to .tokensaver/.ignore-additional:");
+                foreach (string p in added)
+                {
+                    _ = sb.AppendLine(CultureInfo.InvariantCulture, $"  {p}");
+                }
             }
 
             _ = sb.AppendLine();
