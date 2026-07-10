@@ -22,7 +22,7 @@ namespace TokenSaver.MCP.Tools;
 [McpServerToolType]
 internal sealed class SemanticIndexTools(
     IRepoIndexer indexer,
-    ISemanticSearchService search,
+    IConditionalRetrievalService retrieval,
     IOptions<TokenSaverConfig> config,
     WorkspaceRootSessionResolver workspaceRootResolver)
 {
@@ -61,7 +61,10 @@ internal sealed class SemanticIndexTools(
     [Description(
         "Natural-language search over the chunk index built by IndexRepo. Returns file/lines/summary/score per " +
         "hit — not raw code; read the actual file only for the 1-2 hits that look relevant. Returns an empty " +
-        "result set (not an error) if IndexRepo hasn't been run yet.")]
+        "result set (not an error) if IndexRepo hasn't been run yet. Ambiguous queries are silently reranked by " +
+        "a second local model pass before ranking; if the best hit still scores below the confidence floor, " +
+        "returns {\"match\":\"none\", best_candidate, confidence} instead — treat that as \"nothing relevant is " +
+        "indexed for this,\" not as a prompt to use best_candidate anyway.")]
     public async Task<string> SemanticGrep(
         [Description("Natural-language query")] string query,
         [Description("Optional substring filter on the relative file path")]
@@ -73,15 +76,28 @@ internal sealed class SemanticIndexTools(
     {
         await workspaceRootResolver.EnsureResolvedAsync(server, ct);
 
-        IReadOnlyList<SemanticSearchHit> hits = await search.SearchAsync(_config.WorkspaceRoot, query, pathFilter, topK, ct);
-        return JsonSerializer.Serialize(hits.Select(h => new
+        RetrievalOutcome outcome = await retrieval.RetrieveAsync(_config.WorkspaceRoot, query, pathFilter, topK, ct);
+
+        if (outcome.Abstained)
         {
-            file = h.RelativePath,
-            lines = $"{h.StartLine}-{h.EndLine}",
-            type = h.ChunkType,
-            name = h.Name,
-            summary = h.Summary,
-            score = h.Score
-        }));
+            return JsonSerializer.Serialize(new
+            {
+                match = "none",
+                best_candidate = ToHitJson(outcome.BestCandidate!),
+                confidence = outcome.Confidence
+            });
+        }
+
+        return JsonSerializer.Serialize(outcome.Hits.Select(ToHitJson));
     }
+
+    private static object ToHitJson(SemanticSearchHit h) => new
+    {
+        file = h.RelativePath,
+        lines = $"{h.StartLine}-{h.EndLine}",
+        type = h.ChunkType,
+        name = h.Name,
+        summary = h.Summary,
+        score = h.Score
+    };
 }

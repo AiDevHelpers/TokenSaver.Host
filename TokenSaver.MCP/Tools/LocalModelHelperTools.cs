@@ -348,6 +348,16 @@ internal sealed class LocalModelHelperTools
             response += $"\n\n<!-- pipeline: {narrative.Replace("\n", " | ", StringComparison.Ordinal)} -->";
         }
 
+        // First-run notice: SemanticGrep is otherwise silently empty until someone remembers to
+        // call IndexRepo manually — tell the caller a background build just started instead.
+        if (result.SemanticIndexStatus == SemanticIndexTriggerStatus.Started)
+        {
+            response +=
+                "\n\n<!-- ℹ Semantic index (SemanticGrep) has never been built for this workspace — " +
+                "started building it in the background now. This does not block context generation; " +
+                "SemanticGrep results will be available once it finishes (a few minutes for a typical repo). -->";
+        }
+
         // Warn about stale cached files
         if (result.StaleFiles.Count > 0)
         {
@@ -355,6 +365,19 @@ internal sealed class LocalModelHelperTools
             string more = result.StaleFiles.Count > 5 ? $" (+{result.StaleFiles.Count - 5} more)" : "";
             response +=
                 $"\n\n<!-- ⚠ stale-cache: {result.StaleFiles.Count} file(s) changed since last index: {staleList}{more} — re-run BuildConciseContext to refresh -->";
+        }
+
+        // Retrieval self-tuning: a file requested this turn scored below the relevance bar the
+        // filter applied last turn — the narrow-filter threshold is being nudged wider.
+        if (result.CalibrationCheck is { AnyFailure: true } check)
+        {
+            IEnumerable<string> misses = check.Outcomes.Where(o => o.WasFailure)
+                .Select(o => $"'{o.LateFile}' scored {o.LateFileRelevance:F2} vs the {o.PreviousMinKeptRelevance:F2} bar applied last turn");
+            response +=
+                $"\n\n<!-- ⚠ retrieval-calibration: {string.Join("; ", misses)}" +
+                (check.ThresholdAdjusted
+                    ? $" — semantic threshold adjusted (now {check.NewThresholdAdjustment:+0.00;-0.00} from baseline) -->"
+                    : " -->");
         }
 
         // Surface warnings from the last pipeline run (stored on the cleaner)

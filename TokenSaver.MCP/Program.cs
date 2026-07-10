@@ -12,6 +12,7 @@ using TokenSaver.CodeHelper.Patching;
 using TokenSaver.CodeHelper.Planning;
 using TokenSaver.CodeHelper.Research;
 using TokenSaver.Config;
+using TokenSaver.ContextHelper.Calibration;
 using TokenSaver.ContextHelper.Configuration;
 using TokenSaver.ContextHelper.Pipeline;
 using TokenSaver.ContextHelper.Pipeline.Stages;
@@ -27,12 +28,15 @@ using TokenSaver.MCP.Middleware;
 using TokenSaver.MCP.Services;
 using TokenSaver.MCP.Tools;
 
+using Logging.Core;
+
 using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Hosting.WindowsServices;
-using Microsoft.Extensions.Logging.EventLog;
 using Microsoft.Extensions.Options;
+
+using Serilog.Events;
 
 using System.Collections.ObjectModel;
 using System.Diagnostics;
@@ -154,37 +158,40 @@ if (isWindowsService)
     builder.Host.UseWindowsService(o => o.ServiceName = "TokenSaverMCP");
 }
 
-// Microsoft.Extensions.Logging console setup (single-line, yyyy-MM-dd HH:mm:ss timestamps) —
-// the same convention DraftModel.Loader/Program.cs uses, so both projects behave consistently.
-// Plus an EventLog sink when running as a Windows service: console output is invisible under
-// the SCM (no console session for a service), so without this sink every ILogger call vanished
-// silently in service mode and the VS Code extension's pollTokenSaverServiceEventLog() (which
-// reads ProviderName='TokenSaver' from the Application log) had nothing to poll. See
-// EventLogRegistration.TryAddTokenSaverEventLog for the source-registration guard — mirrors
-// DraftModel.Loader/Program.cs's EventLogRegistration exactly, just with a different source name.
-builder.Logging.ClearProviders();
-builder.Logging.AddSimpleConsole(o =>
-{
-    o.SingleLine = true;
-    o.TimestampFormat = "yyyy-MM-dd HH:mm:ss ";
-});
-builder.Logging.SetMinimumLevel(
-    builder.Configuration.GetValue<bool>($"{TokenSaverConfig.SectionName}:VerboseLogging")
-        ? LogLevel.Debug
-        : LogLevel.Information);
-
-// HttpClientFactory's built-in per-request logging (categories "System.Net.Http.HttpClient.*")
-// logs every failed request at Information level with the full exception ToString (stack trace
-// included) — e.g. a wall of text every time the DraftModel router is unreachable. Silenced down
-// to Warning: OllamaEndpointRegistry already logs one concise line right after ("endpoint ...
-// failed — marked unhealthy"), so nothing meaningful is lost, just the redundant noise on top of
-// it.
-builder.Logging.AddFilter("System.Net.Http.HttpClient", LogLevel.Warning);
-
+// Serilog-backed logging via TokenSaver.Common.Logger (shared with DraftModel.Loader — see
+// Logging.Core.AppLoggerFactory). Providers: Console (single-line) + File
+// (%ProgramData%\TokenSaver\logs\tokensaver-.log, rolling daily, retained 14 days) + EventLog
+// (Windows only) + VS Code JSON sink (when VSCODE_LOGS is set). The File sink is what makes logs
+// inspectable after the fact — previously only Console (and, under the SCM, EventLog) existed, so
+// a crash before anyone thought to capture console output was unrecoverable.
+//
+// EventLog needs its source pre-created once (EnsureSourceExists is a no-op after the first
+// success) — only attempted when running as the installed Windows service, since that's the
+// context where console output is invisible and the VS Code extension's
+// pollTokenSaverServiceEventLog() (which reads ProviderName='TokenSaver' from the Application
+// log) needs something to poll. Never blocks startup on failure: a non-admin dev-loop launch
+// just means the EventLog sink silently has nothing to write to yet.
 if (isWindowsService && OperatingSystem.IsWindows())
 {
-    EventLogRegistration.TryAddTokenSaverEventLog(builder.Logging);
+    EventLogRegistration.EnsureTokenSaverEventLogSourceExists();
 }
+
+LogEventLevel minimumLevel =
+    builder.Configuration.GetValue<bool>($"{TokenSaverConfig.SectionName}:VerboseLogging")
+        ? LogEventLevel.Debug
+        : LogEventLevel.Information;
+
+builder.Logging.ClearProviders();
+builder.Host.UseAppLogging(LogChannel.TokenSaver, minimumLevel, cfg =>
+{
+    // HttpClientFactory's built-in per-request logging (categories "System.Net.Http.HttpClient.*")
+    // logs every failed request at Information level with the full exception ToString (stack
+    // trace included) — e.g. a wall of text every time the DraftModel router is unreachable.
+    // Silenced down to Warning: OllamaEndpointRegistry already logs one concise line right after
+    // ("endpoint ... failed — marked unhealthy"), so nothing meaningful is lost, just the
+    // redundant noise on top of it.
+    cfg.MinimumLevel.Override("System.Net.Http.HttpClient", LogEventLevel.Warning);
+});
 
 // ── Configuration ──
 builder.Services.Configure<TokenSaverConfig>(
@@ -213,6 +220,7 @@ builder.Services.AddSingleton<CodeBlockCollapsingStage>();
 builder.Services.AddSingleton<ConversationSummarizationStage>();
 builder.Services.AddSingleton<ToolCallCompressionStage>();
 builder.Services.AddSingleton<ChunkingStage>();
+builder.Services.AddSingleton<RetrievalCalibrationService>();
 builder.Services.AddSingleton<SemanticRelevanceFilterStage>();
 builder.Services.AddSingleton<TokenBudgetStage>();
 builder.Services.AddSingleton<ConversationalGarbageStage>();
@@ -296,6 +304,9 @@ builder.Services.AddSingleton<RawArtifactWriter>();
 builder.Services.AddSingleton<IChunkExtractor, ChunkExtractor>();
 builder.Services.AddSingleton<IRepoIndexer, RepoIndexer>();
 builder.Services.AddSingleton<ISemanticSearchService, SemanticSearchService>();
+builder.Services.AddSingleton<IRerankService, RerankService>();
+builder.Services.AddSingleton<IConditionalRetrievalService, ConditionalRetrievalService>();
+builder.Services.AddSingleton<SemanticIndexBackgroundTrigger>();
 
 // Shared Ollama HTTP client config
 TokenSaverConfig ollamaConfig = builder.Configuration
@@ -393,6 +404,12 @@ builder.Services.AddHttpClient<SemanticRelevanceFilterStage>(client =>
 {
     client.BaseAddress = new Uri(ollamaConfig.OllamaUrl);
     client.Timeout = TimeSpan.FromMinutes(2);
+    client.DefaultRequestHeaders.Add("X-Agent-Type", "passthrough");
+}).AddHttpMessageHandler<EndpointRoutingHandler>();
+builder.Services.AddHttpClient<RetrievalCalibrationService>(client =>
+{
+    client.BaseAddress = new Uri(ollamaConfig.OllamaUrl);
+    client.Timeout = TimeSpan.FromSeconds(30);
     client.DefaultRequestHeaders.Add("X-Agent-Type", "passthrough");
 }).AddHttpMessageHandler<EndpointRoutingHandler>();
 builder.Services.AddHttpClient<TokenBudgetStage>(client =>
@@ -709,36 +726,20 @@ internal partial class Program
 // registry write under HKLM\SYSTEM\CurrentControlSet\Services\EventLog\Application\<source> —
 // the SCM runs this service as LocalSystem by default, which has that permission, so this
 // succeeds unattended on first service start. Never blocks startup on failure: callers get back
-// `false`/no-op and simply fall back to console-only logging, exactly as before this fix.
+// `false`/no-op and Logging.Core.AppLoggerFactory's EventLog sink simply has nothing to write to
+// yet. The actual EventLog *write path* now goes through that Serilog sink (added by
+// UseAppLogging above) rather than an ILoggingBuilder.AddEventLog provider — this method only
+// needs to ensure the source exists for that sink to succeed.
 internal static class EventLogRegistration
 {
     [System.Runtime.Versioning.SupportedOSPlatform("windows")]
-    public static void TryAddTokenSaverEventLog(ILoggingBuilder builder)
+    public static bool EnsureTokenSaverEventLogSourceExists()
     {
-        if (!EnsureSourceExists("TokenSaver"))
-        {
-            return;
-        }
-
-        builder.AddEventLog(o =>
-        {
-            o.SourceName = "TokenSaver";
-            o.LogName = "Application";
-        });
-    }
-
-    private static bool EnsureSourceExists(string source)
-    {
-        if (!OperatingSystem.IsWindows())
-        {
-            return false;
-        }
-
         try
         {
-            if (!System.Diagnostics.EventLog.SourceExists(source))
+            if (!System.Diagnostics.EventLog.SourceExists("TokenSaver"))
             {
-                System.Diagnostics.EventLog.CreateEventSource(source, "Application");
+                System.Diagnostics.EventLog.CreateEventSource("TokenSaver", "Application");
             }
 
             return true;

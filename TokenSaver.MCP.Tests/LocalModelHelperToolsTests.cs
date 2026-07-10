@@ -9,12 +9,14 @@ using TokenSaver.AgentHelpers.Core.Services;
 using TokenSaver.CodeHelper.Configuration;
 using TokenSaver.CodeHelper.Indexing;
 using TokenSaver.Config;
+using TokenSaver.ContextHelper.Calibration;
 using TokenSaver.ContextHelper.Configuration;
 using TokenSaver.ContextHelper.Pipeline;
 using TokenSaver.ContextHelper.Pipeline.Stages;
 using TokenSaver.Database.Context;
 using TokenSaver.Database.Context.Entities;
 using TokenSaver.Library.Configuration;
+using TokenSaver.Library.Contracts;
 using TokenSaver.Library.Services;
 using TokenSaver.MCP.Services;
 using TokenSaver.MCP.Tools;
@@ -100,6 +102,8 @@ public sealed class LocalModelHelperToolsTests : IDisposable
         ContextHelperConfig contextHelperConfig = new();
         IOptions<ContextHelperConfig> contextHelperOptions = Options.Create(contextHelperConfig);
 
+        RetrievalCalibrationService calibration = new(UnreachableHttpClient(), contextHelperOptions, NullLogger<RetrievalCalibrationService>.Instance);
+
         PromptAssessor assessor = new(UnreachableHttpClient(), contextHelperOptions, NullLogger<PromptAssessor>.Instance);
 
         DeduplicationStage stage01 = new(contextHelperOptions, NullLogger<DeduplicationStage>.Instance);
@@ -107,7 +111,7 @@ public sealed class LocalModelHelperToolsTests : IDisposable
         CodeBlockCollapsingStage stage03 = new(contextHelperOptions, NullLogger<CodeBlockCollapsingStage>.Instance);
         ConversationSummarizationStage stage04 = new(UnreachableHttpClient(), contextHelperOptions, NullLogger<ConversationSummarizationStage>.Instance);
         ToolCallCompressionStage stage05 = new(NullLogger<ToolCallCompressionStage>.Instance);
-        SemanticRelevanceFilterStage stage06 = new(UnreachableHttpClient(), contextHelperOptions, NullLogger<SemanticRelevanceFilterStage>.Instance);
+        SemanticRelevanceFilterStage stage06 = new(UnreachableHttpClient(), contextHelperOptions, NullLogger<SemanticRelevanceFilterStage>.Instance, calibration);
         TokenBudgetStage stage07 = new(UnreachableHttpClient(), contextHelperOptions, NullLogger<TokenBudgetStage>.Instance);
         ChunkingStage stage08 = new(contextHelperOptions, NullLogger<ChunkingStage>.Instance);
         ConversationalGarbageStage stage09 = new(NullLogger<ConversationalGarbageStage>.Instance);
@@ -134,7 +138,17 @@ public sealed class LocalModelHelperToolsTests : IDisposable
             Options.Create(new CodeHelperConfig()), [], accessor, gitStaleness, folderTree,
             aiSummarization, capacityClient, NullLogger<WorkspaceIndexService>.Instance);
 
-        ContextPipelineService contextPipeline = new(accessor, cleaner, gitStaleness, workspaceConfig, orchestrator, configOptions);
+        ModelRouteResolver modelRoutes = new(configOptions);
+        TokenEconomyDbAccessor tokenEconomyDb = new();
+        ISavingsTracker savings = new SavingsTracker(tokenEconomyDb, configOptions);
+        IRepoIndexer repoIndexer = new RepoIndexer(
+            new ChunkExtractor(), ollama, modelRoutes, tokenEconomyDb, configOptions);
+        SemanticIndexBackgroundTrigger semanticIndexTrigger = new(
+            repoIndexer, tokenEconomyDb, NullLogger<SemanticIndexBackgroundTrigger>.Instance);
+
+        ContextPipelineService contextPipeline = new(
+            accessor, cleaner, gitStaleness, workspaceConfig, orchestrator, semanticIndexTrigger,
+            savings, calibration, configOptions);
 
         AiProviderConfigService aiProviders = new();
 
@@ -155,9 +169,12 @@ public sealed class LocalModelHelperToolsTests : IDisposable
 
         LazyContextResolver lazyContext = new(detection, behaviorConfig);
 
+        BehaviorConfigOverlay behaviorConfigOverlay = new(
+            behaviorConfig, Options.Create(new CodeHelperConfig()), configOptions, contextHelperOptions);
+
         WorkspaceRootSessionResolver workspaceRootResolver = new(
             configOptions, contextHelperOptions, orchestrator, contextPipeline, ollama,
-            NullLogger<WorkspaceRootSessionResolver>.Instance)
+            behaviorConfigOverlay, NullLogger<WorkspaceRootSessionResolver>.Instance)
         {
             SkipBackgroundWarmupForTests = true
         };

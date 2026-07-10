@@ -1,6 +1,7 @@
 using TokenSaver.CodeHelper.Configuration;
 using TokenSaver.CodeHelper.Indexing;
 using TokenSaver.Config;
+using TokenSaver.ContextHelper.Calibration;
 using TokenSaver.ContextHelper.Configuration;
 using TokenSaver.ContextHelper.Models.Diagnostics;
 using TokenSaver.ContextHelper.Pipeline;
@@ -8,6 +9,7 @@ using TokenSaver.ContextHelper.Pipeline.Stages;
 using TokenSaver.Database.Context;
 using TokenSaver.Database.Context.Entities;
 using TokenSaver.Library.Configuration;
+using TokenSaver.Library.Contracts;
 using TokenSaver.Library.Services;
 using TokenSaver.MCP.Services;
 using TokenSaver.MCP.Tools;
@@ -76,6 +78,8 @@ public sealed class ContextDiagnosticsToolsTests : IDisposable
         ContextHelperConfig contextHelperConfig = new() { EmbeddingModel = "", Debug = debug };
         IOptions<ContextHelperConfig> contextHelperOptions = Options.Create(contextHelperConfig);
 
+        RetrievalCalibrationService calibration = new(DeadClient(), contextHelperOptions, NullLogger<RetrievalCalibrationService>.Instance);
+
         PromptAssessor assessor = new(DeadClient(), contextHelperOptions, NullLogger<PromptAssessor>.Instance);
         StrippingHealthAnalyzer healthAnalyzer = new(contextHelperOptions, NullLogger<StrippingHealthAnalyzer>.Instance);
 
@@ -84,7 +88,7 @@ public sealed class ContextDiagnosticsToolsTests : IDisposable
         CodeBlockCollapsingStage stage03 = new(contextHelperOptions, NullLogger<CodeBlockCollapsingStage>.Instance);
         ConversationSummarizationStage stage04 = new(DeadClient(), contextHelperOptions, NullLogger<ConversationSummarizationStage>.Instance);
         ToolCallCompressionStage stage05 = new(NullLogger<ToolCallCompressionStage>.Instance);
-        SemanticRelevanceFilterStage stage06 = new(DeadClient(), contextHelperOptions, NullLogger<SemanticRelevanceFilterStage>.Instance);
+        SemanticRelevanceFilterStage stage06 = new(DeadClient(), contextHelperOptions, NullLogger<SemanticRelevanceFilterStage>.Instance, calibration);
         TokenBudgetStage stage07 = new(DeadClient(), contextHelperOptions, NullLogger<TokenBudgetStage>.Instance);
         ChunkingStage stage08 = new(contextHelperOptions, NullLogger<ChunkingStage>.Instance);
         ConversationalGarbageStage stage09 = new(NullLogger<ConversationalGarbageStage>.Instance);
@@ -110,18 +114,31 @@ public sealed class ContextDiagnosticsToolsTests : IDisposable
             Options.Create(codeHelperConfig), [], accessor, gitStaleness, folderTree,
             aiSummarization, capacityClient, NullLogger<WorkspaceIndexService>.Instance);
 
-        ContextPipelineService contextPipeline = new(
-            accessor, cleaner, gitStaleness, workspaceConfig, orchestrator, tokenSaverOptions);
-
         OllamaService ollama = new(DeadClient(), tokenSaverOptions, NullLogger<OllamaService>.Instance);
+        ModelRouteResolver modelRoutes = new(tokenSaverOptions);
+
+        TokenEconomyDbAccessor tokenEconomyDb = new();
+        ISavingsTracker savings = new SavingsTracker(tokenEconomyDb, tokenSaverOptions);
+        IRepoIndexer repoIndexer = new RepoIndexer(
+            new ChunkExtractor(), ollama, modelRoutes, tokenEconomyDb, tokenSaverOptions);
+        SemanticIndexBackgroundTrigger semanticIndexTrigger = new(
+            repoIndexer, tokenEconomyDb, NullLogger<SemanticIndexBackgroundTrigger>.Instance);
+
+        ContextPipelineService contextPipeline = new(
+            accessor, cleaner, gitStaleness, workspaceConfig, orchestrator, semanticIndexTrigger,
+            savings, calibration, tokenSaverOptions);
+
+        BehaviorConfigOverlay behaviorConfigOverlay = new(
+            new BehaviorConfigService(NullLogger<BehaviorConfigService>.Instance),
+            Options.Create(codeHelperConfig), tokenSaverOptions, contextHelperOptions);
         WorkspaceRootSessionResolver workspaceRootResolver = new(
             tokenSaverOptions, contextHelperOptions, orchestrator, contextPipeline, ollama,
-            NullLogger<WorkspaceRootSessionResolver>.Instance)
+            behaviorConfigOverlay, NullLogger<WorkspaceRootSessionResolver>.Instance)
         {
             SkipBackgroundWarmupForTests = true
         };
 
-        ContextDiagnosticsTools tools = new(cleaner, contextPipeline, folderTree, workspaceConfig, workspaceRootResolver);
+        ContextDiagnosticsTools tools = new(cleaner, contextPipeline, folderTree, workspaceConfig, workspaceRootResolver, calibration);
         return new Rig(tools, cleaner, accessor, root);
     }
 

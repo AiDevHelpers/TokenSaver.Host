@@ -1,5 +1,7 @@
 using TokenSaver.CodeHelper.Indexing;
 using TokenSaver.Config;
+using TokenSaver.ContextHelper.Calibration;
+using TokenSaver.ContextHelper.Models.Calibration;
 using TokenSaver.ContextHelper.Models.Diagnostics;
 using TokenSaver.ContextHelper.Pipeline;
 using TokenSaver.Library.Services;
@@ -19,7 +21,8 @@ internal sealed class ContextDiagnosticsTools(
     ContextPipelineService contextPipeline,
     FolderTreeManager folderTree,
     WorkspaceConfigManager workspaceConfig,
-    WorkspaceRootSessionResolver workspaceRootResolver)
+    WorkspaceRootSessionResolver workspaceRootResolver,
+    RetrievalCalibrationService retrievalCalibration)
 {
     // ── ContextDiag ───────────────────────────────────────────────────────────
 
@@ -42,10 +45,13 @@ internal sealed class ContextDiagnosticsTools(
         "Requires confirmed=true.\n" +
         "  context-exclude  — append paths to .tokensaver/.ignore-additional (gitignore syntax) so they " +
         "are skipped during context building and code indexing, WITHOUT adding them to .gitignore. " +
-        "Requires confirmed=true and a paths[] array of workspace-relative directories.")]
+        "Requires confirmed=true and a paths[] array of workspace-relative directories.\n" +
+        "  calibration      — show the retrieval self-tuning state: how far the semantic relevance " +
+        "threshold has been auto-adjusted from narrow-filter misses (files requested after the fact " +
+        "that scored below the bar applied when context was first built), and the sample/failure counts behind it.")]
     public async Task<string> ContextDiag(
         [Description(
-            "Action: 'describe', 'block', 'stats', 'file', 'index', 'gitignore', 'gitignore-add', or 'context-exclude'")]
+            "Action: 'describe', 'block', 'stats', 'file', 'index', 'gitignore', 'gitignore-add', 'context-exclude', or 'calibration'")]
         string action,
         [Description(
             "Content filter for 'describe': 'code', 'logs', 'files', 'conversation', 'toolcalls', or a file path substring")]
@@ -76,9 +82,10 @@ internal sealed class ContextDiagnosticsTools(
             "GITIGNORE" => DoGitignoreCheck(root),
             "GITIGNORE-ADD" => DoGitignoreAdd(confirmed, root),
             "CONTEXT-EXCLUDE" => DoContextExclude(confirmed, paths, root),
+            "CALIBRATION" => DoCalibration(root),
             "SELF-TEST" when cleaner.IsDebugEnabled => await DoSelfTestAsync(ct),
             _ =>
-                "Unknown action. Use 'describe', 'block', 'stats', 'file', 'index', 'gitignore', 'gitignore-add', or 'context-exclude'."
+                "Unknown action. Use 'describe', 'block', 'stats', 'file', 'index', 'gitignore', 'gitignore-add', 'context-exclude', or 'calibration'."
         };
     }
 
@@ -185,6 +192,39 @@ internal sealed class ContextDiagnosticsTools(
             {
                 _ = sb.AppendLine(CultureInfo.InvariantCulture, $"  ↳ {note}");
             }
+        }
+
+        return sb.ToString().TrimEnd();
+    }
+
+    // ── Calibration ───────────────────────────────────────────────────────────
+
+    private string DoCalibration(string? root)
+    {
+        string workspaceRoot = root ?? workspaceConfig.GetWorkspaceRoot();
+        RetrievalCalibrationState state = retrievalCalibration.GetStats(workspaceRoot);
+
+        StringBuilder sb = new();
+        _ = sb.AppendLine(CultureInfo.InvariantCulture,
+            $"Retrieval calibration  |  threshold adjustment: {state.ThresholdAdjustment:+0.00;-0.00;+0.00} " +
+            $"(baseline SemanticThreshold unchanged; effective = baseline + this)");
+        _ = sb.AppendLine(CultureInfo.InvariantCulture,
+            $"  Samples: {state.TotalSamples} total, {state.TotalFailures} narrow-filter failures " +
+            $"({(state.TotalSamples == 0 ? 0 : (double)state.TotalFailures / state.TotalSamples):P0})");
+        _ = sb.AppendLine(CultureInfo.InvariantCulture,
+            $"  Consecutive: {state.ConsecutiveFailures} failures, {state.ConsecutivePasses} clean turns");
+        if (!string.IsNullOrEmpty(state.LastUpdated))
+        {
+            _ = sb.AppendLine(CultureInfo.InvariantCulture, $"  Last updated: {state.LastUpdated}");
+        }
+
+        if (state.ThresholdAdjustment == 0 && state.TotalSamples == 0)
+        {
+            _ = sb.AppendLine();
+            _ = sb.AppendLine(
+                "No calibration samples yet — this accumulates when a session requests a file in a " +
+                "later BuildConciseContext turn that the semantic relevance filter didn't surface " +
+                "above its threshold on an earlier turn.");
         }
 
         return sb.ToString().TrimEnd();

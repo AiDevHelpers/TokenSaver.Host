@@ -1,11 +1,13 @@
 using TokenSaver.CodeHelper.Configuration;
 using TokenSaver.CodeHelper.Indexing;
 using TokenSaver.Config;
+using TokenSaver.ContextHelper.Calibration;
 using TokenSaver.ContextHelper.Configuration;
 using TokenSaver.ContextHelper.Pipeline;
 using TokenSaver.ContextHelper.Pipeline.Stages;
 using TokenSaver.Database.Context;
 using TokenSaver.Library.Configuration;
+using TokenSaver.Library.Contracts;
 using TokenSaver.Library.Services;
 using TokenSaver.MCP.Services;
 
@@ -51,6 +53,8 @@ internal static class WorkspaceRootSessionResolverTestFactory
             Options.Create(new CodeHelperConfig()), [], accessor, gitStaleness, folderTree,
             aiSummarization, capacityClient, NullLogger<WorkspaceIndexService>.Instance);
 
+        RetrievalCalibrationService calibration = new(DeadClient(), contextHelperOptions, NullLogger<RetrievalCalibrationService>.Instance);
+
         PromptAssessor assessor = new(DeadClient(), contextHelperOptions, NullLogger<PromptAssessor>.Instance);
         StrippingHealthAnalyzer healthAnalyzer = new(contextHelperOptions, NullLogger<StrippingHealthAnalyzer>.Instance);
         DeduplicationStage stage01 = new(contextHelperOptions, NullLogger<DeduplicationStage>.Instance);
@@ -58,7 +62,7 @@ internal static class WorkspaceRootSessionResolverTestFactory
         CodeBlockCollapsingStage stage03 = new(contextHelperOptions, NullLogger<CodeBlockCollapsingStage>.Instance);
         ConversationSummarizationStage stage04 = new(DeadClient(), contextHelperOptions, NullLogger<ConversationSummarizationStage>.Instance);
         ToolCallCompressionStage stage05 = new(NullLogger<ToolCallCompressionStage>.Instance);
-        SemanticRelevanceFilterStage stage06 = new(DeadClient(), contextHelperOptions, NullLogger<SemanticRelevanceFilterStage>.Instance);
+        SemanticRelevanceFilterStage stage06 = new(DeadClient(), contextHelperOptions, NullLogger<SemanticRelevanceFilterStage>.Instance, calibration);
         TokenBudgetStage stage07 = new(DeadClient(), contextHelperOptions, NullLogger<TokenBudgetStage>.Instance);
         ChunkingStage stage08 = new(contextHelperOptions, NullLogger<ChunkingStage>.Instance);
         ConversationalGarbageStage stage09 = new(NullLogger<ConversationalGarbageStage>.Instance);
@@ -68,10 +72,19 @@ internal static class WorkspaceRootSessionResolverTestFactory
             assessor, healthAnalyzer, contextHelperOptions, NullLogger<ContextCleanerService>.Instance,
             stage01, stage02, stage03, stage04, stage05, stage06, stage07, stage08, stage09, stage10);
 
-        ContextPipelineService contextPipeline = new(
-            accessor, cleaner, gitStaleness, workspaceConfig, indexService, configOptions);
-
         OllamaService ollama = new(DeadClient(), configOptions, NullLogger<OllamaService>.Instance);
+        ModelRouteResolver modelRoutes = new(configOptions);
+
+        TokenEconomyDbAccessor tokenEconomyDb = new();
+        ISavingsTracker savings = new SavingsTracker(tokenEconomyDb, configOptions);
+        IRepoIndexer repoIndexer = new RepoIndexer(
+            new ChunkExtractor(), ollama, modelRoutes, tokenEconomyDb, configOptions);
+        SemanticIndexBackgroundTrigger semanticIndexTrigger = new(
+            repoIndexer, tokenEconomyDb, NullLogger<SemanticIndexBackgroundTrigger>.Instance);
+
+        ContextPipelineService contextPipeline = new(
+            accessor, cleaner, gitStaleness, workspaceConfig, indexService, semanticIndexTrigger,
+            savings, calibration, configOptions);
 
         BehaviorConfigOverlay behaviorConfigOverlay = new(
             new BehaviorConfigService(NullLogger<BehaviorConfigService>.Instance),

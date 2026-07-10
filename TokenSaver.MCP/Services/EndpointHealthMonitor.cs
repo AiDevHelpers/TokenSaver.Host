@@ -22,8 +22,14 @@ internal sealed partial class EndpointHealthMonitor(
     [LoggerMessage(Level = LogLevel.Information, Message = "EndpointHealthMonitor starting — probing every {Interval}.")]
     private static partial void LogStarting(ILogger logger, TimeSpan interval);
 
-    [LoggerMessage(Level = LogLevel.Debug, Message = "Health probe failed for endpoint '{Name}' ({Url}).")]
-    private static partial void LogProbeFailed(ILogger logger, Exception ex, string name, string url);
+    // Deliberately logs ex.Message, not the Exception itself — a probe failure here is a routine,
+    // expected condition (endpoint down, connection refused) that recurs every interval while an
+    // endpoint stays unreachable, not an unexpected fault. Passing the full Exception to
+    // [LoggerMessage] dumps its entire stack trace on every occurrence, which is pure noise for
+    // something this routine; OllamaEndpointRegistry.SetHealth already logs the health-state
+    // transition itself, so nothing meaningful is lost by not repeating the stack trace here.
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Health probe failed for endpoint '{Name}' ({Url}): {Reason}")]
+    private static partial void LogProbeFailed(ILogger logger, string name, string url, string reason);
 
     private static readonly TimeSpan ProbeTimeout = TimeSpan.FromSeconds(5);
 
@@ -84,7 +90,7 @@ internal sealed partial class EndpointHealthMonitor(
         }
         catch (Exception ex)
         {
-            LogProbeFailed(logger, ex, name, url);
+            LogProbeFailed(logger, name, url, ex.Message);
             registry.SetHealth(name, false);
         }
     }

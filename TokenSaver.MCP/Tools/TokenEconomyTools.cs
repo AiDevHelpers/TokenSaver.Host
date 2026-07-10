@@ -108,6 +108,8 @@ internal sealed class TokenEconomyTools(
                 saved_tokens = r.SavedTokens,
                 pct_saved = r.PctSaved,
                 avg_duration_ms = r.AvgDurationMs,
+                avg_conversation_turns = r.AvgConversationTurns,
+                avg_conversation_tokens = r.AvgConversationTokens,
                 worth_it = v.WorthIt,
                 reason = v.Reason
             };
@@ -153,6 +155,8 @@ internal sealed class TokenEconomyTools(
             saved_tokens = row.SavedTokens,
             pct_saved = row.PctSaved,
             avg_duration_ms = row.AvgDurationMs,
+            avg_conversation_turns = row.AvgConversationTurns,
+            avg_conversation_tokens = row.AvgConversationTokens,
             worth_it = v.WorthIt,
             reason = v.Reason
         });
