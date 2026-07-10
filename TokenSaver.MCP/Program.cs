@@ -28,8 +28,6 @@ using TokenSaver.MCP.Middleware;
 using TokenSaver.MCP.Services;
 using TokenSaver.MCP.Tools;
 
-using Logging.Core;
-
 using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
@@ -40,6 +38,7 @@ using Serilog.Events;
 
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using TokenSaver.Common.Logging;
 
 // ── Stdio detection ──
 // When Claude Desktop (or any MCP host) launches this server as a command, stdin is a pipe.
@@ -158,8 +157,8 @@ if (isWindowsService)
     builder.Host.UseWindowsService(o => o.ServiceName = "TokenSaverMCP");
 }
 
-// Serilog-backed logging via TokenSaver.Common.Logger (shared with DraftModel.Loader — see
-// Logging.Core.AppLoggerFactory). Providers: Console (single-line) + File
+// Serilog-backed logging via TokenSaver.Common.Logging (shared with DraftModel.Loader — see
+// AppLoggerFactory). Providers: Console (single-line) + File
 // (%ProgramData%\TokenSaver\logs\tokensaver-.log, rolling daily, retained 14 days) + EventLog
 // (Windows only) + VS Code JSON sink (when VSCODE_LOGS is set). The File sink is what makes logs
 // inspectable after the fact — previously only Console (and, under the SCM, EventLog) existed, so
@@ -191,6 +190,17 @@ builder.Host.UseAppLogging(LogChannel.TokenSaver, minimumLevel, cfg =>
     // ("endpoint ... failed — marked unhealthy"), so nothing meaningful is lost, just the
     // redundant noise on top of it.
     cfg.MinimumLevel.Override("System.Net.Http.HttpClient", LogEventLevel.Warning);
+
+    // ASP.NET Core's DefaultHealthCheckService logs a per-poll "Health check data for {Name}:"
+    // Debug-level dump of each check's Data dictionary, rendered by naively ToString()-ing each
+    // value — for anything beyond a plain string that's garbage (e.g. a List<object> of self-test
+    // results prints as "System.Collections.Generic.List`1[System.Object]", not its contents).
+    // It also duplicates the single-line "Health check {Name} with status {Status} completed
+    // after {Ms}ms with message '...'" summary immediately above it, which already carries the
+    // useful signal. Silenced to Warning: an Unhealthy/Degraded check still logs above that
+    // threshold (confirmed — status-dependent level, not fixed at Debug), so a real problem still
+    // surfaces; only the redundant happy-path Debug noise goes away.
+    cfg.MinimumLevel.Override("Microsoft.Extensions.Diagnostics.HealthChecks", LogEventLevel.Warning);
 });
 
 // ── Configuration ──

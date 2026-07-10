@@ -105,8 +105,8 @@ public sealed class ConfigUpgradeServiceTests : IDisposable
 
         Assert.Contains(""""{ "tokenEconomy": { "enableDistill": false"""", updated, StringComparison.Ordinal);
         Assert.Contains("\"repoHelper\"", updated, StringComparison.Ordinal);
-        Assert.Contains("\"autoEnabled\": false,", updated, StringComparison.Ordinal);
-        Assert.DoesNotContain("// \"autoEnabled\": false,", updated, StringComparison.Ordinal);
+        Assert.Contains("\"autoEnabled\": true,", updated, StringComparison.Ordinal);
+        Assert.DoesNotContain("// \"autoEnabled\": true,", updated, StringComparison.Ordinal);
     }
 
     [Fact]

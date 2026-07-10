@@ -74,8 +74,8 @@ public sealed class WorkspaceConfigDefaultsTests : IDisposable
 
         // ...but every actual setting is commented out (no active overrides)...
         Assert.Contains("// \"addTokenSaverToGitignore\": true,", content);
-        Assert.Contains("// \"optimizeInstructions\": false", content);
-        Assert.Contains("// \"autoEnabled\": false,", content);
+        Assert.Contains("// \"optimizeInstructions\": true", content);
+        Assert.Contains("// \"autoEnabled\": true,", content);
         Assert.Contains("// \"enableDistill\": true,", content);
         Assert.Contains("// \"contextSizeLimit\": 120000,", content);
 
@@ -136,12 +136,12 @@ public sealed class WorkspaceConfigDefaultsTests : IDisposable
         Assert.Contains("\"lazyContext\"", content);
 
         // ...but settings are active (uncommented) rather than commented out...
-        Assert.Contains("\"optimizeInstructions\": false", content);
-        Assert.Contains("\"autoEnabled\": false,", content);
+        Assert.Contains("\"optimizeInstructions\": true", content);
+        Assert.Contains("\"autoEnabled\": true,", content);
         Assert.Contains("\"enableDistill\": true,", content);
         Assert.Contains("\"contextSizeLimit\": 120000,", content);
-        Assert.DoesNotContain("// \"optimizeInstructions\": false", content);
-        Assert.DoesNotContain("// \"autoEnabled\": false,", content);
+        Assert.DoesNotContain("// \"optimizeInstructions\": true", content);
+        Assert.DoesNotContain("// \"autoEnabled\": true,", content);
         Assert.DoesNotContain("// \"enableDistill\": true,", content);
 
         // ...except the stateful "never asked yet" sentinel, which has no real default...
@@ -162,8 +162,8 @@ public sealed class WorkspaceConfigDefaultsTests : IDisposable
             });
         Assert.NotNull(parsed);
         Assert.Null(parsed!.RepoHelper?.AddTokenSaverToGitignore);
-        Assert.False(parsed.RepoHelper?.OptimizeInstructions);
-        Assert.Equal(false, parsed.CodeHelper?.AutoEnabled);
+        Assert.True(parsed.RepoHelper?.OptimizeInstructions);
+        Assert.Equal(true, parsed.CodeHelper?.AutoEnabled);
         Assert.Equal(120_000, parsed.Context?.ContextSizeLimit);
         Assert.Equal(true, parsed.LazyContext?.Overrides?["claude-code"]);
     }
