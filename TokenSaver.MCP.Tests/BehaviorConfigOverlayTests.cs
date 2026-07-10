@@ -10,23 +10,42 @@ using Xunit;
 
 namespace TokenSaver.MCP.Tests;
 
+[Collection("GlobalConfigDirEnvVar")]
 public sealed class BehaviorConfigOverlayTests : IDisposable
 {
+    private const string GlobalDirOverrideEnvVar = "TOKENSAVER_GLOBAL_CONFIG_DIR";
+
     private readonly string _workspaceRoot;
+    private readonly string _globalDir;
     private readonly BehaviorConfigService _service;
 
     public BehaviorConfigOverlayTests()
     {
         _workspaceRoot = Directory.CreateTempSubdirectory("bcoTests-").FullName;
+        // BehaviorConfigService.GlobalConfigPath otherwise resolves to the real machine-wide
+        // %ProgramData%\TokenSaver\config.json, which WorkspaceConfigDefaults now populates with
+        // real default overrides — redirect to an empty temp dir so these "no overrides" tests
+        // stay true regardless of what's on the real machine.
+        _globalDir = Directory.CreateTempSubdirectory("bcoTests-global-").FullName;
+        Environment.SetEnvironmentVariable(GlobalDirOverrideEnvVar, _globalDir);
         _service = new BehaviorConfigService(NullLogger<BehaviorConfigService>.Instance);
     }
 
     public void Dispose()
     {
         _service.Dispose();
+        Environment.SetEnvironmentVariable(GlobalDirOverrideEnvVar, null);
         try
         {
             Directory.Delete(_workspaceRoot, recursive: true);
+        }
+        catch (IOException)
+        {
+        }
+
+        try
+        {
+            Directory.Delete(_globalDir, recursive: true);
         }
         catch (IOException)
         {

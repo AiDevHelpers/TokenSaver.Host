@@ -2,6 +2,7 @@ using TokenSaver.Library.Configuration;
 using TokenSaver.Library.Contracts;
 using TokenSaver.Library.Models.TokenEconomy;
 using TokenSaver.Library.Services;
+using TokenSaver.MCP.Services;
 
 using Microsoft.Extensions.Options;
 
@@ -27,7 +28,8 @@ namespace TokenSaver.MCP.Tools;
 internal sealed class DevLoopTools(
     IDistillationService distill,
     RawArtifactWriter rawWriter,
-    IOptions<TokenSaverConfig> config)
+    IOptions<TokenSaverConfig> config,
+    WorkspaceRootSessionResolver workspaceRootResolver)
 {
     private readonly TokenSaverConfig _config = config.Value;
 
@@ -42,8 +44,11 @@ internal sealed class DevLoopTools(
         int tailLines = 500,
         [Description("Return raw untruncated output instead of a distilled summary")]
         bool verbose = false,
+        McpServer server = null!,
         CancellationToken ct = default)
     {
+        await workspaceRootResolver.EnsureResolvedAsync(server, ct);
+
         string raw;
         try
         {
@@ -76,8 +81,11 @@ internal sealed class DevLoopTools(
         [Description("Path to the git repository")] string repoPath,
         [Description("Diff staged changes only instead of the full working-tree diff")]
         bool stagedOnly = false,
+        McpServer server = null!,
         CancellationToken ct = default)
     {
+        await workspaceRootResolver.EnsureResolvedAsync(server, ct);
+
         string args = stagedOnly ? "diff --staged" : "diff";
         string diff;
         try
@@ -110,8 +118,11 @@ internal sealed class DevLoopTools(
         string? testCommand = null,
         [Description("Return raw untruncated output on failure instead of a distilled summary")]
         bool verbose = false,
+        McpServer server = null!,
         CancellationToken ct = default)
     {
+        await workspaceRootResolver.EnsureResolvedAsync(server, ct);
+
         (string command, string args) = SplitCommand(testCommand ?? "dotnet test");
         (int exitCode, string stdout, string stderr) = await RunProcessAsync(command, args, ct, projectPath);
         string raw = string.IsNullOrWhiteSpace(stdout) ? stderr : stdout;
@@ -141,8 +152,11 @@ internal sealed class DevLoopTools(
         string projectPath,
         [Description("Lint command to run; defaults to 'dotnet format --verify-no-changes' for this codebase's own convention")]
         string? lintCommand = null,
+        McpServer server = null!,
         CancellationToken ct = default)
     {
+        await workspaceRootResolver.EnsureResolvedAsync(server, ct);
+
         (string command, string args) = SplitCommand(lintCommand ?? "dotnet format --verify-no-changes");
         (int exitCode, string stdout, string stderr) = await RunProcessAsync(command, args, ct, projectPath);
         string raw = string.IsNullOrWhiteSpace(stdout) ? stderr : stdout;
@@ -166,8 +180,11 @@ internal sealed class DevLoopTools(
         [Description("Path to the build log file")] string logPath,
         [Description("Only return lines after this line number (0 = whole file)")]
         int sinceLine = 0,
+        McpServer server = null!,
         CancellationToken ct = default)
     {
+        await workspaceRootResolver.EnsureResolvedAsync(server, ct);
+
         string content = await File.ReadAllTextAsync(logPath, ct);
         string[] lines = content.Split('\n');
         string[] newLines = sinceLine < lines.Length ? lines[sinceLine..] : [];

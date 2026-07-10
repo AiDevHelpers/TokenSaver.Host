@@ -12,6 +12,7 @@ using TokenSaver.CodeHelper.Research;
 using TokenSaver.ContextHelper.Models;
 using TokenSaver.ContextHelper.Pipeline;
 using TokenSaver.Library.Configuration;
+using TokenSaver.MCP.Services;
 
 using Microsoft.Extensions.Options;
 
@@ -38,6 +39,7 @@ internal sealed class CodeHelperTools
     private readonly PlanBuilder _planBuilder;
     private readonly AgentAdapterRegistry _registry;
     private readonly PlanStore _store;
+    private readonly WorkspaceRootSessionResolver _workspaceRootResolver;
 
     public CodeHelperTools(
         WorkspaceIndexService index,
@@ -51,7 +53,8 @@ internal sealed class CodeHelperTools
         ContextCleanerService cleaner,
         ICallerDetectionService detection,
         AgentAdapterRegistry registry,
-        IHttpContextAccessor httpContext)
+        IHttpContextAccessor httpContext,
+        WorkspaceRootSessionResolver workspaceRootResolver)
     {
         _index = index;
         _symbolSearch = symbolSearch;
@@ -65,6 +68,7 @@ internal sealed class CodeHelperTools
         _detection = detection;
         _registry = registry;
         _httpContext = httpContext;
+        _workspaceRootResolver = workspaceRootResolver;
     }
 
     // ── CodeIndex ─────────────────────────────────────────────────────────────
@@ -88,8 +92,11 @@ internal sealed class CodeHelperTools
         [Description("Dependency direction for 'dependencies': 'uses', 'usedBy', or 'both' (default)")]
         string direction = "both",
         [Description("Workspace root path")] string? root = null,
+        McpServer server = null!,
         CancellationToken ct = default)
     {
+        await _workspaceRootResolver.EnsureResolvedAsync(server, ct);
+
         string r = root ?? _config.WorkspaceRoot;
         return action.Trim().ToUpperInvariant() switch
         {
@@ -229,8 +236,11 @@ internal sealed class CodeHelperTools
         [Description("Workspace-relative path of the file to restore (required for 'rollback')")]
         string? targetFilePath = null,
         [Description("Workspace root path")] string? root = null,
+        McpServer server = null!,
         CancellationToken ct = default)
     {
+        await _workspaceRootResolver.EnsureResolvedAsync(server, ct);
+
         string r = root ?? _config.WorkspaceRoot;
         return action.Trim().ToUpperInvariant() switch
         {
@@ -425,8 +435,11 @@ internal sealed class CodeHelperTools
         [Description("Session identifier (optional for 'create')")]
         string? sessionId = null,
         [Description("Workspace root path")] string? root = null,
+        McpServer server = null!,
         CancellationToken ct = default)
     {
+        await _workspaceRootResolver.EnsureResolvedAsync(server, ct);
+
         string r = root ?? _config.WorkspaceRoot;
         return action.Trim().ToUpperInvariant() switch
         {

@@ -16,7 +16,8 @@ internal sealed class ManageConfigTools(
     WorkspaceConfigManager workspaceConfig,
     AgentConfigResolver agentConfigResolver,
     LazyContextResolver lazyContextResolver,
-    IHttpContextAccessor httpContext)
+    IHttpContextAccessor httpContext,
+    WorkspaceRootSessionResolver workspaceRootResolver)
 {
     private static readonly JsonSerializerOptions JsonOpts = new() { WriteIndented = true };
 
@@ -81,7 +82,7 @@ internal sealed class ManageConfigTools(
         "be overridden here; see 'get' → detectedLazyContext for what's currently applied to this " +
         "connection. Pass value=null to clear a clientName override (workspace default still " +
         "applies); the workspace default itself cannot be cleared to null, only set true/false.")]
-    public string ManageConfig(
+    public async Task<string> ManageConfig(
         [Description("Action: 'get', 'set-gitignore-pref', 'ignore-additional', 'ignore-bypass', 'set', 'set-agent', or 'set-lazy-context'")]
         string action,
         [Description("For 'set-gitignore-pref': true to add .tokensaver/ to .gitignore, false to decline")]
@@ -99,8 +100,12 @@ internal sealed class ManageConfigTools(
         [Description("For 'set-agent': which agentConfig section — omit/'global' for the top-level default, or 'anthropic'/'deepSeek'/'qwen'/'openSource' for that family's override")]
         string? family = null,
         [Description("For 'set-lazy-context': the client name to set an override for (matches CallerInfo.ClientName, e.g. 'claude-code'); omit to set the workspace-wide default instead")]
-        string? clientName = null)
+        string? clientName = null,
+        McpServer server = null!,
+        CancellationToken ct = default)
     {
+        await workspaceRootResolver.EnsureResolvedAsync(server, ct);
+
         string workspaceRoot = root ?? workspaceConfig.GetWorkspaceRoot();
 
         return action switch
@@ -570,7 +575,10 @@ internal sealed class ManageConfigTools(
             return "set-gitignore-pref requires 'scope' to be 'local' or 'global'.";
         }
 
-        config.Set(workspaceRoot, configScope, current => current with { AddTokenSaverToGitignore = value });
+        config.Set(workspaceRoot, configScope, current => current with
+        {
+            RepoHelper = (current.RepoHelper ?? new RepoHelperBehaviorConfig()) with { AddTokenSaverToGitignore = value },
+        });
 
         string note;
         if (value && !GitignoreFilter.EntryIsCovered(workspaceRoot, GitignorePrompt.Entry))

@@ -43,6 +43,7 @@ internal sealed class LocalModelHelperTools
     private readonly ContextPipelineService _contextPipeline;
     private readonly BehaviorConfigService _behaviorConfig;
     private readonly LazyContextResolver _lazyContext;
+    private readonly WorkspaceRootSessionResolver _workspaceRootResolver;
 
     public LocalModelHelperTools(
         OllamaService ollama,
@@ -59,7 +60,8 @@ internal sealed class LocalModelHelperTools
         DeferredNotificationService deferred,
         OllamaEndpointRegistry endpoints,
         BehaviorConfigService behaviorConfig,
-        LazyContextResolver lazyContext)
+        LazyContextResolver lazyContext,
+        WorkspaceRootSessionResolver workspaceRootResolver)
     {
         _behaviorConfig = behaviorConfig;
         _ollama = ollama;
@@ -76,6 +78,7 @@ internal sealed class LocalModelHelperTools
         _deferred = deferred;
         _endpoints = endpoints;
         _lazyContext = lazyContext;
+        _workspaceRootResolver = workspaceRootResolver;
     }
 
     // ── CleanAndChat ──────────────────────────────────────────────────────────
@@ -160,8 +163,11 @@ internal sealed class LocalModelHelperTools
         string[]? includeIgnored = null,
         [Description("Workspace-relative paths to exclude when multiple copies of a searched file were found")]
         string[]? excludeFiles = null,
+        McpServer server = null!,
         CancellationToken ct = default)
     {
+        await _workspaceRootResolver.EnsureResolvedAsync(server, ct);
+
         string root = workspaceRoot ?? _workspaceConfig.GetWorkspaceRoot();
         GitignoreFilter gitignore = GitignoreFilter.Load(root);
         HashSet<string> confirmed = new(includeIgnored ?? [], StringComparer.OrdinalIgnoreCase);
@@ -393,8 +399,11 @@ internal sealed class LocalModelHelperTools
         bool? splitLargeFiles = null,
         [Description("Optional workspace root path")]
         string? workspaceRoot = null,
+        McpServer server = null!,
         CancellationToken ct = default)
     {
+        await _workspaceRootResolver.EnsureResolvedAsync(server, ct);
+
         string root = workspaceRoot ?? _workspaceConfig.GetWorkspaceRoot();
         WorkspacePreferences prefs = await _workspaceConfig.LoadPreferencesAsync(root);
 
@@ -453,8 +462,11 @@ internal sealed class LocalModelHelperTools
         string? sessionId = null,
         [Description("Optional workspace root path")]
         string? workspaceRoot = null,
+        McpServer server = null!,
         CancellationToken ct = default)
     {
+        await _workspaceRootResolver.EnsureResolvedAsync(server, ct);
+
         ContextHygieneReport report = await _contextPipeline.BuildContextHygieneReportAsync(sessionId, workspaceRoot, ct);
 
         StringBuilder sb = new();

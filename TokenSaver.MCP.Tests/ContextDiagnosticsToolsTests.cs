@@ -9,6 +9,7 @@ using TokenSaver.Database.Context;
 using TokenSaver.Database.Context.Entities;
 using TokenSaver.Library.Configuration;
 using TokenSaver.Library.Services;
+using TokenSaver.MCP.Services;
 using TokenSaver.MCP.Tools;
 
 using Microsoft.Extensions.Logging.Abstractions;
@@ -112,7 +113,15 @@ public sealed class ContextDiagnosticsToolsTests : IDisposable
         ContextPipelineService contextPipeline = new(
             accessor, cleaner, gitStaleness, workspaceConfig, orchestrator, tokenSaverOptions);
 
-        ContextDiagnosticsTools tools = new(cleaner, contextPipeline, folderTree, workspaceConfig);
+        OllamaService ollama = new(DeadClient(), tokenSaverOptions, NullLogger<OllamaService>.Instance);
+        WorkspaceRootSessionResolver workspaceRootResolver = new(
+            tokenSaverOptions, contextHelperOptions, orchestrator, contextPipeline, ollama,
+            NullLogger<WorkspaceRootSessionResolver>.Instance)
+        {
+            SkipBackgroundWarmupForTests = true
+        };
+
+        ContextDiagnosticsTools tools = new(cleaner, contextPipeline, folderTree, workspaceConfig, workspaceRootResolver);
         return new Rig(tools, cleaner, accessor, root);
     }
 

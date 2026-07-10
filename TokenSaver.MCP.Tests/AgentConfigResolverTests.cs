@@ -233,23 +233,42 @@ public sealed class AgentConfigResolverStaticResolveTests
     }
 }
 
+[Collection("GlobalConfigDirEnvVar")]
 public sealed class AgentConfigResolverEndToEndTests : IDisposable
 {
+    private const string GlobalDirOverrideEnvVar = "TOKENSAVER_GLOBAL_CONFIG_DIR";
+
     private readonly string _workspaceRoot;
+    private readonly string _globalDir;
     private readonly BehaviorConfigService _behaviorConfig;
 
     public AgentConfigResolverEndToEndTests()
     {
         _workspaceRoot = Directory.CreateTempSubdirectory("acrTests-").FullName;
+        // BehaviorConfigService.GlobalConfigPath otherwise resolves to the real machine-wide
+        // %ProgramData%\TokenSaver\config.json, which WorkspaceConfigDefaults now populates with
+        // real default overrides — redirect to an empty temp dir so "no config file on disk"
+        // tests stay true regardless of what's on the real machine.
+        _globalDir = Directory.CreateTempSubdirectory("acrTests-global-").FullName;
+        Environment.SetEnvironmentVariable(GlobalDirOverrideEnvVar, _globalDir);
         _behaviorConfig = new BehaviorConfigService(NullLogger<BehaviorConfigService>.Instance);
     }
 
     public void Dispose()
     {
         _behaviorConfig.Dispose();
+        Environment.SetEnvironmentVariable(GlobalDirOverrideEnvVar, null);
         try
         {
             Directory.Delete(_workspaceRoot, recursive: true);
+        }
+        catch (IOException)
+        {
+        }
+
+        try
+        {
+            Directory.Delete(_globalDir, recursive: true);
         }
         catch (IOException)
         {

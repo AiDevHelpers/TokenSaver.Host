@@ -5,23 +5,15 @@ using Xunit;
 namespace TokenSaver.MCP.Tests;
 
 /// <summary>
-///     FindRepoRoot is pure (no shared state) and gets full coverage here. ReadPersistedWorkspaceRoot
-///     and PersistWorkspaceRoot both read/write the real, shared
-///     %ProgramData%\TokenSaver\workspace-root.json — there's no seam to redirect them to a temp
-///     path (BootstrapFilePath is a private static property, not injectable). PersistWorkspaceRoot
-///     is a no-op when the value hasn't changed, so the round-trip test below saves the real
-///     pre-existing value first and restores it in Dispose, keeping this safe to run alongside a
-///     real TokenSaver install on the same machine.
+///     FindRepoRoot is pure (no shared state) and gets full coverage here.
 /// </summary>
 public sealed class WorkspaceRootResolverTests : IDisposable
 {
     private readonly string _tempRoot;
-    private readonly string? _originalPersistedRoot;
 
     public WorkspaceRootResolverTests()
     {
         _tempRoot = Directory.CreateTempSubdirectory("wrrTests-").FullName;
-        _originalPersistedRoot = WorkspaceRootResolver.ReadPersistedWorkspaceRoot();
     }
 
     public void Dispose()
@@ -32,15 +24,6 @@ public sealed class WorkspaceRootResolverTests : IDisposable
         }
         catch (IOException)
         {
-        }
-
-        // Restore whatever was persisted before this test ran (best-effort; PersistWorkspaceRoot
-        // itself swallows IO/UnauthorizedAccessException, and a null original means "nothing to
-        // restore" — there's no delete API, so we leave a freshly-created file in place in that
-        // case, matching what a first-ever run on this machine would already look like).
-        if (_originalPersistedRoot is not null)
-        {
-            WorkspaceRootResolver.PersistWorkspaceRoot(_originalPersistedRoot);
         }
     }
 
@@ -114,27 +97,5 @@ public sealed class WorkspaceRootResolverTests : IDisposable
         string? result = WorkspaceRootResolver.FindRepoRoot(nestedWithOwnGit);
 
         Assert.Equal(nestedWithOwnGit, result);
-    }
-
-    [Fact]
-    public void PersistThenRead_RoundTripsSameValue()
-    {
-        string candidate = _tempRoot;
-
-        WorkspaceRootResolver.PersistWorkspaceRoot(candidate);
-        string? readBack = WorkspaceRootResolver.ReadPersistedWorkspaceRoot();
-
-        Assert.Equal(candidate, readBack);
-    }
-
-    [Fact]
-    public void PersistWorkspaceRoot_SameValueTwice_DoesNotThrow()
-    {
-        string candidate = _tempRoot;
-
-        WorkspaceRootResolver.PersistWorkspaceRoot(candidate);
-        Exception? ex = Record.Exception(() => WorkspaceRootResolver.PersistWorkspaceRoot(candidate));
-
-        Assert.Null(ex);
     }
 }

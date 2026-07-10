@@ -51,6 +51,7 @@ internal sealed partial class AgentDetectionMiddleware
     public async Task InvokeAsync(
         HttpContext context,
         AgentConfigResolver resolver,
+        InstructionOptimizerService instructionOptimizer,
         IOptions<TokenSaverConfig> tokenSaverOptions)
     {
         if (context.Request.Method != HttpMethods.Post ||
@@ -93,6 +94,11 @@ internal sealed partial class AgentDetectionMiddleware
                     // handshake, same rationale as the resolve/log step below.
                     WorkspaceConfigDefaults.EnsureDefaults(workspaceRoot, _logger);
 
+                    // Same best-effort, cheap-when-nothing-changed rationale as EnsureDefaults
+                    // above, but for a config.json that already exists — patches in any
+                    // top-level section missing since the file was created by an older schema.
+                    ConfigUpgradeService.UpgradeIfNeeded(workspaceRoot, _logger);
+
                     AgentConfigResolution resolution = resolver.Resolve(context, workspaceRoot);
                     if (_logger.IsEnabled(LogLevel.Information))
                     {
@@ -104,6 +110,10 @@ internal sealed partial class AgentDetectionMiddleware
                             resolution.Settings.EnablePromptCaching,
                             resolution.Settings.CacheTtlSeconds);
                     }
+
+                    // Best-effort, config-gated (repoHelper.optimizeInstructions, off by default) —
+                    // see InstructionOptimizerService's doc comment.
+                    instructionOptimizer.EnsureSynced(workspaceRoot, resolution.Caller);
                 }
             }
             catch (Exception ex) when (ex is InvalidOperationException or FormatException or ArgumentException)

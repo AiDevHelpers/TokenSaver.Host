@@ -155,10 +155,17 @@ public sealed class LocalModelHelperToolsTests : IDisposable
 
         LazyContextResolver lazyContext = new(detection, behaviorConfig);
 
+        WorkspaceRootSessionResolver workspaceRootResolver = new(
+            configOptions, contextHelperOptions, orchestrator, contextPipeline, ollama,
+            NullLogger<WorkspaceRootSessionResolver>.Instance)
+        {
+            SkipBackgroundWarmupForTests = true
+        };
+
         return new LocalModelHelperTools(
             ollama, cleaner, workspaceConfig, contextPipeline, aiProviders, configOptions,
             detection, registry, httpContextAccessor, assessor, mcpContext, deferred,
-            endpointRegistry, behaviorConfig, lazyContext);
+            endpointRegistry, behaviorConfig, lazyContext, workspaceRootResolver);
     }
 
     // ── ListOllamaEndpoints ───────────────────────────────────────────────────

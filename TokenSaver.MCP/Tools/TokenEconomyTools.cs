@@ -2,6 +2,7 @@ using TokenSaver.Library.Configuration;
 using TokenSaver.Library.Contracts;
 using TokenSaver.Library.Models.TokenEconomy;
 using TokenSaver.Library.Services;
+using TokenSaver.MCP.Services;
 
 using Microsoft.Extensions.Options;
 
@@ -24,7 +25,8 @@ internal sealed class TokenEconomyTools(
     ISavingsTracker savings,
     ModelRouteResolver modelRoutes,
     OllamaService ollama,
-    IOptions<TokenSaverConfig> config)
+    IOptions<TokenSaverConfig> config,
+    WorkspaceRootSessionResolver workspaceRootResolver)
 {
     private readonly TokenSaverConfig _config = config.Value;
 
@@ -86,8 +88,11 @@ internal sealed class TokenEconomyTools(
     public async Task<string> TokenSavingsReport(
         [Description("Lookback window in days (default 7)")] int sinceDays = 7,
         [Description("'tool' (default) or 'role'")] string groupBy = "tool",
+        McpServer server = null!,
         CancellationToken ct = default)
     {
+        await workspaceRootResolver.EnsureResolvedAsync(server, ct);
+
         bool byRole = string.Equals(groupBy, "role", StringComparison.OrdinalIgnoreCase);
         IReadOnlyList<SavingsAggregate> rows = await savings.GetReportAsync(_config.WorkspaceRoot, sinceDays, byRole, ct);
 
@@ -125,8 +130,11 @@ internal sealed class TokenEconomyTools(
         string groupBy = "tool",
         [Description("Lookback window in days (default 30)")]
         int sinceDays = 30,
+        McpServer server = null!,
         CancellationToken ct = default)
     {
+        await workspaceRootResolver.EnsureResolvedAsync(server, ct);
+
         bool byRole = string.Equals(groupBy, "role", StringComparison.OrdinalIgnoreCase);
         SavingsAggregate row = await savings.GetOneAsync(_config.WorkspaceRoot, target, byRole, sinceDays, ct);
 

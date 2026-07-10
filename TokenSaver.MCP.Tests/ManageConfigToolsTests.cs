@@ -23,23 +23,42 @@ namespace TokenSaver.MCP.Tests;
 ///     Ollama/DraftModel dependency needed). Covers every action in ManageConfig's dispatcher
 ///     against a temp workspace root, asserting on the returned JSON/text contract.
 /// </summary>
+[Collection("GlobalConfigDirEnvVar")]
 public sealed class ManageConfigToolsTests : IDisposable
 {
+    private const string GlobalDirOverrideEnvVar = "TOKENSAVER_GLOBAL_CONFIG_DIR";
+
     private readonly string _workspaceRoot;
+    private readonly string _globalDir;
     private readonly BehaviorConfigService _behaviorConfig;
 
     public ManageConfigToolsTests()
     {
         _workspaceRoot = Directory.CreateTempSubdirectory("mctTests-").FullName;
+        // BehaviorConfigService.GlobalConfigPath otherwise resolves to the real machine-wide
+        // %ProgramData%\TokenSaver\config.json, which WorkspaceConfigDefaults now populates with
+        // real default overrides (e.g. lazyContext claude-code=true) — merging that in would
+        // break tests asserting on local-only state. Redirect to an empty temp dir instead.
+        _globalDir = Directory.CreateTempSubdirectory("mctTests-global-").FullName;
+        Environment.SetEnvironmentVariable(GlobalDirOverrideEnvVar, _globalDir);
         _behaviorConfig = new BehaviorConfigService(NullLogger<BehaviorConfigService>.Instance);
     }
 
     public void Dispose()
     {
         _behaviorConfig.Dispose();
+        Environment.SetEnvironmentVariable(GlobalDirOverrideEnvVar, null);
         try
         {
             Directory.Delete(_workspaceRoot, recursive: true);
+        }
+        catch (IOException)
+        {
+        }
+
+        try
+        {
+            Directory.Delete(_globalDir, recursive: true);
         }
         catch (IOException)
         {
@@ -57,8 +76,9 @@ public sealed class ManageConfigToolsTests : IDisposable
         LazyContextResolver lazyContextResolver = new(detection, _behaviorConfig);
 
         HttpContextAccessor accessor = new() { HttpContext = httpContext };
+        WorkspaceRootSessionResolver workspaceRootResolver = WorkspaceRootSessionResolverTestFactory.Create(cfg);
 
-        return new ManageConfigTools(_behaviorConfig, workspaceConfig, agentConfigResolver, lazyContextResolver, accessor);
+        return new ManageConfigTools(_behaviorConfig, workspaceConfig, agentConfigResolver, lazyContextResolver, accessor, workspaceRootResolver);
     }
 
     private sealed class FakeCallerDetectionService(CallerInfo toReturn) : ICallerDetectionService
@@ -82,11 +102,11 @@ public sealed class ManageConfigToolsTests : IDisposable
     // ── get ─────────────────────────────────────────────────────────────────
 
     [Fact]
-    public void Get_ReturnsMergedConfigAndPaths()
+    public async Task Get_ReturnsMergedConfigAndPaths()
     {
         ManageConfigTools tools = CreateTools();
 
-        string json = tools.ManageConfig("get");
+        string json = await tools.ManageConfig("get");
         JsonElement root = JsonDocument.Parse(json).RootElement;
 
         Assert.True(root.TryGetProperty("merged", out _));
@@ -96,11 +116,11 @@ public sealed class ManageConfigToolsTests : IDisposable
     }
 
     [Fact]
-    public void Get_WithHttpContext_PopulatesDetectedAgentAndDetectedLazyContext()
+    public async Task Get_WithHttpContext_PopulatesDetectedAgentAndDetectedLazyContext()
     {
         ManageConfigTools tools = CreateTools(new DefaultHttpContext());
 
-        string json = tools.ManageConfig("get");
+        string json = await tools.ManageConfig("get");
         JsonElement root = JsonDocument.Parse(json).RootElement;
 
         JsonElement detectedAgent = root.GetProperty("detectedAgent");
@@ -112,11 +132,11 @@ public sealed class ManageConfigToolsTests : IDisposable
     }
 
     [Fact]
-    public void Get_WithoutHttpContext_LeavesDetectedFieldsNull()
+    public async Task Get_WithoutHttpContext_LeavesDetectedFieldsNull()
     {
         ManageConfigTools tools = CreateTools(httpContext: null);
 
-        string json = tools.ManageConfig("get");
+        string json = await tools.ManageConfig("get");
         JsonElement root = JsonDocument.Parse(json).RootElement;
 
         Assert.Equal(JsonValueKind.Null, root.GetProperty("detectedAgent").ValueKind);
@@ -124,11 +144,11 @@ public sealed class ManageConfigToolsTests : IDisposable
     }
 
     [Fact]
-    public void UnknownAction_ReturnsUsageMessage()
+    public async Task UnknownAction_ReturnsUsageMessage()
     {
         ManageConfigTools tools = CreateTools();
 
-        string result = tools.ManageConfig("bogus-action");
+        string result = await tools.ManageConfig("bogus-action");
 
         Assert.Contains("Unknown action", result, StringComparison.Ordinal);
         Assert.Contains("get, set-gitignore-pref", result, StringComparison.Ordinal);
@@ -137,12 +157,12 @@ public sealed class ManageConfigToolsTests : IDisposable
     // ── set-gitignore-pref ─────────────────────────────────────────────────────
 
     [Fact]
-    public void SetGitignorePref_AddTrue_CreatesGitignoreAndAppendsEntry()
+    public async Task SetGitignorePref_AddTrue_CreatesGitignoreAndAppendsEntry()
     {
         ManageConfigTools tools = CreateTools();
         Assert.False(File.Exists(Path.Combine(_workspaceRoot, ".gitignore")));
 
-        string result = tools.ManageConfig("set-gitignore-pref", add: true, scope: "local");
+        string result = await tools.ManageConfig("set-gitignore-pref", add: true, scope: "local");
 
         string gitignorePath = Path.Combine(_workspaceRoot, ".gitignore");
         Assert.True(File.Exists(gitignorePath));
@@ -150,52 +170,52 @@ public sealed class ManageConfigToolsTests : IDisposable
         Assert.Contains("Recorded", result, StringComparison.Ordinal);
 
         TokenSaverBehaviorConfig cfg = _behaviorConfig.GetConfig(_workspaceRoot);
-        Assert.True(cfg.AddTokenSaverToGitignore);
+        Assert.True(cfg.RepoHelper?.AddTokenSaverToGitignore);
     }
 
     [Fact]
-    public void SetGitignorePref_AddTrue_WithExistingGitignoreCoveringEntry_DoesNotDuplicate()
+    public async Task SetGitignorePref_AddTrue_WithExistingGitignoreCoveringEntry_DoesNotDuplicate()
     {
         string gitignorePath = Path.Combine(_workspaceRoot, ".gitignore");
         File.WriteAllText(gitignorePath, ".tokensaver/\n");
         ManageConfigTools tools = CreateTools();
 
-        string result = tools.ManageConfig("set-gitignore-pref", add: true, scope: "local");
+        string result = await tools.ManageConfig("set-gitignore-pref", add: true, scope: "local");
 
         Assert.Contains("already covered", result, StringComparison.Ordinal);
         Assert.Equal(1, File.ReadAllLines(gitignorePath).Count(l => l.Contains(".tokensaver", StringComparison.Ordinal)));
     }
 
     [Fact]
-    public void SetGitignorePref_AddFalse_RecordsPreferenceWithoutTouchingGitignore()
+    public async Task SetGitignorePref_AddFalse_RecordsPreferenceWithoutTouchingGitignore()
     {
         ManageConfigTools tools = CreateTools();
 
-        string result = tools.ManageConfig("set-gitignore-pref", add: false, scope: "local");
+        string result = await tools.ManageConfig("set-gitignore-pref", add: false, scope: "local");
 
         Assert.False(File.Exists(Path.Combine(_workspaceRoot, ".gitignore")));
         Assert.Contains("will not add", result, StringComparison.Ordinal);
 
         TokenSaverBehaviorConfig cfg = _behaviorConfig.GetConfig(_workspaceRoot);
-        Assert.False(cfg.AddTokenSaverToGitignore);
+        Assert.False(cfg.RepoHelper?.AddTokenSaverToGitignore);
     }
 
     [Fact]
-    public void SetGitignorePref_MissingAdd_ReturnsValidationMessage()
+    public async Task SetGitignorePref_MissingAdd_ReturnsValidationMessage()
     {
         ManageConfigTools tools = CreateTools();
 
-        string result = tools.ManageConfig("set-gitignore-pref", add: null, scope: "local");
+        string result = await tools.ManageConfig("set-gitignore-pref", add: null, scope: "local");
 
         Assert.Contains("requires 'add'", result, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void SetGitignorePref_MissingScope_ReturnsValidationMessage()
+    public async Task SetGitignorePref_MissingScope_ReturnsValidationMessage()
     {
         ManageConfigTools tools = CreateTools();
 
-        string result = tools.ManageConfig("set-gitignore-pref", add: true, scope: null);
+        string result = await tools.ManageConfig("set-gitignore-pref", add: true, scope: null);
 
         Assert.Contains("requires 'scope'", result, StringComparison.Ordinal);
     }
@@ -203,11 +223,11 @@ public sealed class ManageConfigToolsTests : IDisposable
     // ── ignore-additional / ignore-bypass ──────────────────────────────────────
 
     [Fact]
-    public void IgnoreAdditional_AppendsPatternsToIgnoreAdditionalFile()
+    public async Task IgnoreAdditional_AppendsPatternsToIgnoreAdditionalFile()
     {
         ManageConfigTools tools = CreateTools();
 
-        string result = tools.ManageConfig("ignore-additional", paths: ["**/generated/**", "*.snap"]);
+        string result = await tools.ManageConfig("ignore-additional", paths: ["**/generated/**", "*.snap"]);
 
         string path = WorkspaceIgnoreFilter.AdditionalPath(_workspaceRoot);
         Assert.True(File.Exists(path));
@@ -218,11 +238,11 @@ public sealed class ManageConfigToolsTests : IDisposable
     }
 
     [Fact]
-    public void IgnoreBypass_AppendsPatternsToIgnoreBypassFile()
+    public async Task IgnoreBypass_AppendsPatternsToIgnoreBypassFile()
     {
         ManageConfigTools tools = CreateTools();
 
-        string result = tools.ManageConfig("ignore-bypass", paths: ["vendor/important.lock"]);
+        string result = await tools.ManageConfig("ignore-bypass", paths: ["vendor/important.lock"]);
 
         string path = WorkspaceIgnoreFilter.BypassPath(_workspaceRoot);
         Assert.True(File.Exists(path));
@@ -231,22 +251,22 @@ public sealed class ManageConfigToolsTests : IDisposable
     }
 
     [Fact]
-    public void IgnoreAdditional_NoPaths_ReturnsGuidanceMessage()
+    public async Task IgnoreAdditional_NoPaths_ReturnsGuidanceMessage()
     {
         ManageConfigTools tools = CreateTools();
 
-        string result = tools.ManageConfig("ignore-additional", paths: null);
+        string result = await tools.ManageConfig("ignore-additional", paths: null);
 
         Assert.Contains("No patterns supplied", result, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void IgnoreAdditional_DuplicatePattern_ReportsNothingAdded()
+    public async Task IgnoreAdditional_DuplicatePattern_ReportsNothingAdded()
     {
         ManageConfigTools tools = CreateTools();
-        tools.ManageConfig("ignore-additional", paths: ["dup.txt"]);
+        await tools.ManageConfig("ignore-additional", paths: ["dup.txt"]);
 
-        string result = tools.ManageConfig("ignore-additional", paths: ["dup.txt"]);
+        string result = await tools.ManageConfig("ignore-additional", paths: ["dup.txt"]);
 
         Assert.Contains("Nothing added", result, StringComparison.Ordinal);
     }
@@ -254,11 +274,11 @@ public sealed class ManageConfigToolsTests : IDisposable
     // ── set ─────────────────────────────────────────────────────────────────
 
     [Fact]
-    public void Set_BoolField_Local_UpdatesConfig()
+    public async Task Set_BoolField_Local_UpdatesConfig()
     {
         ManageConfigTools tools = CreateTools();
 
-        string result = tools.ManageConfig("set", scope: "local", field: "autoIntercept", value: "true");
+        string result = await tools.ManageConfig("set", scope: "local", field: "autoIntercept", value: "true");
 
         Assert.Contains("Set 'autoIntercept' = true (Local)", result, StringComparison.Ordinal);
         TokenSaverBehaviorConfig cfg = _behaviorConfig.GetConfig(_workspaceRoot);
@@ -266,11 +286,11 @@ public sealed class ManageConfigToolsTests : IDisposable
     }
 
     [Fact]
-    public void Set_NumericField_UpdatesConfig()
+    public async Task Set_NumericField_UpdatesConfig()
     {
         ManageConfigTools tools = CreateTools();
 
-        string result = tools.ManageConfig("set", scope: "local", field: "contextSizeLimit", value: "50000");
+        string result = await tools.ManageConfig("set", scope: "local", field: "contextSizeLimit", value: "50000");
 
         Assert.Contains("Set 'contextSizeLimit' = 50000", result, StringComparison.Ordinal);
         TokenSaverBehaviorConfig cfg = _behaviorConfig.GetConfig(_workspaceRoot);
@@ -278,11 +298,11 @@ public sealed class ManageConfigToolsTests : IDisposable
     }
 
     [Fact]
-    public void Set_DoubleField_UpdatesConfig()
+    public async Task Set_DoubleField_UpdatesConfig()
     {
         ManageConfigTools tools = CreateTools();
 
-        string result = tools.ManageConfig("set", scope: "local", field: "wasteThreshold", value: "0.42");
+        string result = await tools.ManageConfig("set", scope: "local", field: "wasteThreshold", value: "0.42");
 
         Assert.Contains("Set 'wasteThreshold' = 0.42", result, StringComparison.Ordinal);
         TokenSaverBehaviorConfig cfg = _behaviorConfig.GetConfig(_workspaceRoot);
@@ -290,65 +310,65 @@ public sealed class ManageConfigToolsTests : IDisposable
     }
 
     [Fact]
-    public void Set_ValueNull_ClearsOverride()
+    public async Task Set_ValueNull_ClearsOverride()
     {
         ManageConfigTools tools = CreateTools();
-        tools.ManageConfig("set", scope: "local", field: "autoIntercept", value: "true");
+        await tools.ManageConfig("set", scope: "local", field: "autoIntercept", value: "true");
         Assert.True(_behaviorConfig.GetConfig(_workspaceRoot).Context?.AutoIntercept);
 
-        string result = tools.ManageConfig("set", scope: "local", field: "autoIntercept", value: null);
+        string result = await tools.ManageConfig("set", scope: "local", field: "autoIntercept", value: null);
 
         Assert.Contains("Cleared override for 'autoIntercept'", result, StringComparison.Ordinal);
         Assert.Null(_behaviorConfig.GetConfig(_workspaceRoot).Context?.AutoIntercept);
     }
 
     [Fact]
-    public void Set_ValueLiteralNull_ClearsOverride()
+    public async Task Set_ValueLiteralNull_ClearsOverride()
     {
         ManageConfigTools tools = CreateTools();
-        tools.ManageConfig("set", scope: "local", field: "autoIntercept", value: "true");
+        await tools.ManageConfig("set", scope: "local", field: "autoIntercept", value: "true");
 
-        string result = tools.ManageConfig("set", scope: "local", field: "autoIntercept", value: "null");
+        string result = await tools.ManageConfig("set", scope: "local", field: "autoIntercept", value: "null");
 
         Assert.Contains("Cleared override for 'autoIntercept'", result, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void Set_UnknownField_ReturnsErrorMessage()
+    public async Task Set_UnknownField_ReturnsErrorMessage()
     {
         ManageConfigTools tools = CreateTools();
 
-        string result = tools.ManageConfig("set", scope: "local", field: "notAField", value: "true");
+        string result = await tools.ManageConfig("set", scope: "local", field: "notAField", value: "true");
 
         Assert.Contains("Unknown field 'notAField'", result, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void Set_MissingField_ReturnsValidationMessage()
+    public async Task Set_MissingField_ReturnsValidationMessage()
     {
         ManageConfigTools tools = CreateTools();
 
-        string result = tools.ManageConfig("set", scope: "local", field: null, value: "true");
+        string result = await tools.ManageConfig("set", scope: "local", field: null, value: "true");
 
         Assert.Contains("requires 'field'", result, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void Set_MissingScope_ReturnsValidationMessage()
+    public async Task Set_MissingScope_ReturnsValidationMessage()
     {
         ManageConfigTools tools = CreateTools();
 
-        string result = tools.ManageConfig("set", scope: null, field: "autoIntercept", value: "true");
+        string result = await tools.ManageConfig("set", scope: null, field: "autoIntercept", value: "true");
 
         Assert.Contains("requires 'scope'", result, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void Set_BoolField_NonBooleanValue_ReturnsErrorMessage()
+    public async Task Set_BoolField_NonBooleanValue_ReturnsErrorMessage()
     {
         ManageConfigTools tools = CreateTools();
 
-        string result = tools.ManageConfig("set", scope: "local", field: "autoIntercept", value: "notabool");
+        string result = await tools.ManageConfig("set", scope: "local", field: "autoIntercept", value: "notabool");
 
         Assert.Contains("expects a boolean value", result, StringComparison.Ordinal);
     }
@@ -366,11 +386,11 @@ public sealed class ManageConfigToolsTests : IDisposable
     // ── set-agent ───────────────────────────────────────────────────────────
 
     [Fact]
-    public void SetAgent_GlobalField_UpdatesTopLevelAgentConfig()
+    public async Task SetAgent_GlobalField_UpdatesTopLevelAgentConfig()
     {
         ManageConfigTools tools = CreateTools();
 
-        string result = tools.ManageConfig("set-agent", scope: "local", field: "enablePromptCaching", value: "true");
+        string result = await tools.ManageConfig("set-agent", scope: "local", field: "enablePromptCaching", value: "true");
 
         Assert.Contains("Set 'global.enablePromptCaching' = true", result, StringComparison.Ordinal);
         TokenSaverBehaviorConfig cfg = _behaviorConfig.GetConfig(_workspaceRoot);
@@ -378,11 +398,11 @@ public sealed class ManageConfigToolsTests : IDisposable
     }
 
     [Fact]
-    public void SetAgent_FamilySpecificOverride_UpdatesFamilySection()
+    public async Task SetAgent_FamilySpecificOverride_UpdatesFamilySection()
     {
         ManageConfigTools tools = CreateTools();
 
-        string result = tools.ManageConfig("set-agent", scope: "local", family: "anthropic", field: "cacheTtlSeconds", value: "3600");
+        string result = await tools.ManageConfig("set-agent", scope: "local", family: "anthropic", field: "cacheTtlSeconds", value: "3600");
 
         Assert.Contains("Set 'anthropic.cacheTtlSeconds' = 3600", result, StringComparison.Ordinal);
         TokenSaverBehaviorConfig cfg = _behaviorConfig.GetConfig(_workspaceRoot);
@@ -398,11 +418,11 @@ public sealed class ManageConfigToolsTests : IDisposable
     // (buggy) behavior rather than the documented contract — see CLAUDE.md's "Known gaps" note
     // about this tool class having zero tests/contract enforcement before this file.
     [Fact]
-    public void SetAgent_DeepSeekTtl_SilentlyNoOpsDespiteReportingSuccess()
+    public async Task SetAgent_DeepSeekTtl_SilentlyNoOpsDespiteReportingSuccess()
     {
         ManageConfigTools tools = CreateTools();
 
-        string result = tools.ManageConfig("set-agent", scope: "local", family: "deepSeek", field: "cacheTtlSeconds", value: "3600");
+        string result = await tools.ManageConfig("set-agent", scope: "local", family: "deepSeek", field: "cacheTtlSeconds", value: "3600");
 
         Assert.Contains("Set 'deepSeek.cacheTtlSeconds' = 3600", result, StringComparison.Ordinal);
         TokenSaverBehaviorConfig cfg = _behaviorConfig.GetConfig(_workspaceRoot);
@@ -421,32 +441,32 @@ public sealed class ManageConfigToolsTests : IDisposable
     }
 
     [Fact]
-    public void SetAgent_DeepSeekMinTokens_SilentlyNoOpsDespiteReportingSuccess()
+    public async Task SetAgent_DeepSeekMinTokens_SilentlyNoOpsDespiteReportingSuccess()
     {
         ManageConfigTools tools = CreateTools();
 
-        string result = tools.ManageConfig("set-agent", scope: "local", family: "deepSeek", field: "minCacheableTokens", value: "1024");
+        string result = await tools.ManageConfig("set-agent", scope: "local", family: "deepSeek", field: "minCacheableTokens", value: "1024");
 
         Assert.Contains("Set 'deepSeek.minCacheableTokens' = 1024", result, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void SetAgent_DeepSeekEnablePromptCaching_IsAllowed()
+    public async Task SetAgent_DeepSeekEnablePromptCaching_IsAllowed()
     {
         ManageConfigTools tools = CreateTools();
 
-        string result = tools.ManageConfig("set-agent", scope: "local", family: "deepSeek", field: "enablePromptCaching", value: "true");
+        string result = await tools.ManageConfig("set-agent", scope: "local", family: "deepSeek", field: "enablePromptCaching", value: "true");
 
         Assert.Contains("Set 'deepSeek.enablePromptCaching' = true", result, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void SetAgent_ValueNull_ClearsOverride()
+    public async Task SetAgent_ValueNull_ClearsOverride()
     {
         ManageConfigTools tools = CreateTools();
-        tools.ManageConfig("set-agent", scope: "local", family: "anthropic", field: "enableContextEditing", value: "true");
+        await tools.ManageConfig("set-agent", scope: "local", family: "anthropic", field: "enableContextEditing", value: "true");
 
-        string result = tools.ManageConfig("set-agent", scope: "local", family: "anthropic", field: "enableContextEditing", value: null);
+        string result = await tools.ManageConfig("set-agent", scope: "local", family: "anthropic", field: "enableContextEditing", value: null);
 
         Assert.Contains("Cleared override for 'anthropic.enableContextEditing'", result, StringComparison.Ordinal);
         TokenSaverBehaviorConfig cfg = _behaviorConfig.GetConfig(_workspaceRoot);
@@ -454,55 +474,55 @@ public sealed class ManageConfigToolsTests : IDisposable
     }
 
     [Fact]
-    public void SetAgent_KvCacheQuantization_OpenSourceOnly()
+    public async Task SetAgent_KvCacheQuantization_OpenSourceOnly()
     {
         ManageConfigTools tools = CreateTools();
 
-        string rejected = tools.ManageConfig("set-agent", scope: "local", family: "anthropic", field: "kvCacheQuantization", value: "q8_0");
+        string rejected = await tools.ManageConfig("set-agent", scope: "local", family: "anthropic", field: "kvCacheQuantization", value: "q8_0");
         Assert.Contains("only valid for family=openSource", rejected, StringComparison.Ordinal);
 
-        string ok = tools.ManageConfig("set-agent", scope: "local", family: "openSource", field: "kvCacheQuantization", value: "q8_0");
+        string ok = await tools.ManageConfig("set-agent", scope: "local", family: "openSource", field: "kvCacheQuantization", value: "q8_0");
         Assert.Contains("Set 'openSource.kvCacheQuantization' = q8_0", ok, StringComparison.Ordinal);
         TokenSaverBehaviorConfig cfg = _behaviorConfig.GetConfig(_workspaceRoot);
         Assert.Equal("q8_0", cfg.AgentConfig?.OpenSource?.KvCacheQuantization);
     }
 
     [Fact]
-    public void SetAgent_KvCacheQuantization_InvalidValue_IsRejected()
+    public async Task SetAgent_KvCacheQuantization_InvalidValue_IsRejected()
     {
         ManageConfigTools tools = CreateTools();
 
-        string result = tools.ManageConfig("set-agent", scope: "local", family: "openSource", field: "kvCacheQuantization", value: "zstd");
+        string result = await tools.ManageConfig("set-agent", scope: "local", family: "openSource", field: "kvCacheQuantization", value: "zstd");
 
         Assert.Contains("expects 'f16', 'q8_0', 'q4_0'", result, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void SetAgent_UnknownFamily_ReturnsErrorMessage()
+    public async Task SetAgent_UnknownFamily_ReturnsErrorMessage()
     {
         ManageConfigTools tools = CreateTools();
 
-        string result = tools.ManageConfig("set-agent", scope: "local", family: "bogus", field: "enablePromptCaching", value: "true");
+        string result = await tools.ManageConfig("set-agent", scope: "local", family: "bogus", field: "enablePromptCaching", value: "true");
 
         Assert.Contains("Unknown family 'bogus'", result, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void SetAgent_MissingField_ReturnsValidationMessage()
+    public async Task SetAgent_MissingField_ReturnsValidationMessage()
     {
         ManageConfigTools tools = CreateTools();
 
-        string result = tools.ManageConfig("set-agent", scope: "local", field: null, value: "true");
+        string result = await tools.ManageConfig("set-agent", scope: "local", field: null, value: "true");
 
         Assert.Contains("requires 'field'", result, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void SetAgent_MissingScope_ReturnsValidationMessage()
+    public async Task SetAgent_MissingScope_ReturnsValidationMessage()
     {
         ManageConfigTools tools = CreateTools();
 
-        string result = tools.ManageConfig("set-agent", scope: null, field: "enablePromptCaching", value: "true");
+        string result = await tools.ManageConfig("set-agent", scope: null, field: "enablePromptCaching", value: "true");
 
         Assert.Contains("requires 'scope'", result, StringComparison.Ordinal);
     }
@@ -510,11 +530,11 @@ public sealed class ManageConfigToolsTests : IDisposable
     // ── set-lazy-context ────────────────────────────────────────────────────
 
     [Fact]
-    public void SetLazyContext_WorkspaceDefault_UpdatesConfig()
+    public async Task SetLazyContext_WorkspaceDefault_UpdatesConfig()
     {
         ManageConfigTools tools = CreateTools();
 
-        string result = tools.ManageConfig("set-lazy-context", scope: "local", value: "true");
+        string result = await tools.ManageConfig("set-lazy-context", scope: "local", value: "true");
 
         Assert.Contains("Set lazyContext default", result, StringComparison.Ordinal);
         TokenSaverBehaviorConfig cfg = _behaviorConfig.GetConfig(_workspaceRoot);
@@ -522,11 +542,11 @@ public sealed class ManageConfigToolsTests : IDisposable
     }
 
     [Fact]
-    public void SetLazyContext_PerClientOverride_UpdatesConfig()
+    public async Task SetLazyContext_PerClientOverride_UpdatesConfig()
     {
         ManageConfigTools tools = CreateTools();
 
-        string result = tools.ManageConfig("set-lazy-context", scope: "local", clientName: "claude-code", value: "true");
+        string result = await tools.ManageConfig("set-lazy-context", scope: "local", clientName: "claude-code", value: "true");
 
         Assert.Contains("Set lazy-context override for 'claude-code' = true", result, StringComparison.Ordinal);
         TokenSaverBehaviorConfig cfg = _behaviorConfig.GetConfig(_workspaceRoot);
@@ -539,11 +559,11 @@ public sealed class ManageConfigToolsTests : IDisposable
     [InlineData("github-copilot")]
     [InlineData("continue")]
     [InlineData("continue.dev")]
-    public void SetLazyContext_HardcodedClientNames_AreRejected(string clientName)
+    public async Task SetLazyContext_HardcodedClientNames_AreRejected(string clientName)
     {
         ManageConfigTools tools = CreateTools();
 
-        string result = tools.ManageConfig("set-lazy-context", scope: "local", clientName: clientName, value: "true");
+        string result = await tools.ManageConfig("set-lazy-context", scope: "local", clientName: clientName, value: "true");
 
         Assert.Contains("cannot be overridden", result, StringComparison.Ordinal);
         TokenSaverBehaviorConfig cfg = _behaviorConfig.GetConfig(_workspaceRoot);
@@ -551,12 +571,12 @@ public sealed class ManageConfigToolsTests : IDisposable
     }
 
     [Fact]
-    public void SetLazyContext_ClearClientOverride_RemovesEntry()
+    public async Task SetLazyContext_ClearClientOverride_RemovesEntry()
     {
         ManageConfigTools tools = CreateTools();
-        tools.ManageConfig("set-lazy-context", scope: "local", clientName: "claude-code", value: "true");
+        await tools.ManageConfig("set-lazy-context", scope: "local", clientName: "claude-code", value: "true");
 
-        string result = tools.ManageConfig("set-lazy-context", scope: "local", clientName: "claude-code", value: null);
+        string result = await tools.ManageConfig("set-lazy-context", scope: "local", clientName: "claude-code", value: null);
 
         Assert.Contains("Cleared lazy-context override for 'claude-code'", result, StringComparison.Ordinal);
         TokenSaverBehaviorConfig cfg = _behaviorConfig.GetConfig(_workspaceRoot);
@@ -564,31 +584,31 @@ public sealed class ManageConfigToolsTests : IDisposable
     }
 
     [Fact]
-    public void SetLazyContext_WorkspaceDefault_CannotBeClearedToNull()
+    public async Task SetLazyContext_WorkspaceDefault_CannotBeClearedToNull()
     {
         ManageConfigTools tools = CreateTools();
 
-        string result = tools.ManageConfig("set-lazy-context", scope: "local", value: null);
+        string result = await tools.ManageConfig("set-lazy-context", scope: "local", value: null);
 
         Assert.Contains("cannot be cleared to null", result, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void SetLazyContext_MissingScope_ReturnsValidationMessage()
+    public async Task SetLazyContext_MissingScope_ReturnsValidationMessage()
     {
         ManageConfigTools tools = CreateTools();
 
-        string result = tools.ManageConfig("set-lazy-context", scope: null, value: "true");
+        string result = await tools.ManageConfig("set-lazy-context", scope: null, value: "true");
 
         Assert.Contains("requires 'scope'", result, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void SetLazyContext_NonBooleanClientValue_ReturnsValidationMessage()
+    public async Task SetLazyContext_NonBooleanClientValue_ReturnsValidationMessage()
     {
         ManageConfigTools tools = CreateTools();
 
-        string result = tools.ManageConfig("set-lazy-context", scope: "local", clientName: "claude-code", value: "maybe");
+        string result = await tools.ManageConfig("set-lazy-context", scope: "local", clientName: "claude-code", value: "maybe");
 
         Assert.Contains("requires 'value' to be true, false, or 'null'", result, StringComparison.Ordinal);
     }

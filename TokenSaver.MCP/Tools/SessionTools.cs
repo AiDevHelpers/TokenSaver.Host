@@ -1,6 +1,7 @@
 using TokenSaver.Library.Configuration;
 using TokenSaver.Library.Contracts;
 using TokenSaver.Library.Models.TokenEconomy;
+using TokenSaver.MCP.Services;
 
 using Microsoft.Extensions.Options;
 
@@ -19,7 +20,10 @@ namespace TokenSaver.MCP.Tools;
 ///     full:true). See TokenSaver/docs/token-economy-tools-contract.md.
 /// </summary>
 [McpServerToolType]
-internal sealed class SessionTools(IDistillationService distill, IOptions<TokenSaverConfig> config)
+internal sealed class SessionTools(
+    IDistillationService distill,
+    IOptions<TokenSaverConfig> config,
+    WorkspaceRootSessionResolver workspaceRootResolver)
 {
     private const int DistillThresholdChars = 4000;
     private readonly TokenSaverConfig _config = config.Value;
@@ -34,8 +38,11 @@ internal sealed class SessionTools(IDistillationService distill, IOptions<TokenS
         [Description("The context blob to save")] string contextBlob,
         [Description("Optional explicit output path; defaults to <WorkspaceRoot>/.tokensaver/sessions/<sessionId>.json")]
         string? outputPath = null,
+        McpServer server = null!,
         CancellationToken ct = default)
     {
+        await workspaceRootResolver.EnsureResolvedAsync(server, ct);
+
         string root = string.IsNullOrWhiteSpace(_config.WorkspaceRoot) ? Directory.GetCurrentDirectory() : _config.WorkspaceRoot;
         string dest = outputPath ?? Path.Combine(root, ".tokensaver", "sessions", $"{sessionId}.json");
         _ = Directory.CreateDirectory(Path.GetDirectoryName(dest)!);

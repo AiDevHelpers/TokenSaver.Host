@@ -1,6 +1,7 @@
 using TokenSaver.Library.Configuration;
 using TokenSaver.Library.Contracts;
 using TokenSaver.Library.Models.TokenEconomy;
+using TokenSaver.MCP.Services;
 
 using Microsoft.Extensions.Options;
 
@@ -22,7 +23,8 @@ namespace TokenSaver.MCP.Tools;
 internal sealed class SemanticIndexTools(
     IRepoIndexer indexer,
     ISemanticSearchService search,
-    IOptions<TokenSaverConfig> config)
+    IOptions<TokenSaverConfig> config,
+    WorkspaceRootSessionResolver workspaceRootResolver)
 {
     private readonly TokenSaverConfig _config = config.Value;
 
@@ -38,8 +40,11 @@ internal sealed class SemanticIndexTools(
         string[]? extensions = null,
         [Description("Max concurrent Ollama calls while indexing")]
         int concurrency = 4,
+        McpServer server = null!,
         CancellationToken ct = default)
     {
+        await workspaceRootResolver.EnsureResolvedAsync(server, ct);
+
         string root = string.IsNullOrWhiteSpace(rootPath) ? _config.WorkspaceRoot : rootPath;
         RepoIndexStats stats = await indexer.IndexRepoAsync(root, extensions, concurrency, ct);
         return JsonSerializer.Serialize(new
@@ -63,8 +68,11 @@ internal sealed class SemanticIndexTools(
         string? pathFilter = null,
         [Description("Number of top results to return (default 5)")]
         int topK = 5,
+        McpServer server = null!,
         CancellationToken ct = default)
     {
+        await workspaceRootResolver.EnsureResolvedAsync(server, ct);
+
         IReadOnlyList<SemanticSearchHit> hits = await search.SearchAsync(_config.WorkspaceRoot, query, pathFilter, topK, ct);
         return JsonSerializer.Serialize(hits.Select(h => new
         {

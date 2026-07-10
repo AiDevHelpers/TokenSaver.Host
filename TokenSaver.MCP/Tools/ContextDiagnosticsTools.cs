@@ -3,6 +3,7 @@ using TokenSaver.Config;
 using TokenSaver.ContextHelper.Models.Diagnostics;
 using TokenSaver.ContextHelper.Pipeline;
 using TokenSaver.Library.Services;
+using TokenSaver.MCP.Services;
 
 using ModelContextProtocol.Server;
 
@@ -17,7 +18,8 @@ internal sealed class ContextDiagnosticsTools(
     ContextCleanerService cleaner,
     ContextPipelineService contextPipeline,
     FolderTreeManager folderTree,
-    WorkspaceConfigManager workspaceConfig)
+    WorkspaceConfigManager workspaceConfig,
+    WorkspaceRootSessionResolver workspaceRootResolver)
 {
     // ── ContextDiag ───────────────────────────────────────────────────────────
 
@@ -59,8 +61,11 @@ internal sealed class ContextDiagnosticsTools(
         string? root = null,
         [Description("Paths to exclude for 'context-exclude' action (workspace-relative directories)")]
         string[]? paths = null,
+        McpServer server = null!,
         CancellationToken ct = default)
     {
+        await workspaceRootResolver.EnsureResolvedAsync(server, ct);
+
         return action.Trim().ToUpperInvariant() switch
         {
             "DESCRIBE" => DoDescribe(filter),

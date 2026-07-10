@@ -10,6 +10,7 @@ using TokenSaver.CodeHelper.Research;
 using TokenSaver.ContextHelper.Models;
 using TokenSaver.ContextHelper.Pipeline;
 using TokenSaver.Library.Configuration;
+using TokenSaver.MCP.Services;
 
 using Microsoft.Extensions.Options;
 
@@ -31,7 +32,8 @@ internal sealed class AutoWorkflowTools(
     ContextCleanerService cleaner,
     ICallerDetectionService detection,
     AgentAdapterRegistry registry,
-    IHttpContextAccessor httpContext)
+    IHttpContextAccessor httpContext,
+    WorkspaceRootSessionResolver workspaceRootResolver)
 {
     private readonly CodeHelperConfig _codeCfg = codeConfig.Value;
     private readonly TokenSaverConfig _libCfg = libConfig.Value;
@@ -58,8 +60,11 @@ internal sealed class AutoWorkflowTools(
         string? skeleton = null,
         [Description("Workspace root override")]
         string? root = null,
+        McpServer server = null!,
         CancellationToken ct = default)
     {
+        await workspaceRootResolver.EnsureResolvedAsync(server, ct);
+
         string r = root ?? _libCfg.WorkspaceRoot;
         return action.Trim().ToUpperInvariant() switch
         {
@@ -186,7 +191,7 @@ internal sealed class AutoWorkflowTools(
         "  feedback — after reviewing CodeHelper scaffold output, report how much the AI had to fix. " +
         "sessionId, aiFixCount, aiFixSeverity (Minor|Major|Critical), and correctionRatio (0.0–1.0) required. " +
         "Adjusts calibration weights so future assessments improve over time.")]
-    public string Calibration(
+    public async Task<string> Calibration(
         [Description("Action: 'toggle', 'stats', or 'feedback'")]
         string action,
         [Description("Enable flag (required for 'toggle'): true to enable, false to disable")]
@@ -204,8 +209,12 @@ internal sealed class AutoWorkflowTools(
         [Description("Optional free-text notes for the audit log (for 'feedback')")]
         string? notes = null,
         [Description("Workspace root override")]
-        string? root = null)
+        string? root = null,
+        McpServer server = null!,
+        CancellationToken ct = default)
     {
+        await workspaceRootResolver.EnsureResolvedAsync(server, ct);
+
         string r = root ?? _libCfg.WorkspaceRoot;
         return action.Trim().ToUpperInvariant() switch
         {

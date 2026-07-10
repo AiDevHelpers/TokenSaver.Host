@@ -8,7 +8,6 @@ using TokenSaver.CodeHelper.AutoWorkflow;
 using TokenSaver.CodeHelper.Calibration;
 using TokenSaver.CodeHelper.Configuration;
 using TokenSaver.CodeHelper.Indexing;
-using TokenSaver.CodeHelper.Models.Index;
 using TokenSaver.CodeHelper.Patching;
 using TokenSaver.CodeHelper.Planning;
 using TokenSaver.CodeHelper.Research;
@@ -22,7 +21,6 @@ using TokenSaver.Library.Configuration;
 using TokenSaver.Library.Contracts;
 using TokenSaver.Database.Context;
 using TokenSaver.Library.Models.AiProviders;
-using TokenSaver.Library.Models.Context;
 using TokenSaver.Library.Services;
 using TokenSaver.MCP.HealthChecks;
 using TokenSaver.MCP.Middleware;
@@ -57,15 +55,91 @@ using System.Diagnostics;
 // EOF, server shuts itself down) just from a different launcher. So this is checked
 // explicitly and always forces HTTP-only under the SCM, regardless of what
 // Console.IsInputRedirected happens to report in that session.
+//
+// TOKENSAVER_NO_SCM=1 (set by scripts/run-dev-server.ps1) forces isWindowsService to false
+// outright — the dev loop must always behave as a plain script/console launch, never routed
+// through Windows Service hosting, regardless of what WindowsServiceHelpers.IsWindowsService()'s
+// own detection would say in whatever context it's invoked from (e.g. a non-interactive
+// automation shell with no attached console looks the same to that heuristic as an actual SCM
+// session).
+bool isWindowsService = Environment.GetEnvironmentVariable("TOKENSAVER_NO_SCM") != "1"
+                        && WindowsServiceHelpers.IsWindowsService();
 bool isStdio = Console.IsInputRedirected
-              && !WindowsServiceHelpers.IsWindowsService()
+              && !isWindowsService
               && Environment.GetEnvironmentVariable("TOKENSAVER_HTTP_ONLY") != "1";
 if (isStdio)
 {
     Console.SetOut(Console.Error);
 }
 
+// ── Pause on unhandled startup failure (interactive console only) ──
+// A crash during startup (bad --server-config path, malformed JSON, etc.) would otherwise print
+// the exception and instantly close the window it's running in — unreadable in practice for any
+// launch that runs in its own window (an elevated relaunch, a double-clicked script). Only wired
+// up for a real interactive console: never under the SCM (nothing attached to read a keypress)
+// and never when stdin is redirected (stdio-spawned MCP host, VS Code extension, CI) — those
+// must fail fast, not hang waiting for input nobody can provide.
+if (!isWindowsService && !Console.IsInputRedirected)
+{
+    AppDomain.CurrentDomain.UnhandledException += (_, e) =>
+    {
+        Console.Error.WriteLine();
+        Console.Error.WriteLine($"Unhandled exception: {e.ExceptionObject}");
+        Console.Error.WriteLine("Press Enter to close this window...");
+        try
+        {
+            _ = Console.ReadLine();
+        }
+        catch (InvalidOperationException)
+        {
+            // No console attached after all — nothing to wait on.
+        }
+    };
+}
+
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
+
+// ── Optional external server config file ──
+// --server-config <path> layers an additional JSON config file on top of the default
+// appsettings.json (already loaded from the content root by CreateBuilder above), taking
+// precedence over it. Defaults to nothing extra loaded — the server config location stays
+// "where it is" (appsettings.json next to the exe) unless this is passed explicitly.
+// scripts/run-dev-server.ps1 uses this to point the dev loop at .tokensaver/dev-appsettings.json
+// instead of mutating the real appsettings.json — always as an absolute path (see below).
+//
+// Must be an absolute path. `dotnet run` sets Directory.GetCurrentDirectory() for the launched
+// app to the project's source directory (same as IHostEnvironment.ContentRootPath), NOT the
+// shell's actual working directory — there is no reliable way from inside the process to recover
+// "the directory the user typed this command from". A relative path here would silently resolve
+// under src\Host\TokenSaver.MCP\ instead of wherever the caller meant, so this fails fast with a
+// clear message instead of a confusing deep FileNotFoundException out of AddJsonFile.
+string? serverConfigPath = GetArgValue(args, "--server-config");
+if (!string.IsNullOrWhiteSpace(serverConfigPath))
+{
+    if (!Path.IsPathRooted(serverConfigPath))
+    {
+        Console.Error.WriteLine(
+            $"--server-config must be an absolute path (got '{serverConfigPath}'). " +
+            "Relative paths resolve against the project's source directory under `dotnet run`, " +
+            "not the shell's working directory — pass a full path instead.");
+        if (!isWindowsService && !Console.IsInputRedirected)
+        {
+            Console.Error.WriteLine("Press Enter to close this window...");
+            try
+            {
+                _ = Console.ReadLine();
+            }
+            catch (InvalidOperationException)
+            {
+                // No console attached after all — nothing to wait on.
+            }
+        }
+
+        Environment.Exit(1);
+    }
+
+    builder.Configuration.AddJsonFile(serverConfigPath, optional: false, reloadOnChange: true);
+}
 
 // ── Windows Service support ──
 // A no-op when launched normally (console, or spawned stdio by an MCP host) — only takes
@@ -73,7 +147,12 @@ WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 // use of the same helper. Lets TokenSaver.MCP be installed as an always-on background
 // service (HTTP mode, serving Copilot/Continue/Cursor on ServerPort) independent of whether
 // Claude Desktop is running its own separate stdio-spawned instance via the .mcpb.
-builder.Host.UseWindowsService(o => o.ServiceName = "TokenSaverMCP");
+// Skipped outright when TOKENSAVER_NO_SCM=1 (see isWindowsService above) — the dev loop must
+// never register with the SCM even if UseWindowsService's own detection would disagree.
+if (isWindowsService)
+{
+    builder.Host.UseWindowsService(o => o.ServiceName = "TokenSaverMCP");
+}
 
 // Microsoft.Extensions.Logging console setup (single-line, yyyy-MM-dd HH:mm:ss timestamps) —
 // the same convention DraftModel.Loader/Program.cs uses, so both projects behave consistently.
@@ -89,9 +168,20 @@ builder.Logging.AddSimpleConsole(o =>
     o.SingleLine = true;
     o.TimestampFormat = "yyyy-MM-dd HH:mm:ss ";
 });
-builder.Logging.SetMinimumLevel(LogLevel.Information);
+builder.Logging.SetMinimumLevel(
+    builder.Configuration.GetValue<bool>($"{TokenSaverConfig.SectionName}:VerboseLogging")
+        ? LogLevel.Debug
+        : LogLevel.Information);
 
-if (WindowsServiceHelpers.IsWindowsService() && OperatingSystem.IsWindows())
+// HttpClientFactory's built-in per-request logging (categories "System.Net.Http.HttpClient.*")
+// logs every failed request at Information level with the full exception ToString (stack trace
+// included) — e.g. a wall of text every time the DraftModel router is unreachable. Silenced down
+// to Warning: OllamaEndpointRegistry already logs one concise line right after ("endpoint ...
+// failed — marked unhealthy"), so nothing meaningful is lost, just the redundant noise on top of
+// it.
+builder.Logging.AddFilter("System.Net.Http.HttpClient", LogLevel.Warning);
+
+if (isWindowsService && OperatingSystem.IsWindows())
 {
     EventLogRegistration.TryAddTokenSaverEventLog(builder.Logging);
 }
@@ -229,35 +319,24 @@ builder.Services.PostConfigure<TokenSaverConfig>(cfg => cfg.OllamaUrl = resolved
 Collection<OllamaEndpointConfig> resolvedEndpoints = ollamaConfig.Endpoints;
 builder.Services.PostConfigure<TokenSaverConfig>(cfg => cfg.Endpoints = resolvedEndpoints);
 
-// Auto-detect WorkspaceRoot by walking up to the nearest repo root.
-// We always walk up (not just when WorkspaceRoot is unset) because the VS Code extension
-// passes its first workspace folder as an env var, which may be a project sub-folder
-// (e.g. F:\mcp\TokenSaver\TokenSaver.MCP) rather than the repo root (F:\mcp).
-// Starting point: configured/env-var WorkspaceRoot if set, otherwise ContentRootPath.
-{
-    string searchFrom = !string.IsNullOrWhiteSpace(ollamaConfig.WorkspaceRoot)
-        ? ollamaConfig.WorkspaceRoot
-        : builder.Environment.ContentRootPath;
-
-    string? resolved = WorkspaceRootResolver.FindRepoRoot(searchFrom);
-
-    // The Windows service is always started by the SCM from C:\Windows\System32 — the walk
-    // above finds nothing from there. Fall back to whatever a previous, cwd-aware launch
-    // (stdio from inside the repo, or the VS Code extension) persisted to a small dedicated
-    // bootstrap file — separate from the user-facing behavior config.json (see
-    // WorkspaceRootResolver's doc comment for why it doesn't belong there).
-    resolved ??= WorkspaceRootResolver.ReadPersistedWorkspaceRoot();
-
-    if (resolved is not null)
-    {
-        ollamaConfig.WorkspaceRoot = resolved;
-        WorkspaceRootResolver.PersistWorkspaceRoot(resolved);
-    }
-}
-
+// WorkspaceRoot is not auto-detected at startup anymore — the server should come up and be
+// usable (health checks, model warm-up) without needing to know which repo it's serving. If it's
+// already known via explicit config/env (e.g. the VS Code extension passes
+// TOKENSAVER_TokenSaver__WorkspaceRoot per-workspace-process), carry that value forward. Otherwise
+// it stays empty until WorkspaceRootSessionResolver resolves it lazily on the first tool call of a
+// connecting session, via that session's MCP roots capability (or a cwd repo-root walk as a
+// fallback for clients that don't support roots) — see that type's doc comment.
 if (!string.IsNullOrWhiteSpace(ollamaConfig.WorkspaceRoot))
 {
     _ = builder.Services.PostConfigure<TokenSaverConfig>(cfg => cfg.WorkspaceRoot = ollamaConfig.WorkspaceRoot);
+}
+
+// TokenSaver:BehaviorConfigPath (defaults to "", meaning {workspaceRoot}/.tokensaver/config.json)
+// is exported as TOKENSAVER_LOCAL_CONFIG_PATH so BehaviorConfigService reads/writes that file
+// instead of the default. See BehaviorConfigService.LocalConfigPath.
+if (!string.IsNullOrWhiteSpace(ollamaConfig.BehaviorConfigPath))
+{
+    Environment.SetEnvironmentVariable("TOKENSAVER_LOCAL_CONFIG_PATH", ollamaConfig.BehaviorConfigPath);
 }
 
 // Register prompt adapter before OllamaService so it's available via DI injection
@@ -359,6 +438,16 @@ builder.Services.AddSingleton<AgentConfigResolver>();
 // complete content because nothing omitted is ever seen again. See LazyContextResolver's doc
 // comment for why Cursor/Copilot/Continue are excluded from user override entirely.
 builder.Services.AddSingleton<LazyContextResolver>();
+
+// Implements repoHelper.optimizeInstructions: on session connect, copies the machine-global
+// Claude instructions into whatever workspace instruction file the connecting tool actually
+// supports (see InstructionSyncResolver for the per-tool target lookup). Off by default.
+builder.Services.AddSingleton<InstructionOptimizerService>();
+
+// Resolves WorkspaceRoot lazily on the first tool call of a connecting session (MCP roots
+// capability, falling back to a cwd repo-root walk) instead of eagerly at process startup — see
+// WorkspaceRootSessionResolver's doc comment.
+builder.Services.AddSingleton<WorkspaceRootSessionResolver>();
 
 // ── Fault tracking ──
 // Records unhandled exceptions from any request (MCP tools/call included) so /health can
@@ -492,11 +581,21 @@ if (!string.IsNullOrWhiteSpace(config.WorkspaceRoot))
     Environment.SetEnvironmentVariable("DRAFTMODEL_WORKSPACE", config.WorkspaceRoot);
 
     // Process-start bootstrap: create .tokensaver/config.json (fully commented template),
-    // .ignore-additional, and .ignore-bypass if they don't exist yet, so the workspace has
-    // discoverable/editable config files from the start instead of relying purely on
-    // missing-file-means-default behavior. Also re-run on every later MCP session connect (see
-    // AgentDetectionMiddleware) so a file deleted after startup gets recreated too.
+    // .ignore-additional, .ignore-bypass, and the machine-global config.json if they don't exist
+    // yet, so the workspace has discoverable/editable config files from the start instead of
+    // relying purely on missing-file-means-default behavior. Also re-run on every later MCP
+    // session connect (see AgentDetectionMiddleware) so a file deleted after startup gets
+    // recreated too.
     WorkspaceConfigDefaults.EnsureDefaults(config.WorkspaceRoot, logger);
+
+    // Config-upgrade pass: a config.json that already exists (created by an older TokenSaver
+    // version) may be missing top-level sections the current schema knows about. Patches those
+    // in without touching anything the user already set — see ConfigUpgradeService.
+    ConfigUpgradeService.UpgradeIfNeeded(config.WorkspaceRoot, logger);
+}
+else
+{
+    Program.LogWorkspaceRootNotConfigured(logger);
 }
 
 // Apply .tokensaver/config.json behavior-config overrides onto CodeHelperConfig/TokenEconomyConfig
@@ -506,66 +605,36 @@ app.Services.GetRequiredService<BehaviorConfigOverlay>().Apply();
 string transportLabel = isStdio ? "stdio+http" : "http";
 Program.LogServerStarting(logger, config.ServerPort, config.OllamaUrl, config.WorkspaceRoot, transportLabel);
 
-// ── Warm up unified index and build initial context ──
-// Per the UnifiedIndex plan (§5): single call WorkspaceIndexService.ReconcileAndWarmAsync()
-// does git-staleness reconciliation then builds/refreshes descriptions only for what's stale.
-// Both operations are skipped when WorkspaceRoot is not configured.
-if (!string.IsNullOrWhiteSpace(config.WorkspaceRoot))
+// ── Warm the model on start ──
+// Independent of WorkspaceRoot: forces DraftModel/Ollama to load a model into memory so the
+// first real tool call isn't the one paying that cold-start cost. Gated by
+// ContextHelperConfig.AutoWarmOnStartup (behavior-config field "context.autoWarmOnStartup", on by
+// default — see BehaviorConfigOverlay.Apply() above, which already ran).
+// Indexing and the full context-pipeline warm-up (which both need a workspace) are NOT started
+// here anymore — they're deferred to WorkspaceRootSessionResolver, which fires them once a
+// session actually resolves a workspace root (see that type's doc comment).
+if (app.Services.GetRequiredService<IOptions<ContextHelperConfig>>().Value.AutoWarmOnStartup)
 {
-    // Indexing is CPU-only — start immediately without waiting for DraftModel.
     _ = Task.Run(async () =>
     {
         try
         {
-            WorkspaceIndexService indexService = app.Services.GetRequiredService<WorkspaceIndexService>();
-            IndexStats stats = await indexService.IndexWorkspaceAsync(config.WorkspaceRoot);
-            Program.LogUnifiedIndexReady(
-                logger, stats.FilesIndexed, stats.SymbolsIndexed, stats.FilesSkipped, stats.Elapsed.TotalSeconds);
+            OllamaService ollama = app.Services.GetRequiredService<OllamaService>();
+            bool ready = await ollama.WaitForReadyAsync(
+                TimeSpan.FromMinutes(10),
+                TimeSpan.FromSeconds(10),
+                logger);
+
+            if (!ready)
+            {
+                Program.LogDraftModelNotAvailable(logger);
+            }
         }
         catch (Exception ex)
         {
-            Program.LogInitialIndexSkipped(logger, ex);
+            Program.LogContextWarmupSkipped(logger, ex);
         }
     });
-
-    // Context warm-up calls the full pipeline (PromptAssessor, SemanticFilter, etc.)
-    // which all need DraftModel — wait until it's reachable before proceeding. Gated by
-    // ContextHelperConfig.AutoWarmOnStartup (behavior-config field "context.autoWarmOnStartup",
-    // on by default — see BehaviorConfigOverlay.Apply() above, which already ran).
-    if (app.Services.GetRequiredService<IOptions<ContextHelperConfig>>().Value.AutoWarmOnStartup)
-    {
-        _ = Task.Run(async () =>
-        {
-            try
-            {
-                OllamaService ollama = app.Services.GetRequiredService<OllamaService>();
-                bool ready = await ollama.WaitForReadyAsync(
-                    TimeSpan.FromMinutes(10),
-                    TimeSpan.FromSeconds(10),
-                    logger);
-
-                if (!ready)
-                {
-                    Program.LogDraftModelNotAvailable(logger);
-                    return;
-                }
-
-                ContextPipelineService contextPipeline = app.Services.GetRequiredService<ContextPipelineService>();
-                BuildContextResult result = await contextPipeline.BuildConciseContextAsync(
-                    "[agent boot] initialize context cache",
-                    sessionId: "agent-boot");
-                Program.LogAgentContextWarmed(logger, result.GeneratedFiles.Count, result.TokenCount);
-            }
-            catch (Exception ex)
-            {
-                Program.LogContextWarmupSkipped(logger, ex);
-            }
-        });
-    }
-}
-else
-{
-    Program.LogWorkspaceRootNotConfigured(logger);
 }
 
 // Listen on * to bind both IPv4 (0.0.0.0) and IPv6 (::) so that clients
@@ -578,6 +647,13 @@ catch (IOException ex) when (ex.InnerException is AddressInUseException)
 {
     Program.LogPortInUse(logger, config.ServerPort);
     Environment.Exit(1);
+}
+
+// ── CLI arg parsing ────────────────────────────────────────────────────────────
+static string? GetArgValue(string[] args, string name)
+{
+    int i = Array.IndexOf(args, name);
+    return i >= 0 && i + 1 < args.Length ? args[i + 1] : null;
 }
 
 // ── Health response writer ────────────────────────────────────────────────────
@@ -612,22 +688,13 @@ internal partial class Program
     [LoggerMessage(Level = LogLevel.Information, Message = "TokenSaver MCP server starting on port {Port}, Ollama router at {Url}, workspace {Workspace}, transport {Transport}")]
     internal static partial void LogServerStarting(ILogger logger, int port, string url, string workspace, string transport);
 
-    [LoggerMessage(Level = LogLevel.Information, Message = "Unified index ready: {Files} files, {Symbols} symbols ({Skipped} unchanged) in {Elapsed:F1}s")]
-    internal static partial void LogUnifiedIndexReady(ILogger logger, int files, int symbols, int skipped, double elapsed);
-
-    [LoggerMessage(Level = LogLevel.Warning, Message = "Initial unified index skipped")]
-    internal static partial void LogInitialIndexSkipped(ILogger logger, Exception ex);
-
-    [LoggerMessage(Level = LogLevel.Warning, Message = "DraftModel not available after 10 min — context warm-up skipped.")]
+    [LoggerMessage(Level = LogLevel.Warning, Message = "DraftModel not available after 10 min — model warm-up skipped.")]
     internal static partial void LogDraftModelNotAvailable(ILogger logger);
 
-    [LoggerMessage(Level = LogLevel.Information, Message = "Agent context warmed: {Generated} generated files, {Tokens} tokens")]
-    internal static partial void LogAgentContextWarmed(ILogger logger, int generated, int tokens);
-
-    [LoggerMessage(Level = LogLevel.Warning, Message = "Context warm-up skipped")]
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Model warm-up skipped")]
     internal static partial void LogContextWarmupSkipped(ILogger logger, Exception ex);
 
-    [LoggerMessage(Level = LogLevel.Information, Message = "WorkspaceRoot not configured — context warm-up and code index skipped. Set TokenSaver:WorkspaceRoot in config or TOKENSAVER_TokenSaver__WorkspaceRoot env var.")]
+    [LoggerMessage(Level = LogLevel.Information, Message = "WorkspaceRoot not configured at startup — indexing and context warm-up deferred until a connecting session resolves one (see WorkspaceRootSessionResolver).")]
     internal static partial void LogWorkspaceRootNotConfigured(ILogger logger);
 
     [LoggerMessage(Level = LogLevel.Critical, Message = "Port {Port} already in use — another TokenSaver.MCP instance is likely already running. Exiting.")]

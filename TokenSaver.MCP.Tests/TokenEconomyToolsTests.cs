@@ -1,6 +1,7 @@
 using TokenSaver.Library.Configuration;
 using TokenSaver.Database.Context;
 using TokenSaver.Library.Services;
+using TokenSaver.MCP.Services;
 using TokenSaver.MCP.Tools;
 
 using Microsoft.Extensions.Logging.Abstractions;
@@ -30,7 +31,8 @@ public class TokenEconomyToolsTests
         ModelRouteResolver modelRoutes = new(Options.Create(cfg));
         SavingsTracker savings = new(new TokenEconomyDbAccessor(), Options.Create(cfg));
         DistillationService distill = new(ollama, modelRoutes, savings, Options.Create(cfg));
-        return new TokenEconomyTools(distill, savings, modelRoutes, ollama, Options.Create(cfg));
+        WorkspaceRootSessionResolver workspaceRootResolver = WorkspaceRootSessionResolverTestFactory.Create(cfg);
+        return new TokenEconomyTools(distill, savings, modelRoutes, ollama, Options.Create(cfg), workspaceRootResolver);
     }
 
     [Fact]

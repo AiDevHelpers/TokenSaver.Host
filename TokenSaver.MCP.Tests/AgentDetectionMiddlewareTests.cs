@@ -29,6 +29,7 @@ namespace TokenSaver.MCP.Tests;
 ///     root, with a spy <see cref="ICallerDetectionService" /> standing in for the real
 ///     detection pipeline so tests can assert whether resolution was attempted.
 /// </summary>
+[Collection("GlobalConfigDirEnvVar")]
 public sealed class AgentDetectionMiddlewareTests
 {
     private sealed class SpyCallerDetectionService : ICallerDetectionService
@@ -59,6 +60,7 @@ public sealed class AgentDetectionMiddlewareTests
                 services.AddSingleton<AgentAdapterRegistry>();
                 services.AddSingleton<BehaviorConfigService>();
                 services.AddSingleton<AgentConfigResolver>();
+                services.AddSingleton<InstructionOptimizerService>();
             })
             .Configure(app =>
             {
@@ -155,7 +157,12 @@ public sealed class AgentDetectionMiddlewareTests
     [Fact]
     public async Task PostToMcp_InitializeMethod_RecreatesMissingLocalConfig()
     {
+        const string globalDirOverrideEnvVar = "TOKENSAVER_GLOBAL_CONFIG_DIR";
         string workspaceRoot = Directory.CreateTempSubdirectory("adwTests-").FullName;
+        // EnsureDefaults also bootstraps the machine-global config; redirect it to a temp dir so
+        // this test never touches (or races on) the real %ProgramData%\TokenSaver\config.json.
+        string globalDir = Directory.CreateTempSubdirectory("adwTests-global-").FullName;
+        Environment.SetEnvironmentVariable(globalDirOverrideEnvVar, globalDir);
         try
         {
             (TestServer server, _) = CreateServer(workspaceRoot);
@@ -173,9 +180,19 @@ public sealed class AgentDetectionMiddlewareTests
         }
         finally
         {
+            Environment.SetEnvironmentVariable(globalDirOverrideEnvVar, null);
+
             try
             {
                 Directory.Delete(workspaceRoot, recursive: true);
+            }
+            catch (IOException)
+            {
+            }
+
+            try
+            {
+                Directory.Delete(globalDir, recursive: true);
             }
             catch (IOException)
             {

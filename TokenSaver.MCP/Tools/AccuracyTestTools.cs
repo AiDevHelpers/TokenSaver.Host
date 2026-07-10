@@ -1,6 +1,7 @@
 using TokenSaver.CodeHelper.Indexing;
 using TokenSaver.Library.Models.Accuracy;
 using TokenSaver.Library.Services;
+using TokenSaver.MCP.Services;
 
 using ModelContextProtocol.Server;
 
@@ -20,7 +21,8 @@ internal sealed class AccuracyTestTools(
     WorkspaceCodeScanner scanner,
     AccuracyTestService tester,
     AgentConfigService agentConfig,
-    WorkspaceConfigManager workspaceIndex)
+    WorkspaceConfigManager workspaceIndex,
+    WorkspaceRootSessionResolver workspaceRootResolver)
 {
     private static readonly JsonSerializerOptions JsonOpts = new() { WriteIndented = true };
 
@@ -60,8 +62,11 @@ internal sealed class AccuracyTestTools(
         // save params
         [Description("JSON object mapping agent type → {systemPrompt, temperature, topP} (required for 'save')")]
         string? proposalsJson = null,
+        McpServer server = null!,
         CancellationToken ct = default)
     {
+        await workspaceRootResolver.EnsureResolvedAsync(server, ct);
+
         return action.Trim().ToUpperInvariant() switch
         {
             "TEST" => await DoTest(confirmed, agentType, maxTests, workspaceRoot, ct),
