@@ -18,6 +18,7 @@ public sealed class InstructionOptimizerServiceTests : IDisposable
     private readonly string _globalConfigDir;
     private readonly string _globalClaudeMdPath;
     private readonly BehaviorConfigService _behaviorConfig;
+    private readonly InstructionCacheService _cache;
     private readonly InstructionOptimizerService _service;
 
     public InstructionOptimizerServiceTests()
@@ -30,12 +31,14 @@ public sealed class InstructionOptimizerServiceTests : IDisposable
         Environment.SetEnvironmentVariable(GlobalClaudeMdEnvVar, _globalClaudeMdPath);
 
         _behaviorConfig = new BehaviorConfigService(NullLogger<BehaviorConfigService>.Instance);
-        _service = new InstructionOptimizerService(_behaviorConfig, NullLogger<InstructionOptimizerService>.Instance);
+        _cache = new InstructionCacheService(NullLogger<InstructionCacheService>.Instance);
+        _service = new InstructionOptimizerService(_behaviorConfig, _cache, NullLogger<InstructionOptimizerService>.Instance);
     }
 
     public void Dispose()
     {
         _behaviorConfig.Dispose();
+        _cache.Dispose();
         Environment.SetEnvironmentVariable(GlobalConfigDirEnvVar, null);
         Environment.SetEnvironmentVariable(GlobalClaudeMdEnvVar, null);
         try
@@ -56,8 +59,12 @@ public sealed class InstructionOptimizerServiceTests : IDisposable
     }
 
     [Fact]
-    public void EnsureSynced_OptimizeInstructionsOff_DoesNothing()
+    public void EnsureSynced_OptimizeInstructionsExplicitlyOff_DoesNothing()
     {
+        _behaviorConfig.Set(_workspaceRoot, ConfigScope.Local, c => c with
+        {
+            RepoHelper = (c.RepoHelper ?? new RepoHelperBehaviorConfig()) with { OptimizeInstructions = false },
+        });
         File.WriteAllText(_globalClaudeMdPath, "# Global rules\nAlways do X.");
         CallerInfo caller = new() { ClientName = "cursor" };
 
@@ -66,15 +73,38 @@ public sealed class InstructionOptimizerServiceTests : IDisposable
         Assert.False(File.Exists(Path.Combine(_workspaceRoot, ".cursor", "rules", "tokensaver-global.mdc")));
     }
 
+    /// <summary>
+    ///     No config.json has ever recorded a value for optimizeInstructions here (neither Set nor
+    ///     EnableOptimizeInstructions was called) — this must still sync, since the feature is
+    ///     documented as on by default and must not depend on
+    ///     <c>WorkspaceConfigDefaults.EnsureDefaults</c> having already written a config.json.
+    /// </summary>
     [Fact]
-    public void EnsureSynced_NoGlobalClaudeMd_DoesNothing()
+    public void EnsureSynced_OptimizeInstructionsUnset_SyncsByDefault()
+    {
+        File.WriteAllText(_globalClaudeMdPath, "# Global rules\nAlways do X.");
+        CallerInfo caller = new() { ClientName = "cursor" };
+
+        _service.EnsureSynced(_workspaceRoot, caller);
+
+        Assert.True(File.Exists(Path.Combine(_workspaceRoot, ".cursor", "rules", "tokensaver-global.mdc")));
+    }
+
+    /// <summary>
+    ///     No CLAUDE.md exists anywhere (global or project) — but since optimizeInstructions is
+    ///     on, InstructionCacheService bootstraps a starter CLAUDE.md at the workspace root (see
+    ///     InstructionCacheServiceTests.EnsureFresh_NoDocsAnywhere_BootstrapsStarterClaudeMdAtWorkspaceRoot)
+    ///     rather than syncing nothing, so this now syncs that bootstrapped doc like any other.
+    /// </summary>
+    [Fact]
+    public void EnsureSynced_NoClaudeMdAnywhere_SyncsBootstrappedStarterDoc()
     {
         EnableOptimizeInstructions();
         CallerInfo caller = new() { ClientName = "cursor" };
 
         _service.EnsureSynced(_workspaceRoot, caller);
 
-        Assert.False(File.Exists(Path.Combine(_workspaceRoot, ".cursor", "rules", "tokensaver-global.mdc")));
+        Assert.True(File.Exists(Path.Combine(_workspaceRoot, ".cursor", "rules", "tokensaver-global.mdc")));
     }
 
     [Fact]
@@ -144,5 +174,45 @@ public sealed class InstructionOptimizerServiceTests : IDisposable
         Assert.Contains("user note, keep me", updated, StringComparison.Ordinal);
         Assert.Contains("Second version.", updated, StringComparison.Ordinal);
         Assert.DoesNotContain("First version.", updated, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void EnsureSynced_AutoSplitUnset_SplitsOversizedSectionByDefaultWithoutTouchingSourceFile()
+    {
+        // Only optimizeInstructions is set explicitly here — autoSplitOversizedInstructions is
+        // left unset, and must still default to on (same as optimizeInstructions itself).
+        EnableOptimizeInstructions();
+        string bigSection = "## Big Section\n" + string.Concat(Enumerable.Repeat("Detail. ", 600));
+        string originalGlobalContent = "# Global\n\nIntro.\n\n" + bigSection;
+        File.WriteAllText(_globalClaudeMdPath, originalGlobalContent);
+        CallerInfo caller = new() { ClientName = "cursor" };
+
+        _service.EnsureSynced(_workspaceRoot, caller);
+
+        // The real source file is never touched — only the synced target reflects the split.
+        Assert.Equal(originalGlobalContent, File.ReadAllText(_globalClaudeMdPath));
+        string synced = File.ReadAllText(Path.Combine(_workspaceRoot, ".cursor", "rules", "tokensaver-global.mdc"));
+        Assert.Contains("loaded on demand", synced, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void EnsureSynced_AutoSplitExplicitlyOff_LeavesOversizedDocUnsplitInSyncedTarget()
+    {
+        _behaviorConfig.Set(_workspaceRoot, ConfigScope.Local, c => c with
+        {
+            RepoHelper = (c.RepoHelper ?? new RepoHelperBehaviorConfig()) with
+            {
+                OptimizeInstructions = true,
+                AutoSplitOversizedInstructions = false,
+            },
+        });
+        string bigSection = "## Big Section\n" + string.Concat(Enumerable.Repeat("Detail. ", 600));
+        File.WriteAllText(_globalClaudeMdPath, "# Global\n\nIntro.\n\n" + bigSection);
+        CallerInfo caller = new() { ClientName = "cursor" };
+
+        _service.EnsureSynced(_workspaceRoot, caller);
+
+        string synced = File.ReadAllText(Path.Combine(_workspaceRoot, ".cursor", "rules", "tokensaver-global.mdc"));
+        Assert.DoesNotContain("loaded on demand", synced, StringComparison.Ordinal);
     }
 }

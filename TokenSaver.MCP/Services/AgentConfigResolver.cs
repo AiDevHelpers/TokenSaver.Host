@@ -45,9 +45,17 @@ public sealed class AgentConfigResolver
     ///     Falls back to workspace defaults with no family narrowing when detection can't identify
     ///     a specific model family (<see cref="DefaultAgentAdapter" /> resolved).
     /// </summary>
-    public AgentConfigResolution Resolve(HttpContext? httpContext, string workspaceRoot)
+    /// <param name="httpContext">The current HTTP context.</param>
+    /// <param name="workspaceRoot">The resolved workspace root.</param>
+    /// <param name="mcpClientName">
+    ///     The connecting MCP client's <c>clientInfo.name</c>, if already known (e.g. parsed from
+    ///     the <c>initialize</c> request body by <c>AgentDetectionMiddleware</c> before the MCP SDK
+    ///     itself has a chance to populate <c>IMcpServer.ClientInfo</c>). Pass null when not
+    ///     available — detection then falls back to header-based signals only.
+    /// </param>
+    public AgentConfigResolution Resolve(HttpContext? httpContext, string workspaceRoot, string? mcpClientName = null)
     {
-        CallerInfo caller = httpContext is not null ? _detection.Detect(httpContext) : new CallerInfo();
+        CallerInfo caller = httpContext is not null ? _detection.Detect(httpContext, mcpClientName) : new CallerInfo();
         IAgentAdapter modelAdapter = _registry.Resolve(caller);
 
         AgentBehaviorConfig? agentConfig = _behaviorConfig.GetConfig(workspaceRoot).AgentConfig;

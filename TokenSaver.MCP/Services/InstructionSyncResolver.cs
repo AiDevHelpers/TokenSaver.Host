@@ -84,6 +84,63 @@ public static class InstructionSyncResolver
 
         return InstructionSyncTarget.Unrecognized;
     }
+
+    /// <summary>
+    ///     Resolves the sync target for one sub-doc (a rule file the main doc lazy-loads on
+    ///     demand — see <see cref="InstructionSubDocParser" />), translating its <c>paths</c>
+    ///     frontmatter into whatever glob field <paramref name="clientName" />'s own rule format
+    ///     uses, so the client's native lazy-loading still applies to it. Returns <see langword="null" />
+    ///     when the main doc itself isn't synced for this client (natively-loaded Claude Code) or
+    ///     when the client has no scoped-rule mechanism to preserve the split into (unrecognized
+    ///     clients fall back to one flat <c>AGENTS.md</c> for the main doc — fragmenting that into
+    ///     per-sub-doc files would abandon the one convention they do support).
+    /// </summary>
+    public static InstructionSyncTarget? ResolveSubDoc(string? clientName, string slug, IReadOnlyList<string> pathGlobs)
+    {
+        InstructionSyncTarget main = Resolve(clientName);
+        if (!main.ShouldSync || main.RelativeFilePath is null)
+        {
+            return null;
+        }
+
+        string? dir = Path.GetDirectoryName(main.RelativeFilePath);
+
+        if (CursorClientNames.Contains(clientName!))
+        {
+            string frontMatter = pathGlobs.Count > 0
+                ? $"---\nglobs:\n{YamlList(pathGlobs)}\nalwaysApply: false\n---\n\n"
+                : "---\nalwaysApply: false\n---\n\n";
+            return new InstructionSyncTarget(
+                true, Path.Combine(dir!, $"tokensaver-{slug}.mdc"), frontMatter,
+                $"Cursor: .cursor/rules/{slug}.mdc (scoped rule file)");
+        }
+
+        if (CopilotClientNames.Contains(clientName!))
+        {
+            string applyTo = pathGlobs.Count > 0 ? string.Join(",", pathGlobs) : "**";
+            return new InstructionSyncTarget(
+                true, Path.Combine(dir!, $"tokensaver-{slug}.instructions.md"), $"---\napplyTo: \"{applyTo}\"\n---\n\n",
+                $"GitHub Copilot: .github/instructions/{slug}.instructions.md (applyTo-scoped)");
+        }
+
+        if (ContinueClientNames.Contains(clientName!))
+        {
+            string globs = pathGlobs.Count > 0
+                ? $"[{string.Join(", ", pathGlobs.Select(g => $"\"{g}\""))}]"
+                : "\"**/*\"";
+            return new InstructionSyncTarget(
+                true, Path.Combine(dir!, $"tokensaver-{slug}.md"), $"---\nglobs: {globs}\n---\n\n",
+                $"Continue.dev: .continue/rules/{slug}.md (globs-scoped)");
+        }
+
+        // Unrecognized clients get one flat AGENTS.md for the main doc and nothing else — there's
+        // no scoped-rule convention to preserve, so a separate per-sub-doc file would just be an
+        // orphan nothing ever reads.
+        return null;
+    }
+
+    private static string YamlList(IReadOnlyList<string> items) =>
+        string.Join('\n', items.Select(i => $"  - \"{i}\""));
 }
 
 /// <summary>

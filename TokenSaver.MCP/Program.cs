@@ -8,6 +8,7 @@ using TokenSaver.CodeHelper.AutoWorkflow;
 using TokenSaver.CodeHelper.Calibration;
 using TokenSaver.CodeHelper.Configuration;
 using TokenSaver.CodeHelper.Indexing;
+using TokenSaver.CodeHelper.ContextSegmentation;
 using TokenSaver.CodeHelper.Patching;
 using TokenSaver.CodeHelper.Planning;
 using TokenSaver.CodeHelper.Research;
@@ -279,6 +280,14 @@ builder.Services.AddSingleton<IFileReindexer>(sp => sp.GetRequiredService<Worksp
 // falling back to the calling AI for architecture/design decisions.
 builder.Services.AddSingleton<DraftModelInterceptorService>();
 
+// ── Adaptive context segmentation ──
+// Intelligently partitions codebase into task-relevant segments, learns access patterns,
+// reduces context window consumption by ~30-50% while preserving task-critical content.
+// TODO: These need to be deferred or created per-session since workspaceRoot is now resolved lazily.
+// builder.Services.AddSingleton<ContextSegmentationService>();
+// builder.Services.AddSingleton<AccessPatternTracker>();
+// builder.Services.AddSingleton<AdaptiveContextLoader>();
+
 // ── MCP context service ──
 builder.Services.AddSingleton<McpContextService>();
 
@@ -465,6 +474,10 @@ builder.Services.AddSingleton<AgentConfigResolver>();
 // complete content because nothing omitted is ever seen again. See LazyContextResolver's doc
 // comment for why Cursor/Copilot/Continue are excluded from user override entirely.
 builder.Services.AddSingleton<LazyContextResolver>();
+
+// Hash-gated .tokensaver/context/instructions/ cache backing InstructionOptimizerService — see
+// InstructionCacheService for the regeneration/file-watcher/injection-lookup details.
+builder.Services.AddSingleton<InstructionCacheService>();
 
 // Implements repoHelper.optimizeInstructions: on session connect, copies the machine-global
 // Claude instructions into whatever workspace instruction file the connecting tool actually

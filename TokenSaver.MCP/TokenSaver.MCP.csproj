@@ -60,6 +60,28 @@
     <InstallerVersion Condition="'$(InstallerVersion)' == ''"></InstallerVersion>
   </PropertyGroup>
 
+  <!--
+    Stops the installed TokenSaverMCP Windows service before a Debug build, if it's running —
+    otherwise an F5/Ctrl+F5 dev session loses the race to bind port 11436 against the service.
+    Mirrors run-dev-server.ps1's own service-stop step. Elevates (one UAC prompt) only when the
+    service is actually running and this process isn't already elevated; a stopped/not-installed
+    service means this is a no-op with no prompt. Scoped to Debug + Windows so it never fires
+    during a Release publish (rebuild-and-replace-mcp.ps1 owns that path) or non-Windows CI.
+  -->
+  <Target Name="StopTokenSaverServiceForDebug" BeforeTargets="Build" Condition="'$(OS)' == 'Windows_NT' AND '$(Configuration)' == 'Debug'">
+    <Exec Command="pwsh -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildThisFileDirectory)..\..\..\scripts\stop-service-for-debug.ps1&quot;" ContinueOnError="WarnAndContinue" />
+  </Target>
+
+  <!--
+    Starts DraftModel.Loader's own dev server (visible terminal, per the standing convention for
+    this stack) before a Debug build, if it isn't already listening on 11435 — TokenSaver.MCP's
+    Ollama-backed features (embeddings, summarization, model routing) are dead without it, and it
+    just backs off every request instead of failing loudly. No-op if something's already up.
+  -->
+  <Target Name="StartDraftModelForDebug" BeforeTargets="Build" Condition="'$(OS)' == 'Windows_NT' AND '$(Configuration)' == 'Debug'">
+    <Exec Command="pwsh -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildThisFileDirectory)..\..\..\scripts\start-draftmodel-for-debug.ps1&quot;" ContinueOnError="WarnAndContinue" />
+  </Target>
+
   <Target Name="BuildTokenSaverInstaller" AfterTargets="Publish" Condition="'$(BuildInstaller)' == 'true'">
     <Error Text="BuildInstaller is only supported on Windows (it packages a Windows service installer via WiX)." Condition="'$(OS)' != 'Windows_NT'" />
     <PropertyGroup>

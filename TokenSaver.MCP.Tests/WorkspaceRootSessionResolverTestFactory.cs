@@ -90,9 +90,14 @@ internal static class WorkspaceRootSessionResolverTestFactory
             new BehaviorConfigService(NullLogger<BehaviorConfigService>.Instance),
             Options.Create(new CodeHelperConfig()), configOptions, contextHelperOptions);
 
+        InstructionOptimizerService instructionOptimizer = new(
+            new BehaviorConfigService(NullLogger<BehaviorConfigService>.Instance),
+            new InstructionCacheService(NullLogger<InstructionCacheService>.Instance),
+            NullLogger<InstructionOptimizerService>.Instance);
+
         return new WorkspaceRootSessionResolver(
             configOptions, contextHelperOptions, indexService, contextPipeline, ollama,
-            behaviorConfigOverlay, NullLogger<WorkspaceRootSessionResolver>.Instance)
+            behaviorConfigOverlay, instructionOptimizer, NullLogger<WorkspaceRootSessionResolver>.Instance)
         {
             SkipBackgroundWarmupForTests = true
         };

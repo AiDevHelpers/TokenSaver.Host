@@ -172,9 +172,13 @@ public sealed class LocalModelHelperToolsTests : IDisposable
         BehaviorConfigOverlay behaviorConfigOverlay = new(
             behaviorConfig, Options.Create(new CodeHelperConfig()), configOptions, contextHelperOptions);
 
+        InstructionOptimizerService instructionOptimizer = new(
+            behaviorConfig, new InstructionCacheService(NullLogger<InstructionCacheService>.Instance),
+            NullLogger<InstructionOptimizerService>.Instance);
+
         WorkspaceRootSessionResolver workspaceRootResolver = new(
             configOptions, contextHelperOptions, orchestrator, contextPipeline, ollama,
-            behaviorConfigOverlay, NullLogger<WorkspaceRootSessionResolver>.Instance)
+            behaviorConfigOverlay, instructionOptimizer, NullLogger<WorkspaceRootSessionResolver>.Instance)
         {
             SkipBackgroundWarmupForTests = true
         };

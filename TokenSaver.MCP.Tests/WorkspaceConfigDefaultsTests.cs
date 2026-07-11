@@ -75,6 +75,7 @@ public sealed class WorkspaceConfigDefaultsTests : IDisposable
         // ...but every actual setting is commented out (no active overrides)...
         Assert.Contains("// \"addTokenSaverToGitignore\": true,", content);
         Assert.Contains("// \"optimizeInstructions\": true", content);
+        Assert.Contains("// \"autoSplitOversizedInstructions\": true", content);
         Assert.Contains("// \"autoEnabled\": true,", content);
         Assert.Contains("// \"enableDistill\": true,", content);
         Assert.Contains("// \"contextSizeLimit\": 120000,", content);
@@ -137,10 +138,12 @@ public sealed class WorkspaceConfigDefaultsTests : IDisposable
 
         // ...but settings are active (uncommented) rather than commented out...
         Assert.Contains("\"optimizeInstructions\": true", content);
+        Assert.Contains("\"autoSplitOversizedInstructions\": true", content);
         Assert.Contains("\"autoEnabled\": true,", content);
         Assert.Contains("\"enableDistill\": true,", content);
         Assert.Contains("\"contextSizeLimit\": 120000,", content);
         Assert.DoesNotContain("// \"optimizeInstructions\": true", content);
+        Assert.DoesNotContain("// \"autoSplitOversizedInstructions\": true", content);
         Assert.DoesNotContain("// \"autoEnabled\": true,", content);
         Assert.DoesNotContain("// \"enableDistill\": true,", content);
 
@@ -163,6 +166,7 @@ public sealed class WorkspaceConfigDefaultsTests : IDisposable
         Assert.NotNull(parsed);
         Assert.Null(parsed!.RepoHelper?.AddTokenSaverToGitignore);
         Assert.True(parsed.RepoHelper?.OptimizeInstructions);
+        Assert.True(parsed.RepoHelper?.AutoSplitOversizedInstructions);
         Assert.Equal(true, parsed.CodeHelper?.AutoEnabled);
         Assert.Equal(120_000, parsed.Context?.ContextSizeLimit);
         Assert.Equal(true, parsed.LazyContext?.Overrides?["claude-code"]);

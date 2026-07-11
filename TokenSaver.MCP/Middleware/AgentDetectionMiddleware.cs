@@ -64,12 +64,20 @@ internal sealed partial class AgentDetectionMiddleware
 
         context.Request.EnableBuffering(bufferThreshold: (int)MaxPeekedBodyBytes);
         string? method = null;
+        string? mcpClientName = null;
         try
         {
             using StreamReader reader = new(context.Request.Body, Encoding.UTF8, leaveOpen: true);
             string body = await reader.ReadToEndAsync();
             context.Request.Body.Position = 0;
-            method = JsonNode.Parse(body)?["method"]?.GetValue<string>();
+            JsonNode? root = JsonNode.Parse(body);
+            method = root?["method"]?.GetValue<string>();
+            // The MCP SDK only populates IMcpServer.ClientInfo once its own handshake pipeline
+            // processes this same request — too late for this middleware, which runs before that.
+            // Read clientInfo.name straight from the initialize params instead so caller detection
+            // (and everything gated on it, e.g. InstructionOptimizerService) sees the real client
+            // on the very first request rather than always falling back to header-only signals.
+            mcpClientName = root?["params"]?["clientInfo"]?["name"]?.GetValue<string>();
         }
         catch
         {
@@ -99,7 +107,7 @@ internal sealed partial class AgentDetectionMiddleware
                     // top-level section missing since the file was created by an older schema.
                     ConfigUpgradeService.UpgradeIfNeeded(workspaceRoot, _logger);
 
-                    AgentConfigResolution resolution = resolver.Resolve(context, workspaceRoot);
+                    AgentConfigResolution resolution = resolver.Resolve(context, workspaceRoot, mcpClientName);
                     if (_logger.IsEnabled(LogLevel.Information))
                     {
                         LogAgentDetected(

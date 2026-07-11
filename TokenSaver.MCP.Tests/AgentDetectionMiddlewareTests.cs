@@ -60,6 +60,7 @@ public sealed class AgentDetectionMiddlewareTests
                 services.AddSingleton<AgentAdapterRegistry>();
                 services.AddSingleton<BehaviorConfigService>();
                 services.AddSingleton<AgentConfigResolver>();
+                services.AddSingleton<InstructionCacheService>();
                 services.AddSingleton<InstructionOptimizerService>();
             })
             .Configure(app =>

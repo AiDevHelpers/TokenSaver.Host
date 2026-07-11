@@ -57,6 +57,10 @@ internal sealed class EndpointRoutingHandler(OllamaEndpointRegistry registry) : 
         {
             throw; // unreachable — RecordFailureAndRethrow always returns false
         }
+        catch (Exception ex)
+        {
+            throw ex;
+        }
     }
 
     private bool RecordFailureAndRethrow(string endpointName)

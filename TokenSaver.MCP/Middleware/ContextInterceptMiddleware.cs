@@ -4,6 +4,7 @@ using TokenSaver.ContextHelper.Configuration;
 using TokenSaver.ContextHelper.Models;
 using TokenSaver.ContextHelper.Pipeline;
 using TokenSaver.Library.Configuration;
+using TokenSaver.MCP.Services;
 
 using Microsoft.Extensions.Options;
 
@@ -43,6 +44,9 @@ internal sealed partial class ContextInterceptMiddleware
     [LoggerMessage(Level = LogLevel.Warning, Message = "Draft model interceptor failed for tool {Tool} — passing through")]
     private static partial void LogDraftModelInterceptorFailed(ILogger logger, Exception ex, string tool);
 
+    [LoggerMessage(Level = LogLevel.Information, Message = "Injected task-type-matched instructions for tool {Tool} (taskType={TaskType})")]
+    private static partial void LogInjectedInstructions(ILogger logger, string tool, TaskType taskType);
+
     private static readonly HashSet<string> _skipTools = new(StringComparer.OrdinalIgnoreCase)
     {
         "clean_and_chat",
@@ -78,7 +82,8 @@ internal sealed partial class ContextInterceptMiddleware
         IOptions<CodeHelperConfig> codeHelperOpts,
         IOptions<ContextHelperConfig> contextHelperOpts,
         ContextCleanerService cleaner,
-        DraftModelInterceptorService draftModelInterceptor)
+        DraftModelInterceptorService draftModelInterceptor,
+        InstructionOptimizerService instructionOptimizer)
     {
         bool autoIntercept = contextHelperOpts.Value.AutoIntercept;
         bool autoEnabled = codeHelperOpts.Value.AutoEnabled;
@@ -160,6 +165,12 @@ internal sealed partial class ContextInterceptMiddleware
             return;
         }
 
+        string workspaceRoot = context.RequestServices
+                .GetService(typeof(IOptions<TokenSaverConfig>))
+            is IOptions<TokenSaverConfig> libOpts
+            ? libOpts.Value.WorkspaceRoot ?? ""
+            : "";
+
         // Step 1: Run context cleaning pipeline (gated on autoIntercept, independent of Step 2)
         string cleanedPrompt = prompt;
         if (autoIntercept)
@@ -178,6 +189,21 @@ internal sealed partial class ContextInterceptMiddleware
 
                 PipelineResult ctxResult = await cleaner.CleanContextAsync(prompt, history);
                 cleanedPrompt = ctxResult.ContextText;
+
+                // Inject a task-type-matched sub-doc (e.g. "when debugging") directly, rather than
+                // relying on the connecting client's own lazy-loading — path-glob-triggered rule
+                // files never fire for a purely conversational request that doesn't touch a
+                // matching file, even when the task itself clearly needs that guidance.
+                TaskType? taskType = ctxResult.Summary?.TaskType;
+                if (taskType is not null && !string.IsNullOrWhiteSpace(workspaceRoot))
+                {
+                    string? injectedDoc = instructionOptimizer.TryInjectRelevantDoc(workspaceRoot, taskType.Value);
+                    if (!string.IsNullOrWhiteSpace(injectedDoc))
+                    {
+                        cleanedPrompt = $"<!-- tokensaver:injected-instructions ({taskType}) -->\n{injectedDoc.Trim()}\n<!-- /tokensaver:injected-instructions -->\n\n{cleanedPrompt}";
+                        LogInjectedInstructions(_logger, toolName, taskType.Value);
+                    }
+                }
 
                 if (!string.IsNullOrWhiteSpace(cleanedPrompt) && cleanedPrompt != prompt)
                 {
@@ -219,12 +245,6 @@ internal sealed partial class ContextInterceptMiddleware
 
         try
         {
-            string workspaceRoot = context.RequestServices
-                    .GetService(typeof(IOptions<TokenSaverConfig>))
-                is IOptions<TokenSaverConfig> libOpts
-                ? libOpts.Value.WorkspaceRoot ?? ""
-                : "";
-
             DraftModelInterceptionResult interceptResult = await draftModelInterceptor.TryInterceptAsync(
                 cleanedPrompt, workspaceRoot, context.RequestAborted);
 

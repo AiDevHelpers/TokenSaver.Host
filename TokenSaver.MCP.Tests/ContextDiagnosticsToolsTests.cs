@@ -131,9 +131,13 @@ public sealed class ContextDiagnosticsToolsTests : IDisposable
         BehaviorConfigOverlay behaviorConfigOverlay = new(
             new BehaviorConfigService(NullLogger<BehaviorConfigService>.Instance),
             Options.Create(codeHelperConfig), tokenSaverOptions, contextHelperOptions);
+        InstructionOptimizerService instructionOptimizer = new(
+            new BehaviorConfigService(NullLogger<BehaviorConfigService>.Instance),
+            new InstructionCacheService(NullLogger<InstructionCacheService>.Instance),
+            NullLogger<InstructionOptimizerService>.Instance);
         WorkspaceRootSessionResolver workspaceRootResolver = new(
             tokenSaverOptions, contextHelperOptions, orchestrator, contextPipeline, ollama,
-            behaviorConfigOverlay, NullLogger<WorkspaceRootSessionResolver>.Instance)
+            behaviorConfigOverlay, instructionOptimizer, NullLogger<WorkspaceRootSessionResolver>.Instance)
         {
             SkipBackgroundWarmupForTests = true
         };

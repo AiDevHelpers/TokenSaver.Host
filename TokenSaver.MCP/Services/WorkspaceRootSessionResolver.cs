@@ -1,3 +1,4 @@
+using TokenSaver.AgentHelpers.Core.Models;
 using TokenSaver.CodeHelper.Configuration;
 using TokenSaver.CodeHelper.Indexing;
 using TokenSaver.CodeHelper.Models.Index;
@@ -63,6 +64,7 @@ internal sealed partial class WorkspaceRootSessionResolver
     private readonly ContextPipelineService _contextPipeline;
     private readonly OllamaService _ollama;
     private readonly BehaviorConfigOverlay _behaviorConfigOverlay;
+    private readonly InstructionOptimizerService _instructionOptimizer;
     private readonly ILogger<WorkspaceRootSessionResolver> _logger;
     private int _warmupTriggered;
 
@@ -82,6 +84,7 @@ internal sealed partial class WorkspaceRootSessionResolver
         ContextPipelineService contextPipeline,
         OllamaService ollama,
         BehaviorConfigOverlay behaviorConfigOverlay,
+        InstructionOptimizerService instructionOptimizer,
         ILogger<WorkspaceRootSessionResolver> logger)
     {
         _config = config.Value;
@@ -90,6 +93,7 @@ internal sealed partial class WorkspaceRootSessionResolver
         _contextPipeline = contextPipeline;
         _ollama = ollama;
         _behaviorConfigOverlay = behaviorConfigOverlay;
+        _instructionOptimizer = instructionOptimizer;
         _logger = logger;
     }
 
@@ -124,6 +128,18 @@ internal sealed partial class WorkspaceRootSessionResolver
         // known then — needed here too since the root may only become known now, after that
         // handshake already ran with an empty WorkspaceRoot.
         WorkspaceConfigDefaults.EnsureDefaults(resolved, _logger);
+
+        // Same rationale as EnsureDefaults above, for InstructionOptimizerService.EnsureSynced —
+        // AgentDetectionMiddleware's own call to it (gated on WorkspaceRoot being non-empty at
+        // that point) is a no-op on the common case where the root only becomes known here, on a
+        // fresh process's first real session connect. Without this fallback call, instruction
+        // sync would silently never run at all for that connect (only on a later one, once
+        // WorkspaceRoot happens to already be populated) despite optimizeInstructions being on by
+        // default. server.ClientInfo is populated by now (this runs after the initialize
+        // handshake completes), so a minimal CallerInfo built directly from it is enough here —
+        // no HttpContext-dependent header/user-agent signals to fall back to like
+        // CallerDetectionService has, but ClientInfo.name is the primary signal anyway.
+        _instructionOptimizer.EnsureSynced(resolved, new CallerInfo { ClientName = server.ClientInfo?.Name ?? "" });
 
         // BehaviorConfigOverlay.Apply() no-ops while WorkspaceRoot is empty (see its own doc
         // comment) — its startup call in Program.cs and any ConfigChanged-triggered call both ran
