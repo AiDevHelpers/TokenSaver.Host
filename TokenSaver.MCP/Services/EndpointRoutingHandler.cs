@@ -53,19 +53,16 @@ internal sealed class EndpointRoutingHandler(OllamaEndpointRegistry registry) : 
 
             return response;
         }
-        catch (Exception) when (RecordFailureAndRethrow(endpoint.Name))
+        catch (HttpRequestException ex)
         {
-            throw; // unreachable — RecordFailureAndRethrow always returns false
+            registry.RecordFailure(endpoint.Name);
+            throw new HttpRequestException(
+                $"Endpoint '{endpoint.Name}' ({endpointBaseUri}) appears to be down: {ex.Message}", ex);
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            throw ex;
+            registry.RecordFailure(endpoint.Name);
+            throw;
         }
-    }
-
-    private bool RecordFailureAndRethrow(string endpointName)
-    {
-        registry.RecordFailure(endpointName);
-        return false;
     }
 }
