@@ -1,5 +1,6 @@
 using TokenSaver.CodeHelper.Indexing;
 using TokenSaver.Config;
+using TokenSaver.Config.Contracts;
 using TokenSaver.Library.Services;
 using TokenSaver.MCP.Services;
 using TokenSaver.Utilities.Services;
@@ -135,7 +136,7 @@ internal sealed class ManageConfigTools(
 
     private string SetLazyContext(string workspaceRoot, string? clientName, string? value, string? scope)
     {
-        if (!TryParseScope(scope, out ConfigScope configScope))
+        if (!TryParseScope(scope, out TokenSaver.Config.Contracts.ConfigScope configScope))
         {
             return "set-lazy-context requires 'scope' to be 'local' or 'global'.";
         }
@@ -232,7 +233,7 @@ internal sealed class ManageConfigTools(
             return "set-agent requires 'field'.";
         }
 
-        if (!TryParseScope(scope, out ConfigScope configScope))
+        if (!TryParseScope(scope, out TokenSaver.Config.Contracts.ConfigScope configScope))
         {
             return "set-agent requires 'scope' to be 'local' or 'global'.";
         }
@@ -422,7 +423,7 @@ internal sealed class ManageConfigTools(
             return "set requires 'field'.";
         }
 
-        if (!TryParseScope(scope, out ConfigScope configScope))
+        if (!TryParseScope(scope, out TokenSaver.Config.Contracts.ConfigScope configScope))
         {
             return "set requires 'scope' to be 'local' or 'global'.";
         }
@@ -571,7 +572,7 @@ internal sealed class ManageConfigTools(
             return "set-gitignore-pref requires 'add' (true or false).";
         }
 
-        if (!TryParseScope(scope, out ConfigScope configScope))
+        if (!TryParseScope(scope, out TokenSaver.Config.Contracts.ConfigScope configScope))
         {
             return "set-gitignore-pref requires 'scope' to be 'local' or 'global'.";
         }
@@ -610,18 +611,18 @@ internal sealed class ManageConfigTools(
             : $"Added {added.Count} {label} pattern(s) to {Path.GetFileName(filePath)}: {string.Join(", ", added)}.";
     }
 
-    private static bool TryParseScope(string? scope, out ConfigScope configScope)
+    private static bool TryParseScope(string? scope, out TokenSaver.Config.Contracts.ConfigScope configScope)
     {
         switch (scope?.Trim().ToLowerInvariant())
         {
             case "local":
-                configScope = ConfigScope.Local;
+                configScope = TokenSaver.Config.Contracts.ConfigScope.Local;
                 return true;
             case "global":
-                configScope = ConfigScope.Global;
+                configScope = TokenSaver.Config.Contracts.ConfigScope.Global;
                 return true;
             default:
-                configScope = ConfigScope.Local;
+                configScope = TokenSaver.Config.Contracts.ConfigScope.Local;
                 return false;
         }
     }
