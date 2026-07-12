@@ -325,6 +325,10 @@ builder.Services.AddSingleton<IDebugOutputCapture, DebugOutputCaptureService>();
 // Manages debug sessions, breakpoints, and step commands in VS Code and Visual Studio.
 builder.Services.AddSingleton<IDebuggerControl, DebuggerControlService>();
 
+// ── Test execution ──
+// Runs unit tests, integrations tests, and tracks test results.
+builder.Services.AddSingleton<ITestRunner, TestRunnerService>();
+
 // ── Token-economy tool surface ──
 // distill()-first design: bulk tool output (test/lint/log/diff text) is compressed locally
 // before it's returned to the calling AI. TokenEconomyDbAccessor is a separate DB-access seam
@@ -546,6 +550,7 @@ IMcpServerBuilder mcpBuilder = builder.Services.AddMcpServer(options =>
     .WithTools<IDELauncherTools>()
     .WithTools<DebugOutputTools>()
     .WithTools<DebuggerControlTools>()
+    .WithTools<TestExecutionTools>()
     .WithResources<DocResourceService>()
     .WithPrompts<BuildConciseContextPrompt>();
 
