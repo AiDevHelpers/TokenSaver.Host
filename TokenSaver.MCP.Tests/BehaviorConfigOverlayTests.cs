@@ -3,6 +3,7 @@ using Microsoft.Extensions.Options;
 
 using TokenSaver.CodeHelper.Configuration;
 using TokenSaver.Config;
+using TokenSaver.Config.Contracts;
 using TokenSaver.ContextHelper.Configuration;
 using TokenSaver.Common.Core.Configuration;
 

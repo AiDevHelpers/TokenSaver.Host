@@ -1,5 +1,6 @@
 using TokenSaver.AgentHelpers.Core.Models;
 using TokenSaver.Config;
+using TokenSaver.Config.Contracts;
 using TokenSaver.MCP.Services;
 
 using Microsoft.Extensions.Logging.Abstractions;
