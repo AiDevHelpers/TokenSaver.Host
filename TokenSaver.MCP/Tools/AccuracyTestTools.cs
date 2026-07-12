@@ -1,5 +1,5 @@
 using TokenSaver.CodeHelper.Indexing;
-using TokenSaver.Library.Models.Accuracy;
+using TokenSaver.TokenEconomy.Models.Accuracy;
 using TokenSaver.Library.Services;
 using TokenSaver.MCP.Services;
 
@@ -9,6 +9,8 @@ using System.ComponentModel;
 using System.Globalization;
 using System.Text;
 using System.Text.Json;
+using TokenSaver.TokenEconomy.Services;
+
 
 namespace TokenSaver.MCP.Tools;
 

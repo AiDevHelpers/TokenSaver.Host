@@ -4,7 +4,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
 using TokenSaver.CodeHelper.Configuration;
-using TokenSaver.Library.Configuration;
+using TokenSaver.Common.Core.Configuration;
 using TokenSaver.MCP.Services;
 
 using Xunit;

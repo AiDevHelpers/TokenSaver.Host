@@ -1,6 +1,6 @@
 using TokenSaver.CodeHelper.Indexing;
 using TokenSaver.CodeHelper.Models.Index;
-using TokenSaver.Library.Configuration;
+using TokenSaver.Common.Core.Configuration;
 
 using Microsoft.Extensions.Options;
 

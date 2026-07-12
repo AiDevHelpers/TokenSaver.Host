@@ -7,7 +7,7 @@ using TokenSaver.AgentHelpers.Core.Models;
 using TokenSaver.AgentHelpers.Core.Services;
 using TokenSaver.CodeHelper.Indexing;
 using TokenSaver.Config;
-using TokenSaver.Library.Configuration;
+using TokenSaver.Common.Core.Configuration;
 using TokenSaver.MCP.Services;
 using TokenSaver.MCP.Tools;
 

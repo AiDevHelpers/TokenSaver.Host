@@ -4,7 +4,7 @@ using TokenSaver.AgentHelpers.Core.Contracts;
 using TokenSaver.AgentHelpers.Core.Models;
 using TokenSaver.AgentHelpers.Core.Services;
 using TokenSaver.Config;
-using TokenSaver.Library.Configuration;
+using TokenSaver.Common.Core.Configuration;
 using TokenSaver.MCP.Middleware;
 using TokenSaver.MCP.Services;
 

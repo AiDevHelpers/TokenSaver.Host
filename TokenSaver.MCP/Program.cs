@@ -20,7 +20,7 @@ using TokenSaver.ContextHelper.Pipeline;
 using TokenSaver.ContextHelper.Pipeline.Stages;
 using TokenSaver.Docs;
 using TokenSaver.Docs.Prompts;
-using TokenSaver.Library.Configuration;
+using TokenSaver.Common.Core.Configuration;
 using TokenSaver.Library.Contracts;
 using TokenSaver.Database.Context;
 using TokenSaver.Library.Models.AiProviders;

@@ -1,9 +1,11 @@
-using TokenSaver.Library.Configuration;
+using TokenSaver.Common.Core.Configuration;
 using TokenSaver.Library.Services;
 using TokenSaver.MCP.Services;
 
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
+using TokenSaver.OllamaIntegration.Services;
+
 
 namespace TokenSaver.MCP.HealthChecks;
 

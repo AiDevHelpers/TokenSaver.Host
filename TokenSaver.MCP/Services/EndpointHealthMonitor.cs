@@ -1,5 +1,6 @@
-using TokenSaver.Library.Configuration;
+using TokenSaver.Common.Core.Configuration;
 using TokenSaver.Library.Services;
+using TokenSaver.OllamaIntegration.Services;
 
 using Microsoft.Extensions.Options;
 
@@ -86,6 +87,7 @@ internal sealed partial class EndpointHealthMonitor(
             cts.CancelAfter(ProbeTimeout);
 
             using HttpResponseMessage response = await client.GetAsync(new Uri(new Uri(url), "/api/tags"), cts.Token);
+
             registry.SetHealth(name, response.IsSuccessStatusCode);
         }
         catch (Exception ex)

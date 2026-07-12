@@ -1,4 +1,4 @@
-using TokenSaver.Library.Configuration;
+using TokenSaver.Common.Core.Configuration;
 using TokenSaver.Library.Services;
 using TokenSaver.MCP.HealthChecks;
 using TokenSaver.MCP.Middleware;

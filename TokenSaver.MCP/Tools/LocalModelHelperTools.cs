@@ -7,10 +7,10 @@ using TokenSaver.Config;
 using TokenSaver.ContextHelper.Models;
 using TokenSaver.ContextHelper.Models.Diagnostics;
 using TokenSaver.ContextHelper.Pipeline;
-using TokenSaver.Library.Configuration;
+using TokenSaver.Common.Core.Configuration;
 using TokenSaver.Library.Models;
 using TokenSaver.Library.Models.AiProviders;
-using TokenSaver.Library.Models.Context;
+using TokenSaver.TokenEconomy.Models.Context;
 using TokenSaver.Library.Services;
 using TokenSaver.MCP.Services;
 
@@ -22,6 +22,9 @@ using System.ComponentModel;
 using System.Text;
 
 using CultureInfo = System.Globalization.CultureInfo;
+using TokenSaver.OllamaIntegration.Services;
+using TokenSaver.TokenEconomy.Contracts;
+using TokenSaver.Utilities.Services;
 
 namespace TokenSaver.MCP.Tools;
 

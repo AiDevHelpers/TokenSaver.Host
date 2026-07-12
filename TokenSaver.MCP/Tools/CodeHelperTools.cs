@@ -11,7 +11,7 @@ using TokenSaver.CodeHelper.Planning;
 using TokenSaver.CodeHelper.Research;
 using TokenSaver.ContextHelper.Models;
 using TokenSaver.ContextHelper.Pipeline;
-using TokenSaver.Library.Configuration;
+using TokenSaver.Common.Core.Configuration;
 using TokenSaver.MCP.Services;
 
 using Microsoft.Extensions.Options;

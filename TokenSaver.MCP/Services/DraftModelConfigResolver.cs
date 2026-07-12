@@ -1,4 +1,4 @@
-using TokenSaver.Library.Configuration;
+using TokenSaver.Common.Core.Configuration;
 
 using System.Text.Json;
 using System.Text.Json.Nodes;

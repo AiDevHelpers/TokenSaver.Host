@@ -1,7 +1,9 @@
-using TokenSaver.Library.Configuration;
+using TokenSaver.Common.Core.Configuration;
 using TokenSaver.Library.Contracts;
-using TokenSaver.Library.Models.TokenEconomy;
+using TokenSaver.TokenEconomy.Models.TokenEconomy;
+using TokenSaver.TokenEconomy.Contracts;
 using TokenSaver.Library.Services;
+using TokenSaver.Utilities.Services;
 using TokenSaver.MCP.Services;
 
 using Microsoft.Extensions.Options;
@@ -245,6 +247,7 @@ internal sealed class DevLoopTools(
         }
 
         using Process process = new() { StartInfo = startInfo };
+
         _ = process.Start();
         string stdout = await process.StandardOutput.ReadToEndAsync(ct);
         string stderr = await process.StandardError.ReadToEndAsync(ct);

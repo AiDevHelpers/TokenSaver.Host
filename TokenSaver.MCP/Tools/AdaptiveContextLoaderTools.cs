@@ -1,7 +1,7 @@
 using TokenSaver.CodeHelper.ContextSegmentation;
 using TokenSaver.CodeHelper.Indexing;
 using TokenSaver.CodeHelper.Planning;
-using TokenSaver.Library.Configuration;
+using TokenSaver.Common.Core.Configuration;
 using TokenSaver.MCP.Services;
 
 using Microsoft.Extensions.Logging;

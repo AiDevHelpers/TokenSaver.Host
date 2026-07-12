@@ -1,7 +1,7 @@
 using System.Text.Json;
 
 using TokenSaver.CodeHelper.Configuration;
-using TokenSaver.Library.Configuration;
+using TokenSaver.Common.Core.Configuration;
 
 using Microsoft.Extensions.Options;
 

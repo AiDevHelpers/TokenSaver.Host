@@ -2,10 +2,12 @@ using TokenSaver.AgentHelpers.Core.Contracts;
 using TokenSaver.AgentHelpers.Core.Models;
 using TokenSaver.AgentHelpers.Core.Services;
 
-using TokenSaver.Library.Configuration;
+using TokenSaver.Common.Core.Configuration;
 using TokenSaver.Library.Services;
 
 using Microsoft.Extensions.Options;
+using TokenSaver.OllamaIntegration.Services;
+
 
 namespace TokenSaver.MCP.Services;
 

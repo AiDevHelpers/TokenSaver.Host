@@ -1,6 +1,6 @@
-using TokenSaver.Library.Configuration;
+using TokenSaver.Common.Core.Configuration;
 using TokenSaver.Library.Contracts;
-using TokenSaver.Library.Models.TokenEconomy;
+using TokenSaver.TokenEconomy.Models.TokenEconomy;
 using TokenSaver.MCP.Services;
 using TokenSaver.MCP.Tools;
 

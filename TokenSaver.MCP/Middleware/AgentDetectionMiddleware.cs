@@ -1,5 +1,5 @@
 using TokenSaver.Config;
-using TokenSaver.Library.Configuration;
+using TokenSaver.Common.Core.Configuration;
 using TokenSaver.MCP.Services;
 
 using Microsoft.Extensions.Options;

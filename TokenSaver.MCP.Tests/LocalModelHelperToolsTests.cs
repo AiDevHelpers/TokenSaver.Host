@@ -15,7 +15,7 @@ using TokenSaver.ContextHelper.Pipeline;
 using TokenSaver.ContextHelper.Pipeline.Stages;
 using TokenSaver.Database.Context;
 using TokenSaver.Database.Context.Entities;
-using TokenSaver.Library.Configuration;
+using TokenSaver.Common.Core.Configuration;
 using TokenSaver.Library.Contracts;
 using TokenSaver.Library.Services;
 using TokenSaver.MCP.Services;

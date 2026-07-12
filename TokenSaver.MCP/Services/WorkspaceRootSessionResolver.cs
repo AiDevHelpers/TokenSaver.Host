@@ -4,8 +4,8 @@ using TokenSaver.CodeHelper.Indexing;
 using TokenSaver.CodeHelper.Models.Index;
 using TokenSaver.Config;
 using TokenSaver.ContextHelper.Configuration;
-using TokenSaver.Library.Configuration;
-using TokenSaver.Library.Models.Context;
+using TokenSaver.Common.Core.Configuration;
+using TokenSaver.TokenEconomy.Models.Context;
 using TokenSaver.Library.Services;
 
 using Microsoft.Extensions.Options;
@@ -13,6 +13,8 @@ using Microsoft.Extensions.Options;
 using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
+using TokenSaver.OllamaIntegration.Services;
+
 
 namespace TokenSaver.MCP.Services;
 
