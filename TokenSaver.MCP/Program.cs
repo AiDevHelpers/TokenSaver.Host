@@ -12,6 +12,7 @@ using TokenSaver.CodeHelper.ContextSegmentation;
 using TokenSaver.CodeHelper.Patching;
 using TokenSaver.CodeHelper.Planning;
 using TokenSaver.CodeHelper.Research;
+using TokenSaver.Common.Core.Contracts;
 using TokenSaver.Config;
 using TokenSaver.ContextHelper.Calibration;
 using TokenSaver.ContextHelper.Configuration;
@@ -272,6 +273,7 @@ builder.Services.AddSingleton<SymbolSearchService>();
 builder.Services.AddSingleton<AiSummarizationService>();
 builder.Services.AddSingleton<DependencyTrackingService>();
 builder.Services.AddSingleton<WorkspaceIndexService>();
+builder.Services.AddSingleton<BuildArtifactDetector>();
 builder.Services.AddSingleton<ContextPipelineService>();
 builder.Services.AddSingleton<IFileReindexer>(sp => sp.GetRequiredService<WorkspaceIndexService>());
 
@@ -309,6 +311,19 @@ builder.Services.AddSingleton<AiProviderConfigService>();
 builder.Services.AddSingleton<WorkspaceCodeScanner>(); // now from TokenSaver.CodeHelper.Indexing
 builder.Services.AddSingleton<AccuracyTestService>();
 builder.Services.AddSingleton<AgentConfigService>();
+
+// ── IDE launcher service ──
+// Handles opening VS Code, Visual Studio, and future IDEs with specified workspaces.
+builder.Services.AddSingleton<IIDELauncher, IDELauncherService>();
+
+// ── Debug output capture ──
+// Captures stdout/stderr from launched processes and IDEs so calling AI can read
+// stack traces, build errors, and diagnostics.
+builder.Services.AddSingleton<IDebugOutputCapture, DebugOutputCaptureService>();
+
+// ── Debugger control ──
+// Manages debug sessions, breakpoints, and step commands in VS Code and Visual Studio.
+builder.Services.AddSingleton<IDebuggerControl, DebuggerControlService>();
 
 // ── Token-economy tool surface ──
 // distill()-first design: bulk tool output (test/lint/log/diff text) is compressed locally
@@ -528,6 +543,9 @@ IMcpServerBuilder mcpBuilder = builder.Services.AddMcpServer(options =>
     .WithTools<DevLoopTools>()
     .WithTools<SemanticIndexTools>()
     .WithTools<ManageConfigTools>()
+    .WithTools<IDELauncherTools>()
+    .WithTools<DebugOutputTools>()
+    .WithTools<DebuggerControlTools>()
     .WithResources<DocResourceService>()
     .WithPrompts<BuildConciseContextPrompt>();
 

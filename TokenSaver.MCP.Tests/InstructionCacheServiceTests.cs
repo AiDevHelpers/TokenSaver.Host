@@ -315,4 +315,44 @@ public sealed class InstructionCacheServiceTests : IDisposable
         string cachedSubDoc = File.ReadAllText(Path.Combine(CacheDir, "subdocs", "big-section.md"));
         Assert.Contains("Detail. ", cachedSubDoc, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public void GetChainSourcePaths_GlobalAndWorkspaceDocsExist_ReturnsBothOutermostFirst()
+    {
+        File.WriteAllText(_globalClaudeMdPath, "# Global rules\nAlways do X.");
+        string workspaceClaudeMdPath = Path.Combine(_workspaceRoot, "CLAUDE.md");
+        File.WriteAllText(workspaceClaudeMdPath, "# Project rules");
+
+        IReadOnlyList<string> paths = InstructionCacheService.GetChainSourcePaths(_workspaceRoot);
+
+        Assert.Equal([_globalClaudeMdPath, workspaceClaudeMdPath], paths);
+    }
+
+    [Fact]
+    public void GetChainSourcePaths_HumanMdExistsAtWorkspaceRoot_PrefersItOverClaudeMd()
+    {
+        string workspaceClaudeMdPath = Path.Combine(_workspaceRoot, "CLAUDE.md");
+        string humanPath = Path.Combine(_workspaceRoot, "CLAUDE.human.md");
+        File.WriteAllText(workspaceClaudeMdPath, "# Generated pointer");
+        File.WriteAllText(humanPath, "# Hand-authored source");
+
+        IReadOnlyList<string> paths = InstructionCacheService.GetChainSourcePaths(_workspaceRoot);
+
+        Assert.Equal([humanPath], paths);
+    }
+
+    [Fact]
+    public void EnsureFresh_HumanMdExistsAtWorkspaceRoot_ReadsItsContentInsteadOfClaudeMd()
+    {
+        string workspaceClaudeMdPath = Path.Combine(_workspaceRoot, "CLAUDE.md");
+        string humanPath = Path.Combine(_workspaceRoot, "CLAUDE.human.md");
+        File.WriteAllText(workspaceClaudeMdPath, "# Generated pointer, ignore me");
+        File.WriteAllText(humanPath, "# Hand-authored source content");
+
+        _cache.EnsureFresh(_workspaceRoot);
+
+        string cachedMain = File.ReadAllText(InstructionCacheService.MainDocCachePath(_workspaceRoot));
+        Assert.Contains("Hand-authored source content", cachedMain, StringComparison.Ordinal);
+        Assert.DoesNotContain("Generated pointer, ignore me", cachedMain, StringComparison.Ordinal);
+    }
 }

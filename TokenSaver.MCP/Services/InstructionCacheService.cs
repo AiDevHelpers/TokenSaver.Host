@@ -216,8 +216,8 @@ public sealed partial class InstructionCacheService : IDisposable
         DirectoryInfo? dir = new(workspaceRoot);
         while (dir is not null)
         {
-            string candidate = Path.Combine(dir.FullName, "CLAUDE.md");
-            if (!string.Equals(candidate, globalPath, StringComparison.OrdinalIgnoreCase) && File.Exists(candidate))
+            string? candidate = ResolveClaudeMdCandidate(dir.FullName);
+            if (candidate is not null && !string.Equals(candidate, globalPath, StringComparison.OrdinalIgnoreCase))
             {
                 projectPaths.Add(candidate);
             }
@@ -238,6 +238,39 @@ public sealed partial class InstructionCacheService : IDisposable
         }
 
         return chain;
+    }
+
+    /// <summary>
+    ///     Resolves the CLAUDE.md-equivalent file for one directory level in the chain walk,
+    ///     preferring <c>CLAUDE.human.md</c> over <c>CLAUDE.md</c> when both exist. In practice
+    ///     only the workspace root ever has a <c>CLAUDE.human.md</c> — the rename that creates it
+    ///     (<c>InstructionOptimizerService.EnsureHumanSourcePreserved</c>, gated behind
+    ///     <c>repoHelper.combineClaudeMdForClaudeCode</c>) is scoped to the workspace root only, so
+    ///     ancestor repos and the global instructions file are never renamed. Checking every level
+    ///     uniformly costs nothing and avoids a special case for "only the last level."
+    /// </summary>
+    private static string? ResolveClaudeMdCandidate(string directory)
+    {
+        string humanPath = Path.Combine(directory, "CLAUDE.human.md");
+        if (File.Exists(humanPath))
+        {
+            return humanPath;
+        }
+
+        string claudeMdPath = Path.Combine(directory, "CLAUDE.md");
+        return File.Exists(claudeMdPath) ? claudeMdPath : null;
+    }
+
+    /// <summary>
+    ///     Resolves the same chain as <see cref="EnsureFresh" /> (global instructions, then every
+    ///     ancestor repo's CLAUDE.md, then the workspace root's own, outermost first) but returns
+    ///     only the source paths — used by <c>ClaudeMdExcludesWriter</c> to know which files'
+    ///     content has been folded into the workspace's regenerated <c>CLAUDE.md</c>, so Claude
+    ///     Code's own <c>claudeMdExcludes</c> setting can skip loading them a second time natively.
+    /// </summary>
+    public static IReadOnlyList<string> GetChainSourcePaths(string workspaceRoot)
+    {
+        return [.. DiscoverClaudeMdChain(workspaceRoot).Select(entry => entry.Path)];
     }
 
     /// <summary>

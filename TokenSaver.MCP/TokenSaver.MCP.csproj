@@ -13,6 +13,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\Core\TokenSaver.CodeHelper\TokenSaver.CodeHelper.csproj" />
+    <ProjectReference Include="..\..\Core\TokenSaver.Common.Core\TokenSaver.Common.Core.csproj" />
     <ProjectReference Include="..\..\Core\TokenSaver.Config\TokenSaver.Config.csproj" />
     <ProjectReference Include="..\..\Core\TokenSaver.ContextHelper\TokenSaver.ContextHelper.csproj" />
     <ProjectReference Include="..\..\Core\TokenSaver.Docs\TokenSaver.Docs.csproj" />

@@ -148,7 +148,8 @@ public sealed class LocalModelHelperToolsTests : IDisposable
 
         ContextPipelineService contextPipeline = new(
             accessor, cleaner, gitStaleness, workspaceConfig, orchestrator, semanticIndexTrigger,
-            savings, calibration, configOptions);
+            savings, calibration, new BuildArtifactDetector(NullLogger<BuildArtifactDetector>.Instance),
+            new BehaviorConfigService(NullLogger<BehaviorConfigService>.Instance), configOptions);
 
         AiProviderConfigService aiProviders = new();
 

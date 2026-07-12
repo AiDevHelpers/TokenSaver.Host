@@ -126,7 +126,8 @@ public sealed class ContextDiagnosticsToolsTests : IDisposable
 
         ContextPipelineService contextPipeline = new(
             accessor, cleaner, gitStaleness, workspaceConfig, orchestrator, semanticIndexTrigger,
-            savings, calibration, tokenSaverOptions);
+            savings, calibration, new BuildArtifactDetector(NullLogger<BuildArtifactDetector>.Instance),
+            new BehaviorConfigService(NullLogger<BehaviorConfigService>.Instance), tokenSaverOptions);
 
         BehaviorConfigOverlay behaviorConfigOverlay = new(
             new BehaviorConfigService(NullLogger<BehaviorConfigService>.Instance),

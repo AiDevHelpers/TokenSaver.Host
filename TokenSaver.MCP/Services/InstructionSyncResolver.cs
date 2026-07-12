@@ -16,8 +16,12 @@ namespace TokenSaver.MCP.Services;
 ///     <c>.github/copilot-instructions.md</c>); Continue.dev's <c>.continue/rules/*.md</c>
 ///     (<c>globs</c> frontmatter). Claude Code already natively auto-loads the real
 ///     <c>%USERPROFILE%\.claude\CLAUDE.md</c> into every session for every repo on this machine —
-///     copying it into the repo too would just be a redundant duplicate, so Claude Code resolves
-///     to "don't sync" rather than a target file.
+///     copying it into the repo too would just be a redundant duplicate, so <see cref="Resolve" />
+///     resolves it to "don't sync" rather than a target file. When
+///     <c>repoHelper.combineClaudeMdForClaudeCode</c> is explicitly on, though, native loading
+///     stops being optimal (no dedup across the chain, no size-based lazy loading) — that path is
+///     handled separately by <c>InstructionOptimizerService.SyncClaudeCodeCombinedFile</c>, not by
+///     <see cref="Resolve" />; see <see cref="IsClaudeCodeClient" />.
 ///     </para>
 /// </summary>
 public static class InstructionSyncResolver
@@ -41,6 +45,72 @@ public static class InstructionSyncResolver
     {
         "continue", "continue.dev", "continuedev",
     };
+
+    /// <summary>
+    ///     Short, tool-specific "how this client actually uses instructions" tips, prepended by
+    ///     callers that want to hint at best practices for the client an instruction file is being
+    ///     synced to. Mirrors the researched-quirks style already used in
+    ///     <c>TokenSaver.AgentHelpers.OpenSource.CursorClientAdapter</c>'s doc comments (a
+    ///     different concern — that class formats <em>context</em>, not instruction files — hence
+    ///     this lives here rather than folding instruction-writing guidance into
+    ///     <c>IAgentAdapter</c>). Returns <see langword="null" /> for unrecognized clients.
+    /// </summary>
+    public static string? InstructionWritingTips(string? clientName)
+    {
+        if (string.IsNullOrEmpty(clientName))
+        {
+            return null;
+        }
+
+        if (ClaudeCodeClientNames.Contains(clientName))
+        {
+            return "Claude Code loads CLAUDE.md in full every session — keep it short and terse; " +
+                   "push conditional/bulky guidance into `.claude/rules/*.md` with `paths:` frontmatter " +
+                   "so it only loads when a matching file is read.";
+        }
+
+        if (CursorClientNames.Contains(clientName))
+        {
+            return "Cursor re-reads files independently and does a lossy summarization pass once its " +
+                   "context fills — prefer fewer, complete rule files over many shallow ones.";
+        }
+
+        if (CopilotClientNames.Contains(clientName))
+        {
+            return "Copilot's `applyTo` glob frontmatter is the only lazy-load mechanism it has — " +
+                   "instructions without a matching `applyTo` scope load for every request.";
+        }
+
+        if (ContinueClientNames.Contains(clientName))
+        {
+            return "Continue.dev's `globs` frontmatter scopes a rule to matching files — leave it " +
+                   "unset only for guidance that truly applies repo-wide.";
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    ///     True when <paramref name="clientName" /> is a recognized Claude Code client name — used
+    ///     by <c>InstructionOptimizerService</c> to gate the
+    ///     <c>repoHelper.combineClaudeMdForClaudeCode</c> path, which is a fundamentally different
+    ///     sync mechanism from <see cref="Resolve" />'s managed-block-in-a-generated-file targets
+    ///     (it rewrites the real project <c>CLAUDE.md</c> instead).
+    /// </summary>
+    public static bool IsClaudeCodeClient(string? clientName) =>
+        !string.IsNullOrEmpty(clientName) && ClaudeCodeClientNames.Contains(clientName);
+
+    /// <summary>
+    ///     Formats Claude Code's own <c>.claude/rules/*.md</c> frontmatter for one extracted
+    ///     sub-doc — a <c>paths:</c> YAML list, the same convention this repo's own rule files use
+    ///     (see <c>.claude/rules/commands.md</c>). Empty when <paramref name="pathGlobs" /> is
+    ///     empty, matching Claude Code's documented behavior that a rule with no <c>paths</c> field
+    ///     loads unconditionally at every session start rather than being skipped.
+    /// </summary>
+    public static string ClaudeCodeRuleFrontMatter(IReadOnlyList<string> pathGlobs)
+    {
+        return pathGlobs.Count > 0 ? $"---\npaths:\n{YamlList(pathGlobs)}\n---\n\n" : "";
+    }
 
     /// <summary>Resolves the sync target for <paramref name="clientName" />, workspace-root-relative.</summary>
     public static InstructionSyncTarget Resolve(string? clientName)

@@ -84,7 +84,8 @@ internal static class WorkspaceRootSessionResolverTestFactory
 
         ContextPipelineService contextPipeline = new(
             accessor, cleaner, gitStaleness, workspaceConfig, indexService, semanticIndexTrigger,
-            savings, calibration, configOptions);
+            savings, calibration, new BuildArtifactDetector(NullLogger<BuildArtifactDetector>.Instance),
+            new BehaviorConfigService(NullLogger<BehaviorConfigService>.Instance), configOptions);
 
         BehaviorConfigOverlay behaviorConfigOverlay = new(
             new BehaviorConfigService(NullLogger<BehaviorConfigService>.Instance),
