@@ -3,6 +3,7 @@ using TokenSaver.Library.Services;
 using TokenSaver.MCP.HealthChecks;
 using TokenSaver.MCP.Middleware;
 using TokenSaver.MCP.Services;
+using TokenSaver.OllamaIntegration.Services;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;

@@ -24,6 +24,7 @@ using System.Text;
 using CultureInfo = System.Globalization.CultureInfo;
 using TokenSaver.OllamaIntegration.Services;
 using TokenSaver.TokenEconomy.Contracts;
+using TokenSaver.TokenEconomy.Services;
 using TokenSaver.Utilities.Services;
 
 namespace TokenSaver.MCP.Tools;

@@ -20,6 +20,10 @@ using TokenSaver.Library.Contracts;
 using TokenSaver.Library.Services;
 using TokenSaver.MCP.Services;
 using TokenSaver.MCP.Tools;
+using TokenSaver.OllamaIntegration.Services;
+using TokenSaver.TokenEconomy.Contracts;
+using TokenSaver.TokenEconomy.Services;
+using TokenSaver.Utilities.Services;
 
 using Xunit;
 
