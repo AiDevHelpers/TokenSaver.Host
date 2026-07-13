@@ -13,11 +13,10 @@ using TokenSaver.CodeHelper.Contracts;
 using TokenSaver.Config.Contracts;
 using TokenSaver.Common.Core.Configuration;
 using TokenSaver.Common.Core.Contracts;
-using TokenSaver.Library.Contracts;
+using TokenSaver.Common.Contracts;
+using TokenSaver.Common.Models;
 using TokenSaver.Config;
 using TokenSaver.Database.Context;
-using TokenSaver.Library.Models.AiProviders;
-using TokenSaver.Library.Services;
 using TokenSaver.OllamaIntegration.Services;
 using TokenSaver.TokenEconomy.Contracts;
 using TokenSaver.TokenEconomy.Services;
@@ -30,6 +29,7 @@ using TokenSaver.AgentHelpers.Qwen;
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Configuration;
 
 namespace TokenSaver.MCP.Services;
 
@@ -98,7 +98,8 @@ internal static class ServiceRegistrationExtensions
         services.AddSingleton<WorkspaceIndexService>();
         services.AddSingleton<IWorkspaceIndexService>(sp => sp.GetRequiredService<WorkspaceIndexService>());
         services.AddSingleton<BuildArtifactDetector>();
-        services.AddSingleton<IContextPipelineService, ContextPipelineService>();
+        services.AddSingleton<ContextPipelineService>();
+        services.AddSingleton<IContextPipelineService>(sp => sp.GetRequiredService<ContextPipelineService>());
         services.AddSingleton<IFileReindexer>(sp => sp.GetRequiredService<WorkspaceIndexService>());
         return services;
     }
@@ -136,6 +137,11 @@ internal static class ServiceRegistrationExtensions
     }
 
     /// <summary>Register HTTP clients for Ollama endpoint communication.</summary>
+    /// <remarks>
+    ///     The User-Agent header is applied globally via <c>ConfigureHttpClientDefaults</c> in
+    ///     Program.cs (so background probe clients created through
+    ///     <see cref="IHttpClientFactory.CreateClient()" /> are attributed too), not per-client here.
+    /// </remarks>
     public static IServiceCollection AddOllamaHttpClients(this IServiceCollection services, TokenSaverConfig config)
     {
         services.AddSingleton<OllamaEndpointRegistry>();
@@ -162,6 +168,7 @@ internal static class ServiceRegistrationExtensions
     }
 
     /// <summary>Register HTTP clients for pipeline stages that call the model.</summary>
+    /// <remarks>The User-Agent header is applied globally — see <see cref="AddOllamaHttpClients" />.</remarks>
     public static IServiceCollection AddPipelineHttpClients(this IServiceCollection services, TokenSaverConfig config)
     {
         const string PassthroughAgent = "passthrough";  // Tells DraftModel router not to switch agents
@@ -268,6 +275,37 @@ internal static class ServiceRegistrationExtensions
         services.AddSingleton<IDebuggerApiClient, DebuggerApiImplementation>();
         services.AddSingleton<IDebugOutputCapture, DebugOutputCaptureService>();
         services.AddSingleton<IIDELauncher, IDELauncherService>();
+
+        // Phase 1: Foundation — Structured event capture, problem tracking, and client tracking
+        services.AddSingleton<DebuggerEventService>();
+        services.AddSingleton<IDebuggerEventCapture>(sp => sp.GetRequiredService<DebuggerEventService>());
+        services.AddSingleton<DebuggerProblemService>();
+        services.AddSingleton<IDebuggerProblemCapture>(sp => sp.GetRequiredService<DebuggerProblemService>());
+        services.AddSingleton<IClientDebugContextService, ClientDebugContextService>();
+
+        // Phase 2: Streaming endpoints and real-time event distribution
+        services.AddSingleton<DebuggerEventStreamManager>(sp =>
+            new DebuggerEventStreamManager(
+                sp.GetRequiredService<ILogger<DebuggerEventStreamManager>>(),
+                sp.GetRequiredService<IDebuggerEventCapture>()));
+
+        // Phase 3: Persistence and historical analysis
+        services.AddHostedService<DebuggerEventLogWriter>(sp =>
+            new DebuggerEventLogWriter(
+                sp.GetRequiredService<ILogger<DebuggerEventLogWriter>>(),
+                sp.GetRequiredService<IDebuggerEventCapture>()));
+
+        services.AddHostedService<DebuggerProblemLogWriter>(sp =>
+            new DebuggerProblemLogWriter(
+                sp.GetRequiredService<ILogger<DebuggerProblemLogWriter>>(),
+                sp.GetRequiredService<IDebuggerProblemCapture>()));
+
+        services.AddSingleton<DebuggerEventQueryService>();
+        services.AddSingleton<DebuggerProblemQueryService>();
+
+        // Phase 4: Multi-client extension integration
+        services.AddSingleton<ExtensionRegistryService>();
+
         return services;
     }
 }

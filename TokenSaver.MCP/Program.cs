@@ -12,18 +12,20 @@ using System.Diagnostics;
 
 using TokenSaver.Common.Logging;
 using TokenSaver.Common.Core.Configuration;
+using TokenSaver.Common.Installation;
+using TokenSaver.Common.Models;
 using TokenSaver.Config;
 using TokenSaver.Database.Context;
 using TokenSaver.Docs;
 using TokenSaver.Docs.Prompts;
-using TokenSaver.Library.Models.AiProviders;
-using TokenSaver.Library.Services;
 using TokenSaver.CodeHelper.Indexing;
 using TokenSaver.MCP.HealthChecks;
 using TokenSaver.MCP.Middleware;
 using TokenSaver.MCP.Services;
 using TokenSaver.MCP.Tools;
 using TokenSaver.MCP;
+using TokenSaver.MCP.Endpoints;
+using TokenSaver.MCP.Middleware;
 using TokenSaver.OllamaIntegration.Services;
 
 // ── Stdio detection ──
@@ -191,6 +193,20 @@ if (!string.IsNullOrWhiteSpace(ollamaConfig.BehaviorConfigPath))
 // ── REGISTER SERVICES (via extension methods) ──
 // ═══════════════════════════════════════════════════════════════════════════════
 
+// Compute User-Agent header with version for DraftModel requests
+string version = VersionDetector.GetVersionString();
+string userAgent = $"TokenSaver/{version}";
+
+// Stamp the User-Agent on EVERY HttpClient the factory produces — including the unnamed
+// clients created via IHttpClientFactory.CreateClient() by the background probes
+// (EndpointHealthMonitor's /api/tags poll, McpRegistrationCheckService's /health poll). Without
+// this, those probes reach DraftModel.Loader's router with no User-Agent and show up as an
+// unidentified caller in its request log. Applying it here (rather than per-typed-client) keeps
+// the identifier in one place and guarantees any future HttpClient is attributed too.
+builder.Services.ConfigureHttpClientDefaults(http =>
+    http.ConfigureHttpClient(client =>
+        client.DefaultRequestHeaders.UserAgent.ParseAdd(userAgent)));
+
 builder.Services
     .AddConfigurationSections(builder.Configuration)
     .AddContextPipeline()
@@ -233,6 +249,7 @@ IMcpServerBuilder mcpBuilder = builder.Services.AddMcpServer(options =>
     .WithTools<IDELauncherTools>()
     .WithTools<DebugOutputTools>()
     .WithTools<DebuggerControlTools>()
+    .WithTools<DebuggerAnalysisTools>()
     .WithTools<TestExecutionTools>()
     .WithResources<DocResourceService>()
     .WithPrompts<BuildConciseContextPrompt>();
@@ -250,9 +267,11 @@ WebApplication app = builder.Build();
 
 // ── Middleware pipeline ──
 // Ordered for correct exception/context handling:
-// 1. FaultTracking (wraps everything)
-// 2. AgentDetection (peeks handshake for model family)
-// 3. ContextIntercept (intercepts/modifies context)
+// 1. DebuggerContext (captures extension info and timing)
+// 2. FaultTracking (wraps everything)
+// 3. AgentDetection (peeks handshake for model family)
+// 4. ContextIntercept (intercepts/modifies context)
+app.UseDebuggerContextInterceptor();
 app.UseMiddleware<FaultTrackingMiddleware>();
 app.UseMiddleware<AgentDetectionMiddleware>();
 app.UseMiddleware<ContextInterceptMiddleware>();
@@ -262,6 +281,9 @@ app.MapMcp("/mcp");
 
 // ── Map Debugger API endpoints (for VS Code extension) ──
 app.MapDebuggerEndpoints();
+
+// ── Map Debugger Streaming endpoints (Server-Sent Events) ──
+app.MapDebuggerStreamingEndpoints();
 
 // ── Map provider-registration endpoint (disabled, compatibility only) ──
 app.MapGet("/api/register-providers", async (
