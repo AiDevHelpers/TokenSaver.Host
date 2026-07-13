@@ -135,7 +135,7 @@ public sealed class LocalModelHelperToolsTests : IDisposable
 
         FolderTreeManager folderTree = new(accessor, workspaceConfig, NullLogger<FolderTreeManager>.Instance);
         AiSummarizationService aiSummarization = new(NullLogger<AiSummarizationService>.Instance);
-        DraftModelCapacityClient capacityClient = new(UnreachableHttpClient(), NullLogger<DraftModelCapacityClient>.Instance);
+        SimpleModelServerCapacityClient capacityClient = new(UnreachableHttpClient(), NullLogger<SimpleModelServerCapacityClient>.Instance);
 
         WorkspaceIndexService orchestrator = new(
             Options.Create(new CodeHelperConfig()), [], accessor, gitStaleness, folderTree,

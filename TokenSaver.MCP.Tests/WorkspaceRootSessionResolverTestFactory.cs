@@ -49,7 +49,7 @@ internal static class WorkspaceRootSessionResolverTestFactory
         WorkspaceConfigManager workspaceConfig = new(configOptions, NullLogger<WorkspaceConfigManager>.Instance);
         FolderTreeManager folderTree = new(accessor, workspaceConfig, NullLogger<FolderTreeManager>.Instance);
         AiSummarizationService aiSummarization = new(NullLogger<AiSummarizationService>.Instance);
-        DraftModelCapacityClient capacityClient = new(DeadClient(), NullLogger<DraftModelCapacityClient>.Instance);
+        SimpleModelServerCapacityClient capacityClient = new(DeadClient(), NullLogger<SimpleModelServerCapacityClient>.Instance);
 
         WorkspaceIndexService indexService = new(
             Options.Create(new CodeHelperConfig()), [], accessor, gitStaleness, folderTree,

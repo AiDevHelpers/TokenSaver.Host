@@ -7,7 +7,7 @@ namespace TokenSaver.MCP.Services;
 /// <summary>
 ///     DelegatingHandler that routes every request through <see cref="OllamaEndpointRegistry" />
 ///     instead of a fixed HttpClient.BaseAddress. Registered on all typed HttpClients that talk
-///     to Ollama (OllamaService, DraftModelCapacityClient, PromptAssessor, TaskClassifier, and the
+///     to Ollama (OllamaService, SimpleModelServerCapacityClient, PromptAssessor, TaskClassifier, and the
 ///     context pipeline stages) so a single registry/config change (multiple <c>Endpoints</c>,
 ///     failover/round-robin/explicit selection) affects every caller without touching their code.
 ///     Each typed client still gets a BaseAddress at registration (pointing at the legacy/default

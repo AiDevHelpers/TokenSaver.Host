@@ -78,7 +78,7 @@ internal static class ServiceRegistrationExtensions
         services.AddSingleton<CapabilityAssessor>();
         services.AddSingleton<WorkflowSessionStore>();
         services.AddSingleton<CodeWorkflowService>();
-        services.AddSingleton<DraftModelInterceptorService>();
+        services.AddSingleton<SimpleModelServerInterceptorService>();
         services.AddSingleton<TaskClassifier>();
         services.AddSingleton<PlanBuilder>();
         return services;
@@ -88,7 +88,7 @@ internal static class ServiceRegistrationExtensions
     public static IServiceCollection AddIndexingServices(this IServiceCollection services)
     {
         services.AddSingleton<GitStalenessChecker>();
-        services.AddSingleton<DraftModelCapacityClient>();
+        services.AddSingleton<SimpleModelServerCapacityClient>();
         services.AddSingleton<WorkspaceIndexDbAccessor>();
         services.AddSingleton<BehaviorConfigService>();
         services.AddSingleton<IBehaviorConfigService>(sp => sp.GetRequiredService<BehaviorConfigService>());
@@ -163,7 +163,7 @@ internal static class ServiceRegistrationExtensions
         }).AddHttpMessageHandler<EndpointRoutingHandler>();
 
         // DraftModel capacity check client (10-second timeout, quick checks only)
-        services.AddHttpClient<DraftModelCapacityClient>(client =>
+        services.AddHttpClient<SimpleModelServerCapacityClient>(client =>
         {
             client.BaseAddress = new Uri(config.OllamaUrl);
             client.Timeout = TimeSpan.FromSeconds(10);

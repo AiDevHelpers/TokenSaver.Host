@@ -18,7 +18,7 @@ internal static class DraftModelConfigResolver
     private const string DraftModelLoaderEndpointName = "draftmodel-loader";
 
     /// <summary>
-    ///     If <see cref="TokenSaverConfig.DraftModelServiceInstalled" /> is set, reads
+    ///     If <see cref="TokenSaverConfig.SimpleModelServerServiceInstalled" /> is set, reads
     ///     DraftModel.Loader's ProgramData config (JSONC — comments/trailing commas allowed)
     ///     and, when found, updates <paramref name="config" />.OllamaUrl to the discovered
     ///     router host/port and adds a "draftmodel-loader" entry to
@@ -28,7 +28,7 @@ internal static class DraftModelConfigResolver
     /// </summary>
     public static void ApplyIfInstalled(TokenSaverConfig config)
     {
-        if (!config.DraftModelServiceInstalled)
+        if (!config.SimpleModelServerServiceInstalled)
         {
             return;
         }

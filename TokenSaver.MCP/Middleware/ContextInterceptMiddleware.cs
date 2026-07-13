@@ -82,7 +82,7 @@ internal sealed partial class ContextInterceptMiddleware
         IOptions<CodeHelperConfig> codeHelperOpts,
         IOptions<ContextHelperConfig> contextHelperOpts,
         ContextCleanerService cleaner,
-        DraftModelInterceptorService draftModelInterceptor,
+        SimpleModelServerInterceptorService draftModelInterceptor,
         InstructionOptimizerService instructionOptimizer)
     {
         bool autoIntercept = contextHelperOpts.Value.AutoIntercept;
@@ -245,7 +245,7 @@ internal sealed partial class ContextInterceptMiddleware
 
         try
         {
-            DraftModelInterceptionResult interceptResult = await draftModelInterceptor.TryInterceptAsync(
+            SimpleModelServerInterceptionResult interceptResult = await draftModelInterceptor.TryInterceptAsync(
                 cleanedPrompt, workspaceRoot, context.RequestAborted);
 
             if (interceptResult.HandledByDraftModel)
@@ -288,7 +288,7 @@ internal sealed partial class ContextInterceptMiddleware
         await _next(context);
     }
 
-    private static async Task WriteJsonRpcResultAsync(HttpContext context, DraftModelInterceptionResult result)
+    private static async Task WriteJsonRpcResultAsync(HttpContext context, SimpleModelServerInterceptionResult result)
     {
         // Build a JSON-RPC success response
         JsonObject response = new()

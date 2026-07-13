@@ -19,7 +19,7 @@ namespace TokenSaver.MCP.HealthChecks;
 ///                 reloads it, incurring a one-time cold-load delay)
 ///     Unhealthy — router unreachable, or no models pulled
 /// </summary>
-internal sealed class DraftModelHealthCheck(OllamaService ollama) : IHealthCheck
+internal sealed class SimpleModelServerHealthCheck(OllamaService ollama) : IHealthCheck
 {
     private const long BytesPerMb = 1024 * 1024;
 

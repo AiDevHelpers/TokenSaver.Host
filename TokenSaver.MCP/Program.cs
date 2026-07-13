@@ -225,7 +225,7 @@ builder.Services
 // ── Health Checks ──
 // draftmodel is tagged "ready" (gates /health/ready); others are untagged.
 builder.Services.AddHealthChecks()
-    .AddCheck<DraftModelHealthCheck>("draftmodel", tags: ["ready"])
+    .AddCheck<SimpleModelServerHealthCheck>("draftmodel", tags: ["ready"])
     .AddCheck<UnhandledFaultHealthCheck>("unhandled-fault")
     .AddCheck<SelfTestHealthCheck>("self-test");
 

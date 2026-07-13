@@ -111,7 +111,7 @@ public sealed class ContextDiagnosticsToolsTests : IDisposable
 
         CodeHelperConfig codeHelperConfig = new();
         AiSummarizationService aiSummarization = new(NullLogger<AiSummarizationService>.Instance);
-        DraftModelCapacityClient capacityClient = new(DeadClient(), NullLogger<DraftModelCapacityClient>.Instance);
+        SimpleModelServerCapacityClient capacityClient = new(DeadClient(), NullLogger<SimpleModelServerCapacityClient>.Instance);
         WorkspaceIndexService orchestrator = new(
             Options.Create(codeHelperConfig), [], accessor, gitStaleness, folderTree,
             aiSummarization, capacityClient, NullLogger<WorkspaceIndexService>.Instance);
