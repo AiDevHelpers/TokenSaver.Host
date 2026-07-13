@@ -8,11 +8,12 @@ using TokenSaver.ContextHelper.Models;
 using TokenSaver.ContextHelper.Models.Diagnostics;
 using TokenSaver.ContextHelper.Pipeline;
 using TokenSaver.Common.Core.Configuration;
-using TokenSaver.Library.Models;
-using TokenSaver.Library.Models.AiProviders;
+using TokenSaver.Common.Models;
 using TokenSaver.TokenEconomy.Models.Context;
-using TokenSaver.Library.Services;
+using TokenSaver.OllamaIntegration.Services;
 using TokenSaver.MCP.Services;
+using ContextBuildResult = TokenSaver.TokenEconomy.Models.Context.BuildContextResult;
+using ContextHygieneRpt = TokenSaver.TokenEconomy.Models.Context.ContextHygieneReport;
 
 using Microsoft.Extensions.Options;
 
@@ -20,9 +21,8 @@ using ModelContextProtocol.Server;
 
 using System.ComponentModel;
 using System.Text;
+using System.Globalization;
 
-using CultureInfo = System.Globalization.CultureInfo;
-using TokenSaver.OllamaIntegration.Services;
 using TokenSaver.TokenEconomy.Contracts;
 using TokenSaver.TokenEconomy.Services;
 using TokenSaver.Utilities.Services;
@@ -284,7 +284,7 @@ internal sealed class LocalModelHelperTools
             format = format with { WillAskForMissingContext = lazyResolution.WillAskForMissingContext };
         }
 
-        BuildContextResult result = await _contextPipeline.BuildConciseContextAsync(
+        ContextBuildResult result = await _contextPipeline.BuildConciseContextAsync(
             prompt, history, sessionId, resolvedFiles.ToArray(), root,
             avoidChainOfThought: format.AvoidChainOfThought,
             perFileTokenLimit: format.PerFileTokenLimit,
@@ -494,7 +494,7 @@ internal sealed class LocalModelHelperTools
     {
         await _workspaceRootResolver.EnsureResolvedAsync(server, ct);
 
-        ContextHygieneReport report = await _contextPipeline.BuildContextHygieneReportAsync(sessionId, workspaceRoot, ct);
+        ContextHygieneRpt report = await _contextPipeline.BuildContextHygieneReportAsync(sessionId, workspaceRoot, ct);
 
         StringBuilder sb = new();
         _ = sb.AppendLine(CultureInfo.InvariantCulture, $"Context cache: {report.FileCount} files, {report.SectionCount} sections.");

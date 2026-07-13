@@ -1,5 +1,5 @@
 using TokenSaver.Common.Core.Configuration;
-using TokenSaver.Library.Services;
+using TokenSaver.Common.Models;
 using TokenSaver.OllamaIntegration.Services;
 
 using Microsoft.Extensions.Options;

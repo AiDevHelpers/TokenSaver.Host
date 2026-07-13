@@ -6,14 +6,13 @@ using TokenSaver.Config;
 using TokenSaver.ContextHelper.Configuration;
 using TokenSaver.Common.Core.Configuration;
 using TokenSaver.TokenEconomy.Models.Context;
-using TokenSaver.Library.Services;
+using TokenSaver.OllamaIntegration.Services;
 
 using Microsoft.Extensions.Options;
 
 using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
-using TokenSaver.OllamaIntegration.Services;
 
 
 namespace TokenSaver.MCP.Services;

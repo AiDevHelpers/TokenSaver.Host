@@ -218,7 +218,9 @@ builder.Services
     .AddPipelineHttpClients(ollamaConfig)
     .AddAgentHelpersAdapters(ollamaConfig.OllamaModel)
     .AddWorkspaceSessionServices()
-    .AddDebuggerServices();
+    .AddDebuggerServices()
+    .AddWslControlServices()
+    .AddLanguageHelperServices();
 
 // ── Health Checks ──
 // draftmodel is tagged "ready" (gates /health/ready); others are untagged.
@@ -251,6 +253,8 @@ IMcpServerBuilder mcpBuilder = builder.Services.AddMcpServer(options =>
     .WithTools<DebuggerControlTools>()
     .WithTools<DebuggerAnalysisTools>()
     .WithTools<TestExecutionTools>()
+    .WithTools<WslControlTools>()
+    .WithTools<LanguageHelperTools>()
     .WithResources<DocResourceService>()
     .WithPrompts<BuildConciseContextPrompt>();
 

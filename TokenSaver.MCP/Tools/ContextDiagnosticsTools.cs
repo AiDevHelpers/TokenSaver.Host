@@ -4,7 +4,7 @@ using TokenSaver.ContextHelper.Calibration;
 using TokenSaver.ContextHelper.Models.Calibration;
 using TokenSaver.ContextHelper.Models.Diagnostics;
 using TokenSaver.ContextHelper.Pipeline;
-using TokenSaver.Library.Services;
+using TokenSaver.OllamaIntegration.Services; using TokenSaver.Common.Models;
 using TokenSaver.MCP.Services;
 using TokenSaver.Utilities.Services;
 

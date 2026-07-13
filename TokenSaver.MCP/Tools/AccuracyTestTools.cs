@@ -1,6 +1,6 @@
 using TokenSaver.CodeHelper.Indexing;
 using TokenSaver.TokenEconomy.Models.Accuracy;
-using TokenSaver.Library.Services;
+using TokenSaver.OllamaIntegration.Services; using TokenSaver.Common.Models;
 using TokenSaver.MCP.Services;
 
 using ModelContextProtocol.Server;

@@ -21,6 +21,11 @@ using TokenSaver.OllamaIntegration.Services;
 using TokenSaver.TokenEconomy.Contracts;
 using TokenSaver.TokenEconomy.Services;
 using TokenSaver.Utilities.Services;
+using TokenSaver.WslControl;
+using TokenSaver.WslControl.Contracts;
+using TokenSaver.LanguageHelpers.CSharp.Extensions;
+using TokenSaver.LanguageHelpers.PowerShell.Extensions;
+using TokenSaver.LanguageHelpers.Python.Extensions;
 using TokenSaver.AgentHelpers.Anthropic;
 using TokenSaver.AgentHelpers.Core.Extensions;
 using TokenSaver.AgentHelpers.DeepSeek;
@@ -306,6 +311,33 @@ internal static class ServiceRegistrationExtensions
         // Phase 4: Multi-client extension integration
         services.AddSingleton<ExtensionRegistryService>();
 
+        return services;
+    }
+
+    /// <summary>
+    ///     Registers the WSL provider stack (TokenSaver.WslControl) plus the host-side adapter that
+    ///     binds its <see cref="IWslCommandModel" /> seam to the local model (OllamaService), so the
+    ///     natural-language planner can route command synthesis through the DraftModel/Ollama router.
+    /// </summary>
+    public static IServiceCollection AddWslControlServices(this IServiceCollection services)
+    {
+        // Bind the WslControl command-model seam to the local model before AddWslControl runs,
+        // so the planner resolves this implementation.
+        services.AddSingleton<IWslCommandModel, OllamaWslCommandModel>();
+        services.AddWslControl();
+        return services;
+    }
+
+    /// <summary>
+    ///     Registers the per-language code-quality helpers (TokenSaver.LanguageHelpers.*) and their shared
+    ///     Core services (process runner + <c>ILanguageHelperRegistry</c>). Each <c>Add*LanguageHelper</c>
+    ///     adds the Core layer idempotently, so the registry aggregates all three helpers.
+    /// </summary>
+    public static IServiceCollection AddLanguageHelperServices(this IServiceCollection services)
+    {
+        services.AddCSharpLanguageHelper();
+        services.AddPowerShellLanguageHelper();
+        services.AddPythonLanguageHelper();
         return services;
     }
 }

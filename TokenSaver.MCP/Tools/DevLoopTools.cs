@@ -1,8 +1,8 @@
 using TokenSaver.Common.Core.Configuration;
-using TokenSaver.Library.Contracts;
+using TokenSaver.Common.Contracts;
 using TokenSaver.TokenEconomy.Models.TokenEconomy;
 using TokenSaver.TokenEconomy.Contracts;
-using TokenSaver.Library.Services;
+using TokenSaver.OllamaIntegration.Services;
 using TokenSaver.Utilities.Services;
 using TokenSaver.MCP.Services;
 

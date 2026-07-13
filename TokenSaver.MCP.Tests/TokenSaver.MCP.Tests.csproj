@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
+    <!-- net*-windows to match TokenSaver.MCP (which is net*-windows for WSL/Community.Wsl.Sdk). -->
+    <TargetFramework>net10.0-windows</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <IsPackable>false</IsPackable>
@@ -9,7 +10,6 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\TokenSaver.MCP\TokenSaver.MCP.csproj" />
-    <ProjectReference Include="..\..\Core\TokenSaver.Library\TokenSaver.Library.csproj" />
     <ProjectReference Include="..\..\Core\TokenSaver.OllamaIntegration.Tests\TokenSaver.OllamaIntegration.Tests.csproj" />
     <ProjectReference Include="..\..\Core\TokenSaver.TokenEconomy.Tests\TokenSaver.TokenEconomy.Tests.csproj" />
     <ProjectReference Include="..\..\Core\TokenSaver.Utilities.Tests\TokenSaver.Utilities.Tests.csproj" />

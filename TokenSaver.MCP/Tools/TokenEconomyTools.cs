@@ -1,8 +1,10 @@
 using TokenSaver.Common.Core.Configuration;
-using TokenSaver.Library.Contracts;
+using TokenSaver.Common.Contracts;
 using TokenSaver.TokenEconomy.Models.TokenEconomy;
-using TokenSaver.Library.Services;
+using TokenSaver.OllamaIntegration.Services;
 using TokenSaver.MCP.Services;
+using TokenSaver.TokenEconomy.Contracts;
+using TokenSaver.Utilities.Services;
 
 using Microsoft.Extensions.Options;
 
@@ -10,9 +12,6 @@ using ModelContextProtocol.Server;
 
 using System.ComponentModel;
 using System.Text.Json;
-using TokenSaver.OllamaIntegration.Services;
-using TokenSaver.TokenEconomy.Contracts;
-using TokenSaver.Utilities.Services;
 
 namespace TokenSaver.MCP.Tools;
 
