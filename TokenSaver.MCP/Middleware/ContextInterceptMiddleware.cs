@@ -33,16 +33,16 @@ internal sealed partial class ContextInterceptMiddleware
     private static partial void LogContextCleaned(ILogger logger, string tool, int before, int after);
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Draft model handled request for tool {Tool}: {Summary}")]
-    private static partial void LogDraftModelHandled(ILogger logger, string tool, string? summary);
+    private static partial void LogSimpleModelServerHandled(ILogger logger, string tool, string? summary);
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Context cleaning pipeline failed for tool {Tool} — passing through")]
     private static partial void LogContextCleaningFailed(ILogger logger, Exception ex, string tool);
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Draft model deferred for tool {Tool}. Prompt augmented with guidance request.")]
-    private static partial void LogDraftModelDeferred(ILogger logger, string tool);
+    private static partial void LogSimpleModelServerDeferred(ILogger logger, string tool);
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Draft model interceptor failed for tool {Tool} — passing through")]
-    private static partial void LogDraftModelInterceptorFailed(ILogger logger, Exception ex, string tool);
+    private static partial void LogSimpleModelServerInterceptorFailed(ILogger logger, Exception ex, string tool);
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Injected task-type-matched instructions for tool {Tool} (taskType={TaskType})")]
     private static partial void LogInjectedInstructions(ILogger logger, string tool, TaskType taskType);
@@ -82,7 +82,7 @@ internal sealed partial class ContextInterceptMiddleware
         IOptions<CodeHelperConfig> codeHelperOpts,
         IOptions<ContextHelperConfig> contextHelperOpts,
         ContextCleanerService cleaner,
-        SimpleModelServerInterceptorService draftModelInterceptor,
+        SimpleModelServerInterceptorService simpleModelServerInterceptor,
         InstructionOptimizerService instructionOptimizer)
     {
         bool autoIntercept = contextHelperOpts.Value.AutoIntercept;
@@ -245,13 +245,13 @@ internal sealed partial class ContextInterceptMiddleware
 
         try
         {
-            SimpleModelServerInterceptionResult interceptResult = await draftModelInterceptor.TryInterceptAsync(
+            SimpleModelServerInterceptionResult interceptResult = await simpleModelServerInterceptor.TryInterceptAsync(
                 cleanedPrompt, workspaceRoot, context.RequestAborted);
 
-            if (interceptResult.HandledByDraftModel)
+            if (interceptResult.HandledBySimpleModelServer)
             {
                 // Draft model implemented the task — return the result directly
-                LogDraftModelHandled(_logger, toolName, interceptResult.Summary);
+                LogSimpleModelServerHandled(_logger, toolName, interceptResult.Summary);
 
                 await WriteJsonRpcResultAsync(context, interceptResult);
                 return;
@@ -265,7 +265,7 @@ internal sealed partial class ContextInterceptMiddleware
                 // Update the request body with the augmented prompt
                 args!["prompt"] = JsonValue.Create(deferredPrompt);
                 // Also signal to the tool that this was intercepted
-                args["_draftModelIntercepted"] = JsonValue.Create(true);
+                args["_simpleModelServerIntercepted"] = JsonValue.Create(true);
                 if (interceptResult.NeedsArchitectureHelp)
                 {
                     args["_needsArchitectureHelp"] = JsonValue.Create(true);
@@ -276,13 +276,13 @@ internal sealed partial class ContextInterceptMiddleware
                 context.Request.Body = new MemoryStream(newBytes);
                 context.Request.ContentLength = newBytes.Length;
 
-                LogDraftModelDeferred(_logger, toolName);
+                LogSimpleModelServerDeferred(_logger, toolName);
             }
         }
         catch (Exception ex)
         {
             // Interceptor failure — don't block the tool call
-            LogDraftModelInterceptorFailed(_logger, ex, toolName);
+            LogSimpleModelServerInterceptorFailed(_logger, ex, toolName);
         }
 
         await _next(context);

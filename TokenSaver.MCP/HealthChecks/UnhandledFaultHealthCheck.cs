@@ -10,7 +10,7 @@ namespace TokenSaver.MCP.HealthChecks;
 ///     the process itself is clearly still up and running (it's answering this very health
 ///     check). Deliberately untagged — it participates in the full <c>/health</c> report but not
 ///     the <c>"ready"</c>-tagged predicate <c>/health/ready</c> uses, matching
-///     DraftModel.Loader's split between full self-diagnostic health and cheap readiness.
+///     SimpleModelServer's split between full self-diagnostic health and cheap readiness.
 /// </summary>
 internal sealed class UnhandledFaultHealthCheck(UnhandledFaultTracker faultTracker) : IHealthCheck
 {

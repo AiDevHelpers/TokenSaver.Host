@@ -32,7 +32,7 @@ internal sealed class AccuracyTestTools(
 
     [McpServerTool]
     [Description(
-        "Manage DraftModel agent configuration and accuracy testing. action determines what happens:\n" +
+        "Manage SimpleModelServer agent configuration and accuracy testing. action determines what happens:\n" +
         "  test   — scan the workspace, run accuracy tests against the local model, return a scored report. " +
         "Always ask the user the setup questions first, then re-call with confirmed=true.\n" +
         "  get    — return current agent system prompts and sampling parameters for review.\n" +
@@ -115,7 +115,7 @@ internal sealed class AccuracyTestTools(
         if (raw is null)
         {
             return "SimpleModelServer.config.json not found. " +
-                   "Ensure SIMPLEMODELSERVER_WORKSPACE points to the workspace root and DraftModel.Loader has run at least once.";
+                   "Ensure SIMPLEMODELSERVER_WORKSPACE points to the workspace root and SimpleModelServer has run at least once.";
         }
 
         try
@@ -170,7 +170,7 @@ internal sealed class AccuracyTestTools(
 
         _ = sb.AppendLine();
         _ = sb.AppendLine(
-            "Changes are live for new DraftModel.Loader requests. Re-run AgentConfig(action: 'test') to measure the impact.");
+            "Changes are live for new SimpleModelServer requests. Re-run AgentConfig(action: 'test') to measure the impact.");
         return sb.ToString().TrimEnd();
     }
 

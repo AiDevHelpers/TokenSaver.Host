@@ -50,8 +50,8 @@ internal sealed partial class WorkspaceRootSessionResolver
     [LoggerMessage(Level = LogLevel.Warning, Message = "Initial unified index skipped")]
     private static partial void LogInitialIndexSkipped(ILogger logger, Exception ex);
 
-    [LoggerMessage(Level = LogLevel.Warning, Message = "DraftModel not available after 10 min — context warm-up skipped.")]
-    private static partial void LogDraftModelNotAvailable(ILogger logger);
+    [LoggerMessage(Level = LogLevel.Warning, Message = "SimpleModelServer not available after 10 min — context warm-up skipped.")]
+    private static partial void LogSimpleModelServerNotAvailable(ILogger logger);
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Agent context warmed: {Generated} generated files, {Tokens} tokens")]
     private static partial void LogAgentContextWarmed(ILogger logger, int generated, int tokens);
@@ -221,7 +221,7 @@ internal sealed partial class WorkspaceRootSessionResolver
                 bool ready = await _ollama.WaitForReadyAsync(TimeSpan.FromMinutes(10), TimeSpan.FromSeconds(10), _logger);
                 if (!ready)
                 {
-                    LogDraftModelNotAvailable(_logger);
+                    LogSimpleModelServerNotAvailable(_logger);
                     return;
                 }
 

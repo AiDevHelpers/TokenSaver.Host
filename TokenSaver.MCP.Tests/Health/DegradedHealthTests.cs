@@ -8,10 +8,10 @@ namespace TokenSaver.MCP.Tests;
 /// <summary>
 ///     Covers the two ways TokenSaver.MCP's /health can report degraded status: an unhandled
 ///     exception recorded by FaultTrackingMiddleware/UnhandledFaultTracker, and a failing
-///     SelfTestHealthCheck check. Mirrors DraftModel.Loader.Tests's DegradedHealthTests — same
+///     SelfTestHealthCheck check. Mirrors SimpleModelServer.Tests's DegradedHealthTests — same
 ///     two mechanisms, same "shouldn't affect /health/ready" boundary, adapted to this project's
 ///     ASP.NET Core health-checks-based architecture instead of a hand-rolled HttpListener.
-///     Note: unlike DraftModel's router, ASP.NET Core's HealthCheckMiddleware maps
+///     Note: unlike SimpleModelServer's router, ASP.NET Core's HealthCheckMiddleware maps
 ///     HealthStatus.Degraded to HTTP 200 by default (only Unhealthy maps to 503) — these tests
 ///     assert on the JSON body's "status" field rather than expecting a non-200 status code.
 /// </summary>

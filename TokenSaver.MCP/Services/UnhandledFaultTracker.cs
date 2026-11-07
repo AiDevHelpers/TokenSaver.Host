@@ -3,8 +3,8 @@ namespace TokenSaver.MCP.Services;
 /// <summary>
 ///     Tracks the most recent unhandled exception thrown while processing a request (MCP
 ///     tools/call or any other HTTP endpoint on this server), so <c>/health</c> can report
-///     degraded status even when every other health check (DraftModel reachability, etc.) still
-///     passes. Mirrors DraftModel.Loader's <c>ModelHealthMonitor.RecordFault</c>/<c>HasRecentFault</c>
+///     degraded status even when every other health check (SimpleModelServer reachability, etc.) still
+///     passes. Mirrors SimpleModelServer's <c>ModelHealthMonitor.RecordFault</c>/<c>HasRecentFault</c>
 ///     design: a stack trace on the server isn't something a liveness probe can detect on its
 ///     own — the process is still up and answering requests — so it's surfaced as a time-boxed
 ///     signal instead. Only the exception's message is retained (not the full stack trace) since

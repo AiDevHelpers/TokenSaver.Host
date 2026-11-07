@@ -134,7 +134,7 @@ if (isWindowsService)
 }
 
 // ── Configure logging ──
-// Serilog-backed logging via TokenSaver.Common.Logging (shared with DraftModel.Loader).
+// Serilog-backed logging via TokenSaver.Common.Logging (shared with SimpleModelServer).
 // Providers: Console (single-line) + File (%ProgramData%\TokenSaver\logs) + EventLog + VS Code JSON
 if (isWindowsService && OperatingSystem.IsWindows())
 {
@@ -190,14 +190,14 @@ if (!string.IsNullOrWhiteSpace(ollamaConfig.BehaviorConfigPath))
 // ── REGISTER SERVICES (via extension methods) ──
 // ═══════════════════════════════════════════════════════════════════════════════
 
-// Compute User-Agent header with version for DraftModel requests
+// Compute User-Agent header with version for SimpleModelServer requests
 string version = VersionDetector.GetVersionString();
 string userAgent = $"TokenSaver/{version}";
 
 // Stamp the User-Agent on EVERY HttpClient the factory produces — including the unnamed
 // clients created via IHttpClientFactory.CreateClient() by the background probes
 // (EndpointHealthMonitor's /api/tags poll, McpRegistrationCheckService's /health poll). Without
-// this, those probes reach DraftModel.Loader's router with no User-Agent and show up as an
+// this, those probes reach SimpleModelServer's router with no User-Agent and show up as an
 // unidentified caller in its request log. Applying it here (rather than per-typed-client) keeps
 // the identifier in one place and guarantees any future HttpClient is attributed too.
 builder.Services.ConfigureHttpClientDefaults(http =>
@@ -314,7 +314,7 @@ app.MapGet("/api/register-providers", async (
 
 // ── Map health endpoints ──
 // GET /health → liveness + self-diagnostics (is the process up, is anything broken?)
-// GET /health/ready → readiness (is DraftModel reachable, are models loaded?)
+// GET /health/ready → readiness (is SimpleModelServer reachable, are models loaded?)
 app.MapHealthChecks("/health", new HealthCheckOptions
 {
     ResponseWriter = WriteJsonHealthResponse
@@ -400,8 +400,8 @@ internal partial class Program
     [LoggerMessage(Level = LogLevel.Information, Message = "TokenSaver MCP server starting on port {Port}, Ollama router at {Url}, workspace {Workspace}, transport {Transport}")]
     internal static partial void LogServerStarting(ILogger logger, int port, string url, string workspace, string transport);
 
-    [LoggerMessage(Level = LogLevel.Warning, Message = "DraftModel not available after 10 min — model warm-up skipped.")]
-    internal static partial void LogDraftModelNotAvailable(ILogger logger);
+    [LoggerMessage(Level = LogLevel.Warning, Message = "SimpleModelServer not available after 10 min — model warm-up skipped.")]
+    internal static partial void LogSimpleModelServerNotAvailable(ILogger logger);
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Model warm-up skipped")]
     internal static partial void LogContextWarmupSkipped(ILogger logger, Exception ex);

@@ -16,7 +16,7 @@ namespace TokenSaver.MCP.Services;
 ///     2. Surfaces operative settings the calling AI needs to know about to use tools correctly —
 ///     currently whether <see cref="CodeHelperConfig.AutoEnabled" /> auto-intercept is on (tool
 ///     prompts may be silently rewritten/handled by the draft model instead of reaching the AI
-///     unmodified) and whether DraftModel's router is actually reachable at
+///     unmodified) and whether SimpleModelServer's router is actually reachable at
 ///     <see cref="TokenSaverConfig.OllamaUrl" /> (auto-intercept enabled with an unreachable
 ///     router silently degrades instead of erroring loudly).
 ///     Never writes — auto-writing client config was removed (see <c>AiProviderConfigService</c>)
@@ -49,7 +49,7 @@ internal sealed partial class McpRegistrationCheckService(
     [LoggerMessage(Level = LogLevel.Debug, Message = "MCP registration check skipped: {File} is not valid JSON ({ParseError})")]
     private static partial void LogInvalidJson(ILogger logger, string file, string parseError);
 
-    [LoggerMessage(Level = LogLevel.Information, Message = "Operative settings: auto-intercept={AutoEnabled}, contextSizeLimit={ContextSizeLimit}, draftModelRouter={RouterReachable} ({OllamaUrl}).")]
+    [LoggerMessage(Level = LogLevel.Information, Message = "Operative settings: auto-intercept={AutoEnabled}, contextSizeLimit={ContextSizeLimit}, simpleModelServerRouter={RouterReachable} ({OllamaUrl}).")]
     private static partial void LogOperativeSettings(ILogger logger, bool autoEnabled, int contextSizeLimit, bool routerReachable, string ollamaUrl);
 
     private readonly TokenSaverConfig _config = config.Value;
@@ -75,7 +75,7 @@ internal sealed partial class McpRegistrationCheckService(
     private async Task CheckOperativeSettingsAsync(CancellationToken ct)
     {
         bool autoEnabled = _codeHelperConfig.AutoEnabled;
-        bool routerReachable = await IsDraftModelReachableAsync(ct);
+        bool routerReachable = await IsSimpleModelServerReachableAsync(ct);
 
         LogOperativeSettings(_logger, autoEnabled, _config.ContextSizeLimit, routerReachable, _config.OllamaUrl);
 
@@ -83,19 +83,19 @@ internal sealed partial class McpRegistrationCheckService(
             "TokenSaver operative settings — " +
             $"context auto-intercept: {(autoEnabled ? "ON (tool prompts may be silently rewritten/handled by the draft model)" : "OFF")}; " +
             $"context size limit: {_config.ContextSizeLimit:N0} chars; " +
-            $"DraftModel router: {(routerReachable ? "reachable" : "UNREACHABLE")} at {_config.OllamaUrl}.");
+            $"SimpleModelServer router: {(routerReachable ? "reachable" : "UNREACHABLE")} at {_config.OllamaUrl}.");
 
         if (autoEnabled && !routerReachable)
         {
             _deferred.PostQuestion(
-                $"Context auto-intercept is enabled but DraftModel's router is unreachable at {_config.OllamaUrl} " +
+                $"Context auto-intercept is enabled but SimpleModelServer's router is unreachable at {_config.OllamaUrl} " +
                 "— tool calls that would normally go through the draft model may hang or silently pass through " +
-                "unmodified instead. Either start DraftModel.Loader, or disable intercept by calling the " +
+                "unmodified instead. Either start SimpleModelServer, or disable intercept by calling the " +
                 "auto-workflow calibration tool with action='toggle', enabled=false.");
         }
     }
 
-    private async Task<bool> IsDraftModelReachableAsync(CancellationToken ct)
+    private async Task<bool> IsSimpleModelServerReachableAsync(CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(_config.OllamaUrl) ||
             !Uri.TryCreate(_config.OllamaUrl, UriKind.Absolute, out Uri? baseUri))

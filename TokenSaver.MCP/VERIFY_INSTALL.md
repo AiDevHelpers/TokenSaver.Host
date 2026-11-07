@@ -2,8 +2,8 @@
 
 Use this after TokenSaver.MCP is installed, started, and wired up to a client (see
 `TokenSaver/TokenSaver.VsCodeExt/INSTALL_PROMPT.md`), and only **after**
-`DraftModel/DraftModel.Loader/VERIFY_INSTALL.md` has already passed — most TokenSaver.MCP tools
-call through to DraftModel, so verifying TokenSaver first would misattribute a DraftModel
+`SimpleModelServer/SimpleModelServer/VERIFY_INSTALL.md` has already passed — most TokenSaver.MCP tools
+call through to SimpleModelServer, so verifying TokenSaver first would misattribute a SimpleModelServer
 failure as a TokenSaver bug.
 
 Default port: `11436`. Most of this server's surface is MCP tools (invoked through whichever
@@ -18,9 +18,9 @@ curl -s http://localhost:11436/health
 curl -s http://localhost:11436/health/ready
 ```
 
-`/health/ready` additionally checks DraftModel reachability — if `/health` passes but
-`/health/ready` doesn't, the issue is DraftModel connectivity from TokenSaver's side, not
-TokenSaver itself. Re-check `DraftModel/DraftModel.Loader/VERIFY_INSTALL.md` first.
+`/health/ready` additionally checks SimpleModelServer reachability — if `/health` passes but
+`/health/ready` doesn't, the issue is SimpleModelServer connectivity from TokenSaver's side, not
+TokenSaver itself. Re-check `SimpleModelServer/SimpleModelServer/VERIFY_INSTALL.md` first.
 
 ## 2. Confirm the client sees the server and its tools
 
@@ -33,20 +33,20 @@ tool implementations.
 
 Ask the client: *"Call the Help tool with no arguments."*
 Expect a list of available TokenSaver.MCP tools grouped by category, not an error. This is the
-lowest-risk tool to start with — it doesn't touch DraftModel or the filesystem.
+lowest-risk tool to start with — it doesn't touch SimpleModelServer or the filesystem.
 
-## 4. Tool: `CleanAndChat` (exercises the DraftModel link end-to-end through MCP)
+## 4. Tool: `CleanAndChat` (exercises the SimpleModelServer link end-to-end through MCP)
 
 Ask the client: *"Call CleanAndChat with prompt: 'Reply with exactly the word: pong'."*
 Expect a real model response (not an error, not an empty string). This is the single most
-important test in this file — it proves the full chain (client → MCP → DraftModel router →
+important test in this file — it proves the full chain (client → MCP → SimpleModelServer router →
 Ollama → model → back) works, not just that each piece is independently alive.
 
 ## 5. Tool: `ListOllamaEndpoints`
 
 Ask the client: *"Call ListOllamaEndpoints."*
-Expect a list of configured Ollama endpoints with health/stats, including the one DraftModel is
-using. An empty or error result here means TokenSaver can't see DraftModel's endpoint
+Expect a list of configured Ollama endpoints with health/stats, including the one SimpleModelServer is
+using. An empty or error result here means TokenSaver can't see SimpleModelServer's endpoint
 configuration even if `CleanAndChat` worked — worth flagging as a config-visibility gap.
 
 ## 6. Tool: `CodeIndex` (workspace awareness)
@@ -88,8 +88,8 @@ failure. Only flag this if it errors outright (5xx) rather than returning `[]`.
 ## What "fully working" means
 
 Steps 1–2 confirm the connection; steps 3–9 confirm each major tool category (help, chat-through-
-DraftModel, endpoint visibility, filesystem/code awareness, context building, file editing) works
+SimpleModelServer, endpoint visibility, filesystem/code awareness, context building, file editing) works
 without error; step 10 confirms the deprecated endpoint fails safe rather than erroring. If step 4
-(`CleanAndChat`) fails but DraftModel's own `VERIFY_INSTALL.md` passed standalone, the problem is
-specifically in TokenSaver's routing/config pointing at DraftModel — check its config for the
-correct DraftModel router port/host before assuming a code bug.
+(`CleanAndChat`) fails but SimpleModelServer's own `VERIFY_INSTALL.md` passed standalone, the problem is
+specifically in TokenSaver's routing/config pointing at SimpleModelServer — check its config for the
+correct SimpleModelServer router port/host before assuming a code bug.

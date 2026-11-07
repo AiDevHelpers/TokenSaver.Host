@@ -48,7 +48,7 @@ internal sealed class McpContextService
 
         // Diagnostics (consolidated)
         new("Diagnostics", "Agent Config",
-            "Manage DraftModel agent config and run accuracy tests. Actions: test | get | update | save."),
+            "Manage SimpleModelServer agent config and run accuracy tests. Actions: test | get | update | save."),
         new("Diagnostics", "Context Diag",
             "Inspect context pipeline state, collapsed blocks, and .gitignore health. Actions: describe | block | stats | gitignore | gitignore-add."),
 

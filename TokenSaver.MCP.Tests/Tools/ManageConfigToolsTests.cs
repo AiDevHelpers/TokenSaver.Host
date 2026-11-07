@@ -20,7 +20,7 @@ namespace TokenSaver.MCP.Tests;
 /// <summary>
 ///     Closes CLAUDE.md's "Known gaps" entry for the MCP Tools/*.cs classes, starting with
 ///     ManageConfigTools since it is entirely synchronous and file/config-based (no live
-///     Ollama/DraftModel dependency needed). Covers every action in ManageConfig's dispatcher
+///     Ollama/SimpleModelServer dependency needed). Covers every action in ManageConfig's dispatcher
 ///     against a temp workspace root, asserting on the returned JSON/text contract.
 /// </summary>
 [Collection("GlobalConfigDirEnvVar")]

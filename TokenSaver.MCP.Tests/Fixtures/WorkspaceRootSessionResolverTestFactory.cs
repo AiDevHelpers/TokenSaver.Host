@@ -27,7 +27,7 @@ namespace TokenSaver.MCP.Tests;
 ///     network — the HttpClient instances below use the same unreachable-loopback placeholder
 ///     TokenEconomyToolsTests/ContextDiagnosticsToolsTests use elsewhere in this project.
 ///     <see cref="ContextHelperConfig.AutoWarmOnStartup" /> is forced off so the background
-///     warm-up task doesn't spend up to 10 minutes polling a DraftModel that will never answer,
+///     warm-up task doesn't spend up to 10 minutes polling a SimpleModelServer that will never answer,
 ///     and <see cref="WorkspaceRootSessionResolver.SkipBackgroundWarmupForTests" /> is set so the
 ///     (unconditional, not gated by AutoWarmOnStartup) background indexing pass never actually
 ///     touches disk either — otherwise every test that calls a workspace-scoped tool method would

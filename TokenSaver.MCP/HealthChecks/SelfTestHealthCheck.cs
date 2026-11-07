@@ -10,9 +10,9 @@ namespace TokenSaver.MCP.HealthChecks;
 
 /// <summary>
 ///     Exercises a handful of the server's own lightweight, in-process code paths (no network
-///     I/O — this deliberately does not call DraftModel/Ollama; that's <see cref="SimpleModelServerHealthCheck" />'s
+///     I/O — this deliberately does not call SimpleModelServer/Ollama; that's <see cref="SimpleModelServerHealthCheck" />'s
 ///     job) to catch a broken configuration/wiring bug before a real caller does. Mirrors
-///     DraftModel.Loader's <c>RunSelfTests</c> in RouterHttpServer: each check is independent —
+///     SimpleModelServer's <c>RunSelfTests</c> in RouterHttpServer: each check is independent —
 ///     one throwing doesn't stop the rest — and a failure is reported as Degraded with which
 ///     check failed and why, even though the process is obviously still up and responding.
 ///     Deliberately untagged so it participates in <c>/health</c> but not the

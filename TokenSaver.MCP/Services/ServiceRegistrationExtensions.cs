@@ -162,7 +162,7 @@ internal static class ServiceRegistrationExtensions
             client.Timeout = TimeSpan.FromMinutes(5);
         }).AddHttpMessageHandler<EndpointRoutingHandler>();
 
-        // DraftModel capacity check client (10-second timeout, quick checks only)
+        // SimpleModelServer capacity check client (10-second timeout, quick checks only)
         services.AddHttpClient<SimpleModelServerCapacityClient>(client =>
         {
             client.BaseAddress = new Uri(config.OllamaUrl);
@@ -176,7 +176,7 @@ internal static class ServiceRegistrationExtensions
     /// <remarks>The User-Agent header is applied globally — see <see cref="AddOllamaHttpClients" />.</remarks>
     public static IServiceCollection AddPipelineHttpClients(this IServiceCollection services, TokenSaverConfig config)
     {
-        const string PassthroughAgent = "passthrough";  // Tells DraftModel router not to switch agents
+        const string PassthroughAgent = "passthrough";  // Tells SimpleModelServer router not to switch agents
 
         // PromptAssessor: quick model evaluation (30 second timeout)
         services.AddHttpClient<PromptAssessor>(client =>
@@ -317,7 +317,7 @@ internal static class ServiceRegistrationExtensions
     /// <summary>
     ///     Registers the WSL provider stack (TokenSaver.WslControl) plus the host-side adapter that
     ///     binds its <see cref="IWslCommandModel" /> seam to the local model (OllamaService), so the
-    ///     natural-language planner can route command synthesis through the DraftModel/Ollama router.
+    ///     natural-language planner can route command synthesis through the SimpleModelServer/Ollama router.
     /// </summary>
     public static IServiceCollection AddWslControlServices(this IServiceCollection services)
     {

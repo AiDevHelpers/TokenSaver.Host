@@ -20,7 +20,7 @@ namespace TokenSaver.MCP.Tests;
 /// <summary>
 ///     Minimal, purpose-built ASP.NET Core test host for the degraded-health/self-test feature —
 ///     deliberately does NOT reuse the real Program.cs composition root, which wires up ~20
-///     singletons, background index warm-up, and real DraftModel connectivity waits that would
+///     singletons, background index warm-up, and real SimpleModelServer connectivity waits that would
 ///     make these tests slow and flaky for something that's really just "does the fault-tracking
 ///     middleware + these two health checks behave correctly". Wires only what that needs:
 ///     <see cref="FaultTrackingMiddleware" />, <see cref="UnhandledFaultHealthCheck" />,

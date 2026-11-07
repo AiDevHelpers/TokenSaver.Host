@@ -9,7 +9,7 @@ using System.Globalization;
 namespace TokenSaver.MCP.HealthChecks;
 
 /// <summary>
-///     Health check that probes the DraftModel router (via OllamaService) and reports
+///     Health check that probes the SimpleModelServer router (via OllamaService) and reports
 ///     whether it is reachable, has models available, and has models loaded in VRAM. Also reports
 ///     host resource stats (GPU/VRAM via <c>nvidia-smi</c>, system RAM, logical CPU core count) —
 ///     informational only, never affects Healthy/Unhealthy classification, since a GPU-stat probe
@@ -35,22 +35,22 @@ internal sealed class SimpleModelServerHealthCheck(OllamaService ollama) : IHeal
         catch (Exception ex)
         {
             return HealthCheckResult.Unhealthy(
-                "DraftModel router threw an exception during health probe.",
+                "SimpleModelServer router threw an exception during health probe.",
                 ex);
         }
 
         if (!status.Running)
         {
             return HealthCheckResult.Unhealthy(
-                "DraftModel router is not reachable. " +
-                "Ensure DraftModel.Loader is running (dotnet run --project DraftModel/DraftModel.Loader -- --service).");
+                "SimpleModelServer router is not reachable. " +
+                "Ensure SimpleModelServer is running (dotnet run --project SimpleModelServer/SimpleModelServer -- --service).");
         }
 
         if (status.Models.Length == 0)
         {
             return HealthCheckResult.Unhealthy(
-                "DraftModel router is reachable but no models are pulled. " +
-                "Run DraftModel.Loader with --service to pull required models.");
+                "SimpleModelServer router is reachable but no models are pulled. " +
+                "Run SimpleModelServer with --service to pull required models.");
         }
 
         bool idle = status.LoadedInVram.Length == 0;
@@ -63,7 +63,7 @@ internal sealed class SimpleModelServerHealthCheck(OllamaService ollama) : IHeal
         // and a joined string is just as usable in the /health JSON response.
         //
         // "models_available" mirrors the router's /api/tags response, which is deliberately a
-        // single virtual model name (see DraftModel's docs/router-contract.md — "single virtual
+        // single virtual model name (see SimpleModelServer's docs/router-contract.md — "single virtual
         // model" by design, not a bug): the router hides which concrete draft/main/deep/large
         // model is actually behind it. The real concrete model names only ever show up in
         // "models_in_vram" (proxied verbatim from Ollama's own /api/ps).
@@ -88,12 +88,12 @@ internal sealed class SimpleModelServerHealthCheck(OllamaService ollama) : IHeal
 
         return idle
             ? HealthCheckResult.Healthy(
-                $"DraftModel router is up with {status.Models.Length} model(s) available, " +
+                $"SimpleModelServer router is up with {status.Models.Length} model(s) available, " +
                 "but idle — none currently loaded in VRAM (keep_alive expired). " +
                 "Next request will incur a one-time cold-load delay.",
                 data)
             : HealthCheckResult.Healthy(
-                $"DraftModel router is healthy. " +
+                $"SimpleModelServer router is healthy. " +
                 $"{status.LoadedInVram.Length}/{status.Models.Length} model(s) loaded in VRAM.",
                 data);
     }
