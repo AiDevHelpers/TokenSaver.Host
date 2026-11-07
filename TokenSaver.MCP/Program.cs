@@ -220,9 +220,9 @@ builder.Services
     .AddLanguageHelperServices();
 
 // ── Health Checks ──
-// draftmodel is tagged "ready" (gates /health/ready); others are untagged.
+// simplemodelserver is tagged "ready" (gates /health/ready); others are untagged.
 builder.Services.AddHealthChecks()
-    .AddCheck<SimpleModelServerHealthCheck>("draftmodel", tags: ["ready"])
+    .AddCheck<SimpleModelServerHealthCheck>("simplemodelserver", tags: ["ready"])
     .AddCheck<UnhandledFaultHealthCheck>("unhandled-fault")
     .AddCheck<SelfTestHealthCheck>("self-test");
 
