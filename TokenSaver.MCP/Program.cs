@@ -167,9 +167,6 @@ TokenSaverConfig ollamaConfig = builder.Configuration
     .GetSection(TokenSaverConfig.SectionName)
     .Get<TokenSaverConfig>() ?? new TokenSaverConfig();
 
-// Auto-discover DraftModel router if installed as a Windows service
-DraftModelConfigResolver.ApplyIfInstalled(ollamaConfig);
-
 // Propagate resolved configuration back into DI
 string resolvedOllamaUrl = ollamaConfig.OllamaUrl;
 builder.Services.PostConfigure<TokenSaverConfig>(cfg => cfg.OllamaUrl = resolvedOllamaUrl);
