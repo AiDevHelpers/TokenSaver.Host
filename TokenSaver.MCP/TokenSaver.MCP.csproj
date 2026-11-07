@@ -31,7 +31,7 @@
     <ProjectReference Include="..\..\AgentHelpers\TokenSaver.AgentHelpers.Qwen\TokenSaver.AgentHelpers.Qwen.csproj" />
     <ProjectReference Include="..\..\AgentHelpers\TokenSaver.AgentHelpers.DeepSeek\TokenSaver.AgentHelpers.DeepSeek.csproj" />
     <ProjectReference Include="..\..\AgentHelpers\TokenSaver.AgentHelpers.OpenSource\TokenSaver.AgentHelpers.OpenSource.csproj" />
-    <ProjectReference Include="..\..\..\..\Common\Logging\TokenSaver.Common.Logging\TokenSaver.Common.Logging.csproj" />
+    <ProjectReference Include="..\..\..\Common\Logging\TokenSaver.Common.Logging\TokenSaver.Common.Logging.csproj" />
     <ProjectReference Include="..\..\Common\TokenSaver.Common.Installation\TokenSaver.Common.Installation.csproj" />
     <ProjectReference Include="..\..\Common\TokenSaver.Common.Models\TokenSaver.Common.Models.csproj" />
   </ItemGroup>
