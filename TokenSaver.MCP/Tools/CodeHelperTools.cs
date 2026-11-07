@@ -125,7 +125,10 @@ internal sealed class CodeHelperTools
         IReadOnlyList<SymbolEntry> symbols = await _symbolSearch.FindSymbolAsync(name, kindFilter, filePath, root, ct);
         if (symbols.Count == 0)
         {
-            return $"No symbols named '{name}' found. Run CodeIndex(action: 'scan') first if you haven't yet.";
+            int indexed = await _symbolSearch.CountAllSymbolsAsync(root, ct);
+            return indexed == 0
+                ? $"No symbols named '{name}' found. The index has no symbols yet; run CodeIndex(action: 'scan') first."
+                : $"No symbols named '{name}' found among {indexed} indexed symbol(s) in '{root}'.";
         }
 
         StringBuilder sb = new($"Found {symbols.Count} symbol(s) named '{name}':\n\n");
