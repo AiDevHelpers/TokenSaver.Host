@@ -114,8 +114,8 @@ internal sealed class AccuracyTestTools(
         string? raw = await agentConfig.GetRawConfigAsync(ct);
         if (raw is null)
         {
-            return "DraftModel.config.json not found. " +
-                   "Ensure DRAFTMODEL_WORKSPACE points to the workspace root and DraftModel.Loader has run at least once.";
+            return "SimpleModelServer.config.json not found. " +
+                   "Ensure SIMPLEMODELSERVER_WORKSPACE points to the workspace root and DraftModel.Loader has run at least once.";
         }
 
         try
@@ -201,7 +201,7 @@ internal sealed class AccuracyTestTools(
         return ok
             ? $"Saved {proposals.Count} proposed prompt(s) to {path}.\n" +
               "Review the file, then call AgentConfig(action: 'update') to apply individual changes."
-            : "Failed to save proposals — ensure DRAFTMODEL_WORKSPACE is set.";
+            : "Failed to save proposals — ensure SIMPLEMODELSERVER_WORKSPACE is set.";
     }
 
     // ── Formatting helpers ────────────────────────────────────────────────────

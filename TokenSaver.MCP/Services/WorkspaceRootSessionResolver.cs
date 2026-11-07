@@ -122,7 +122,7 @@ internal sealed partial class WorkspaceRootSessionResolver
         }
 
         _config.WorkspaceRoot = resolved;
-        Environment.SetEnvironmentVariable("DRAFTMODEL_WORKSPACE", resolved);
+        Environment.SetEnvironmentVariable("SIMPLEMODELSERVER_WORKSPACE", resolved);
         LogWorkspaceRootResolved(_logger, resolved);
 
         // Same bootstrap AgentDetectionMiddleware runs on `initialize` when the root is already
