@@ -107,7 +107,7 @@ public sealed class ManageConfigToolsTests : IDisposable
         ManageConfigTools tools = CreateTools();
 
         string json = await tools.ManageConfig("get");
-        JsonElement root = JsonDocument.Parse(json).RootElement;
+        JsonElement root = JsonElement.Parse(json);
 
         Assert.True(root.TryGetProperty("merged", out _));
         Assert.Equal(BehaviorConfigService.LocalConfigPath(_workspaceRoot), root.GetProperty("localPath").GetString());
@@ -121,7 +121,7 @@ public sealed class ManageConfigToolsTests : IDisposable
         ManageConfigTools tools = CreateTools(new DefaultHttpContext());
 
         string json = await tools.ManageConfig("get");
-        JsonElement root = JsonDocument.Parse(json).RootElement;
+        JsonElement root = JsonElement.Parse(json);
 
         JsonElement detectedAgent = root.GetProperty("detectedAgent");
         Assert.Equal("Anthropic", detectedAgent.GetProperty("family").GetString());
@@ -137,7 +137,7 @@ public sealed class ManageConfigToolsTests : IDisposable
         ManageConfigTools tools = CreateTools(httpContext: null);
 
         string json = await tools.ManageConfig("get");
-        JsonElement root = JsonDocument.Parse(json).RootElement;
+        JsonElement root = JsonElement.Parse(json);
 
         Assert.Equal(JsonValueKind.Null, root.GetProperty("detectedAgent").ValueKind);
         Assert.Equal(JsonValueKind.Null, root.GetProperty("detectedLazyContext").ValueKind);
@@ -166,7 +166,7 @@ public sealed class ManageConfigToolsTests : IDisposable
 
         string gitignorePath = Path.Combine(_workspaceRoot, ".gitignore");
         Assert.True(File.Exists(gitignorePath));
-        Assert.Contains(".tokensaver", File.ReadAllText(gitignorePath), StringComparison.Ordinal);
+        Assert.Contains(".tokensaver", await File.ReadAllTextAsync(gitignorePath), StringComparison.Ordinal);
         Assert.Contains("Recorded", result, StringComparison.Ordinal);
 
         TokenSaverBehaviorConfig cfg = _behaviorConfig.GetConfig(_workspaceRoot);
@@ -177,13 +177,13 @@ public sealed class ManageConfigToolsTests : IDisposable
     public async Task SetGitignorePref_AddTrue_WithExistingGitignoreCoveringEntry_DoesNotDuplicate()
     {
         string gitignorePath = Path.Combine(_workspaceRoot, ".gitignore");
-        File.WriteAllText(gitignorePath, ".tokensaver/\n");
+        await File.WriteAllTextAsync(gitignorePath, ".tokensaver/\n");
         ManageConfigTools tools = CreateTools();
 
         string result = await tools.ManageConfig("set-gitignore-pref", add: true, scope: "local");
 
         Assert.Contains("already covered", result, StringComparison.Ordinal);
-        Assert.Equal(1, File.ReadAllLines(gitignorePath).Count(l => l.Contains(".tokensaver", StringComparison.Ordinal)));
+        Assert.Equal(1, (await File.ReadAllLinesAsync(gitignorePath)).Count(l => l.Contains(".tokensaver", StringComparison.Ordinal)));
     }
 
     [Fact]
@@ -231,7 +231,7 @@ public sealed class ManageConfigToolsTests : IDisposable
 
         string path = WorkspaceIgnoreFilter.AdditionalPath(_workspaceRoot);
         Assert.True(File.Exists(path));
-        string content = File.ReadAllText(path);
+        string content = await File.ReadAllTextAsync(path);
         Assert.Contains("**/generated/**", content, StringComparison.Ordinal);
         Assert.Contains("*.snap", content, StringComparison.Ordinal);
         Assert.Contains("Added 2", result, StringComparison.Ordinal);
@@ -246,7 +246,7 @@ public sealed class ManageConfigToolsTests : IDisposable
 
         string path = WorkspaceIgnoreFilter.BypassPath(_workspaceRoot);
         Assert.True(File.Exists(path));
-        Assert.Contains("vendor/important.lock", File.ReadAllText(path), StringComparison.Ordinal);
+        Assert.Contains("vendor/important.lock", await File.ReadAllTextAsync(path), StringComparison.Ordinal);
         Assert.Contains("bypass (force-include)", result, StringComparison.Ordinal);
     }
 
@@ -436,7 +436,7 @@ public sealed class ManageConfigToolsTests : IDisposable
         // in the written JSON, and EnablePromptCaching is exactly the seeded default rather than
         // something this "cacheTtlSeconds" call could have produced.
         Assert.True(cfg.AgentConfig?.DeepSeek?.EnablePromptCaching);
-        string localJson = File.ReadAllText(BehaviorConfigService.LocalConfigPath(_workspaceRoot));
+        string localJson = await File.ReadAllTextAsync(BehaviorConfigService.LocalConfigPath(_workspaceRoot));
         Assert.DoesNotContain("3600", localJson, StringComparison.Ordinal);
     }
 

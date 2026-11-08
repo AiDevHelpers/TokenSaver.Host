@@ -58,10 +58,13 @@ internal sealed class DebuggerEventStreamManager
 
         if (_subscriptions.TryAdd(subscriptionId, subscription))
         {
-            _logger.LogInformation(
-                "SSE subscription added: {SubscriptionName} (ID: {SubscriptionId})",
-                subscription.SubscriptionName,
-                subscriptionId);
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation(
+                    "SSE subscription added: {SubscriptionName} (ID: {SubscriptionId})",
+                    subscription.SubscriptionName,
+                    subscriptionId);
+            }
             return subscriptionId;
         }
 
@@ -75,10 +78,13 @@ internal sealed class DebuggerEventStreamManager
     {
         if (_subscriptions.TryRemove(subscriptionId, out var subscription))
         {
-            _logger.LogInformation(
-                "SSE subscription removed: {SubscriptionName} (sent {EventCount} events)",
-                subscription.SubscriptionName,
-                subscription.EventsCount);
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation(
+                    "SSE subscription removed: {SubscriptionName} (sent {EventCount} events)",
+                    subscription.SubscriptionName,
+                    subscription.EventsCount);
+            }
         }
     }
 
@@ -90,7 +96,7 @@ internal sealed class DebuggerEventStreamManager
         lock (_broadcastLock)
         {
             // Rate limiting check
-            if (_subscriptions.Count > 0)
+            if (!_subscriptions.IsEmpty)
             {
                 var now = DateTime.UtcNow;
                 var activeSubscriptions = _subscriptions.Values
@@ -99,7 +105,10 @@ internal sealed class DebuggerEventStreamManager
 
                 if (activeSubscriptions >= _maxEventsPerSecond)
                 {
-                    _logger.LogDebug("Rate limit reached ({MaxEventsPerSecond}/sec)", _maxEventsPerSecond);
+                    if (_logger.IsEnabled(LogLevel.Debug))
+                    {
+                        _logger.LogDebug("Rate limit reached ({MaxEventsPerSecond}/sec)", _maxEventsPerSecond);
+                    }
                     return;
                 }
             }
@@ -163,7 +172,10 @@ internal sealed class DebuggerEventStreamManager
     {
         var count = _subscriptions.Count;
         _subscriptions.Clear();
-        _logger.LogInformation("Cleared {SubscriptionCount} subscriptions", count);
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation("Cleared {SubscriptionCount} subscriptions", count);
+        }
     }
 
     private async Task SendEventToSubscriptionAsync(DebuggerStreamSubscription subscription, DebuggerEvent evt)

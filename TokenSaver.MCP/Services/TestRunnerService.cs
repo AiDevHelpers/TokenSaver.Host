@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 using System.Diagnostics;
+using System.Globalization;
 using System.Text.RegularExpressions;
 
 namespace TokenSaver.MCP.Services;
@@ -150,10 +151,13 @@ internal sealed class TestRunnerService : ITestRunner
             await process.WaitForExitAsync(ct);
             sw.Stop();
 
-            var output = await process.StandardOutput.ReadToEndAsync();
-            var errors = await process.StandardError.ReadToEndAsync();
+            var output = await process.StandardOutput.ReadToEndAsync(ct);
+            var errors = await process.StandardError.ReadToEndAsync(ct);
 
-            _logger.LogInformation("Test run completed in {Elapsed}ms with exit code {ExitCode}", sw.ElapsedMilliseconds, process.ExitCode);
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation("Test run completed in {Elapsed}ms with exit code {ExitCode}", sw.ElapsedMilliseconds, process.ExitCode);
+            }
 
             if (process.ExitCode != 0 && string.IsNullOrWhiteSpace(output))
             {
@@ -213,10 +217,10 @@ internal sealed class TestRunnerService : ITestRunner
         var failedMatch = Regex.Matches(output, @"Failed:\s*(\d+)", RegexOptions.IgnoreCase);
         var skippedMatch = Regex.Matches(output, @"Skipped:\s*(\d+)", RegexOptions.IgnoreCase);
 
-        int total = totalMatch.Count > 0 ? int.Parse(totalMatch[0].Groups[1].Value) : 0;
-        int passed = passedMatch.Count > 0 ? int.Parse(passedMatch[0].Groups[1].Value) : 0;
-        int failed = failedMatch.Count > 0 ? int.Parse(failedMatch[0].Groups[1].Value) : 0;
-        int skipped = skippedMatch.Count > 0 ? int.Parse(skippedMatch[0].Groups[1].Value) : 0;
+        int total = totalMatch.Count > 0 ? int.Parse(totalMatch[0].Groups[1].Value, CultureInfo.InvariantCulture) : 0;
+        int passed = passedMatch.Count > 0 ? int.Parse(passedMatch[0].Groups[1].Value, CultureInfo.InvariantCulture) : 0;
+        int failed = failedMatch.Count > 0 ? int.Parse(failedMatch[0].Groups[1].Value, CultureInfo.InvariantCulture) : 0;
+        int skipped = skippedMatch.Count > 0 ? int.Parse(skippedMatch[0].Groups[1].Value, CultureInfo.InvariantCulture) : 0;
 
         // Extract failure details from output
         var failures = new List<TestFailure>();

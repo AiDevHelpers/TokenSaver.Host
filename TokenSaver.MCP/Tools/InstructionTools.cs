@@ -3,6 +3,7 @@ using TokenSaver.MCP.Services;
 using ModelContextProtocol.Server;
 
 using System.ComponentModel;
+using System.Globalization;
 using System.Text;
 
 namespace TokenSaver.MCP.Tools;
@@ -26,7 +27,7 @@ internal sealed class InstructionTools(InstructionStoreService store)
         StringBuilder sb = new();
         foreach (InstructionInfo item in items)
         {
-            _ = sb.AppendLine($"- {item.Name}: {item.Description}");
+            _ = sb.AppendLine(CultureInfo.InvariantCulture, $"- {item.Name}: {item.Description}");
         }
 
         return sb.ToString().TrimEnd();

@@ -13,6 +13,8 @@ namespace TokenSaver.MCP.Tools;
 [McpServerToolType]
 internal sealed class DebuggerAnalysisTools
 {
+    private static readonly JsonSerializerOptions s_jsonOptions = new() { WriteIndented = true };
+
     private readonly IDebuggerEventCapture _eventCapture;
     private readonly IDebuggerProblemCapture _problemCapture;
 
@@ -54,7 +56,7 @@ internal sealed class DebuggerAnalysisTools
         var stats = _problemCapture.GetProblemStats();
         var analysis = DebuggerProblemsAnalysisJson.FromStats(stats, problems, includeFileBreakdown);
 
-        return JsonSerializer.Serialize(analysis, new JsonSerializerOptions { WriteIndented = true });
+        return JsonSerializer.Serialize(analysis, s_jsonOptions);
     }
 
     /// <summary>
@@ -79,7 +81,7 @@ internal sealed class DebuggerAnalysisTools
             }).OrderByDescending(f => f.problemCount).ToList()
         };
 
-        return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
+        return JsonSerializer.Serialize(result, s_jsonOptions);
     }
 
     /// <summary>
@@ -103,7 +105,7 @@ internal sealed class DebuggerAnalysisTools
                 })
         };
 
-        return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
+        return JsonSerializer.Serialize(result, s_jsonOptions);
     }
 
     /// <summary>
@@ -130,7 +132,7 @@ internal sealed class DebuggerAnalysisTools
             }
         };
 
-        return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
+        return JsonSerializer.Serialize(result, s_jsonOptions);
     }
 
     /// <summary>
@@ -193,7 +195,7 @@ internal sealed class DebuggerAnalysisTools
             }).ToList()
         };
 
-        return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
+        return JsonSerializer.Serialize(result, s_jsonOptions);
     }
 
     /// <summary>
@@ -227,7 +229,7 @@ internal sealed class DebuggerAnalysisTools
                 .ToList()
         };
 
-        return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
+        return JsonSerializer.Serialize(result, s_jsonOptions);
     }
 
     /// <summary>
@@ -244,6 +246,6 @@ internal sealed class DebuggerAnalysisTools
         {
             timestamp = DateTime.UtcNow,
             message = "All captured problems and events have been cleared"
-        }, new JsonSerializerOptions { WriteIndented = true });
+        }, s_jsonOptions);
     }
 }

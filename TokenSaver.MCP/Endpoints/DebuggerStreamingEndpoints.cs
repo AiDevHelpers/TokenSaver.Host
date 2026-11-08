@@ -149,7 +149,7 @@ internal static class DebuggerStreamingEndpoints
         try
         {
             // Send periodic problem summary
-            var cts = CancellationTokenSource.CreateLinkedTokenSource(context.RequestAborted);
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(context.RequestAborted);
             while (!cts.Token.IsCancellationRequested)
             {
                 try

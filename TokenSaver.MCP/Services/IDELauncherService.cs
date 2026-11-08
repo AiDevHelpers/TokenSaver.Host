@@ -64,7 +64,10 @@ internal sealed class IDELauncherService : IIDELauncher
                 _runningIDEs[ideType] = new IDEProcess { Process = process, Port = port };
             }
 
-            _logger.LogInformation("Launched {IdeType} (PID {ProcessId}) for {WorkspaceRoot}", ideType, process.Id, workspaceRoot);
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation("Launched {IdeType} (PID {ProcessId}) for {WorkspaceRoot}", ideType, process.Id, workspaceRoot);
+            }
 
             if (waitForReady)
             {
@@ -124,7 +127,10 @@ internal sealed class IDELauncherService : IIDELauncher
         {
             if (!_runningIDEs.TryGetValue(ideType, out var ide) || ide.Process.HasExited)
             {
-                _logger.LogInformation("{IdeType} is not running", ideType);
+                if (_logger.IsEnabled(LogLevel.Information))
+                {
+                    _logger.LogInformation("{IdeType} is not running", ideType);
+                }
                 return;
             }
 
@@ -144,7 +150,10 @@ internal sealed class IDELauncherService : IIDELauncher
                     ide.Process.Kill();
                 }
 
-                _logger.LogInformation("Stopped {IdeType}", ideType);
+                if (_logger.IsEnabled(LogLevel.Information))
+                {
+                    _logger.LogInformation("Stopped {IdeType}", ideType);
+                }
             }
             catch (Exception ex)
             {
@@ -221,7 +230,10 @@ internal sealed class IDELauncherService : IIDELauncher
                 {
                     if (_runningIDEs.TryGetValue(ideType, out var ide) && !ide.Process.HasExited)
                     {
-                        _logger.LogInformation("{IdeType} is ready", ideType);
+                        if (_logger.IsEnabled(LogLevel.Information))
+                        {
+                            _logger.LogInformation("{IdeType} is ready", ideType);
+                        }
                         return;
                     }
                 }

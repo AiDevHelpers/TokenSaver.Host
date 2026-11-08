@@ -14,12 +14,12 @@ public sealed class ExtensionRegistryServiceTests
         var extensions = _registry.GetAllExtensions();
 
         Assert.NotEmpty(extensions);
-        Assert.True(extensions.Any(e => e.ExtensionId == "VsCode"));
-        Assert.True(extensions.Any(e => e.ExtensionId == "Cursor"));
-        Assert.True(extensions.Any(e => e.ExtensionId == "Continue"));
-        Assert.True(extensions.Any(e => e.ExtensionId == "VisualStudio"));
-        Assert.True(extensions.Any(e => e.ExtensionId == "LMStudio"));
-        Assert.True(extensions.Any(e => e.ExtensionId == "ClaudeDesktop"));
+        Assert.Contains(extensions, e => e.ExtensionId == "VsCode");
+        Assert.Contains(extensions, e => e.ExtensionId == "Cursor");
+        Assert.Contains(extensions, e => e.ExtensionId == "Continue");
+        Assert.Contains(extensions, e => e.ExtensionId == "VisualStudio");
+        Assert.Contains(extensions, e => e.ExtensionId == "LMStudio");
+        Assert.Contains(extensions, e => e.ExtensionId == "ClaudeDesktop");
     }
 
     [Fact]
@@ -89,10 +89,10 @@ public sealed class ExtensionRegistryServiceTests
         var streaming = _registry.GetExtensionsByFeature("streaming");
 
         Assert.NotEmpty(streaming);
-        Assert.True(streaming.Any(e => e.ExtensionId == "VsCode"));
-        Assert.True(streaming.Any(e => e.ExtensionId == "Cursor"));
-        Assert.True(streaming.Any(e => e.ExtensionId == "ClaudeDesktop"));
-        Assert.False(streaming.Any(e => e.ExtensionId == "VisualStudio"));
+        Assert.Contains(streaming, e => e.ExtensionId == "VsCode");
+        Assert.Contains(streaming, e => e.ExtensionId == "Cursor");
+        Assert.Contains(streaming, e => e.ExtensionId == "ClaudeDesktop");
+        Assert.DoesNotContain(streaming, e => e.ExtensionId == "VisualStudio");
     }
 
     [Fact]

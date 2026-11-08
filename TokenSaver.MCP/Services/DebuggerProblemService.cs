@@ -156,12 +156,12 @@ internal sealed class DebuggerProblemService : IDebuggerProblemCapture
     /// <summary>Classify severity based on problem type.</summary>
     private static DebugSeverity ClassifySeverity(string problemType)
     {
-        return problemType.ToLowerInvariant() switch
+        return problemType.ToUpperInvariant() switch
         {
-            var x when x.Contains("error") || x.Contains("critical") => DebugSeverity.Error,
-            var x when x.Contains("warning") => DebugSeverity.Warning,
-            var x when x.Contains("info") => DebugSeverity.Info,
-            var x when x.Contains("fatal") || x.Contains("crash") => DebugSeverity.Fatal,
+            var x when x.Contains("ERROR", StringComparison.Ordinal) || x.Contains("CRITICAL", StringComparison.Ordinal) => DebugSeverity.Error,
+            var x when x.Contains("WARNING", StringComparison.Ordinal) => DebugSeverity.Warning,
+            var x when x.Contains("INFO", StringComparison.Ordinal) => DebugSeverity.Info,
+            var x when x.Contains("FATAL", StringComparison.Ordinal) || x.Contains("CRASH", StringComparison.Ordinal) => DebugSeverity.Fatal,
             _ => DebugSeverity.Warning
         };
     }

@@ -96,7 +96,7 @@ public sealed class ClientDebugContextServiceTests
         var sessionId = _service.StartSession(clientId);
 
         var session = _service.GetSession(sessionId)!;
-        Assert.StartsWith("Session-", session.SessionName);
+        Assert.StartsWith("Session-", session.SessionName, StringComparison.Ordinal);
     }
 
     [Fact]

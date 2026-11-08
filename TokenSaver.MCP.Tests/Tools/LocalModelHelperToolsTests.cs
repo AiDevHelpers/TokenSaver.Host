@@ -251,7 +251,7 @@ public sealed class LocalModelHelperToolsTests : IDisposable
 
         string prefsPath = Path.Combine(_root, ".tokensaver", "preferences.json");
         Assert.True(File.Exists(prefsPath));
-        Assert.Contains("Copilot", await File.ReadAllTextAsync(prefsPath));
+        Assert.Contains("Copilot", await File.ReadAllTextAsync(prefsPath), StringComparison.Ordinal);
     }
 
     [Fact]
@@ -362,8 +362,8 @@ public sealed class LocalModelHelperToolsTests : IDisposable
     [Fact]
     public async Task BuildConciseContext_RequestedGitignoredFile_ReturnsConfirmationPromptInsteadOfBuilding()
     {
-        File.WriteAllText(Path.Combine(_root, ".gitignore"), "secret.txt\n");
-        File.WriteAllText(Path.Combine(_root, "secret.txt"), "sensitive");
+        await File.WriteAllTextAsync(Path.Combine(_root, ".gitignore"), "secret.txt\n");
+        await File.WriteAllTextAsync(Path.Combine(_root, "secret.txt"), "sensitive");
 
         LocalModelHelperTools tools = CreateTools();
 
@@ -407,8 +407,8 @@ public sealed class LocalModelHelperToolsTests : IDisposable
     [Fact]
     public async Task BuildConciseContext_ConfirmedIgnoredFile_IncludesItInsteadOfPromptingAgain()
     {
-        File.WriteAllText(Path.Combine(_root, ".gitignore"), "secret.txt\n");
-        File.WriteAllText(Path.Combine(_root, "secret.txt"), "sensitive");
+        await File.WriteAllTextAsync(Path.Combine(_root, ".gitignore"), "secret.txt\n");
+        await File.WriteAllTextAsync(Path.Combine(_root, "secret.txt"), "sensitive");
 
         LocalModelHelperTools tools = CreateTools();
 

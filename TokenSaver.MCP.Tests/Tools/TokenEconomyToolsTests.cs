@@ -43,7 +43,7 @@ public class TokenEconomyToolsTests
         TokenEconomyTools tools = CreateTools();
 
         string json = tools.TokenBudget("short content", threshold: 8000);
-        JsonElement result = JsonDocument.Parse(json).RootElement;
+        JsonElement result = JsonElement.Parse(json);
 
         Assert.False(result.GetProperty("over_budget").GetBoolean());
         Assert.Equal(8000, result.GetProperty("threshold").GetInt32());
@@ -56,7 +56,7 @@ public class TokenEconomyToolsTests
         string content = new string('a', 4000); // ~1000 estimated tokens
 
         string json = tools.TokenBudget(content, threshold: 500);
-        JsonElement result = JsonDocument.Parse(json).RootElement;
+        JsonElement result = JsonElement.Parse(json);
 
         Assert.True(result.GetProperty("over_budget").GetBoolean());
         Assert.Equal(1000, result.GetProperty("tokens").GetInt32());
@@ -69,7 +69,7 @@ public class TokenEconomyToolsTests
         TokenEconomyTools tools = CreateTools();
 
         string json = tools.TokenBudget("anything", threshold: 0);
-        JsonElement result = JsonDocument.Parse(json).RootElement;
+        JsonElement result = JsonElement.Parse(json);
 
         Assert.Equal(0, result.GetProperty("pct_of_threshold").GetInt32());
     }

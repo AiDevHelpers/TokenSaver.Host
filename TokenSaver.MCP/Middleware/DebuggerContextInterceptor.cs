@@ -51,7 +51,7 @@ internal sealed class DebuggerContextInterceptor
         if (string.IsNullOrEmpty(clientId) && !string.IsNullOrEmpty(extensionType))
         {
             clientId = clientContextService.RegisterClient(extensionType, extensionVersion);
-            context.Response.Headers.Add("X-Client-Id", clientId);
+            context.Response.Headers["X-Client-Id"] = clientId;
         }
 
         // Record activity if we have a client
@@ -61,12 +61,15 @@ internal sealed class DebuggerContextInterceptor
         }
 
         // Log request start
-        _logger.LogDebug(
-            "Debug request from {Extension} v{Version}: {Method} {Path}",
-            extensionType ?? "unknown",
-            extensionVersion ?? "unknown",
-            context.Request.Method,
-            requestPath);
+        if (_logger.IsEnabled(LogLevel.Debug))
+        {
+            _logger.LogDebug(
+                "Debug request from {Extension} v{Version}: {Method} {Path}",
+                extensionType ?? "unknown",
+                extensionVersion ?? "unknown",
+                context.Request.Method,
+                requestPath);
+        }
 
         try
         {
@@ -105,7 +108,7 @@ internal sealed class DebuggerContextInterceptor
     private static string? GetToolNameFromPath(string path)
     {
         // Extract tool name from MCP tool endpoints
-        if (path.Contains("/mcp") && path.Contains("tool"))
+        if (path.Contains("/mcp", StringComparison.Ordinal) && path.Contains("tool", StringComparison.Ordinal))
         {
             var parts = path.Split('/');
             var toolIndex = Array.IndexOf(parts, "tool");
@@ -116,9 +119,9 @@ internal sealed class DebuggerContextInterceptor
         }
 
         // Extract API operation
-        if (path.StartsWith("/api/debugger/"))
+        if (path.StartsWith("/api/debugger/", StringComparison.Ordinal))
         {
-            return path.Replace("/api/debugger/", "").Split('/')[0];
+            return path.Replace("/api/debugger/", "", StringComparison.Ordinal).Split('/')[0];
         }
 
         return null;

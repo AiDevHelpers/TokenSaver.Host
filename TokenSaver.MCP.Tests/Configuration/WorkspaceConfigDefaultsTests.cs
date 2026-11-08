@@ -11,6 +11,13 @@ public sealed class WorkspaceConfigDefaultsTests : IDisposable
 {
     private const string GlobalDirOverrideEnvVar = "TOKENSAVER_GLOBAL_CONFIG_DIR";
 
+    private static readonly System.Text.Json.JsonSerializerOptions s_jsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true,
+        ReadCommentHandling = System.Text.Json.JsonCommentHandling.Skip,
+        AllowTrailingCommas = true,
+    };
+
     private readonly string _workspaceRoot;
     private readonly string _globalDir;
 
@@ -65,23 +72,23 @@ public sealed class WorkspaceConfigDefaultsTests : IDisposable
         string content = File.ReadAllText(configPath);
 
         // Every top-level section is present so the file documents the full schema...
-        Assert.Contains("\"repoHelper\"", content);
-        Assert.Contains("\"codeHelper\"", content);
-        Assert.Contains("\"tokenEconomy\"", content);
-        Assert.Contains("\"context\"", content);
-        Assert.Contains("\"agentConfig\"", content);
-        Assert.Contains("\"lazyContext\"", content);
+        Assert.Contains("\"repoHelper\"", content, StringComparison.Ordinal);
+        Assert.Contains("\"codeHelper\"", content, StringComparison.Ordinal);
+        Assert.Contains("\"tokenEconomy\"", content, StringComparison.Ordinal);
+        Assert.Contains("\"context\"", content, StringComparison.Ordinal);
+        Assert.Contains("\"agentConfig\"", content, StringComparison.Ordinal);
+        Assert.Contains("\"lazyContext\"", content, StringComparison.Ordinal);
 
         // ...but every actual setting is commented out (no active overrides)...
-        Assert.Contains("// \"addTokenSaverToGitignore\": true,", content);
-        Assert.Contains("// \"optimizeInstructions\": true", content);
-        Assert.Contains("// \"autoSplitOversizedInstructions\": true", content);
-        Assert.Contains("// \"autoEnabled\": true,", content);
-        Assert.Contains("// \"enableDistill\": true,", content);
-        Assert.Contains("// \"contextSizeLimit\": 120000,", content);
+        Assert.Contains("// \"addTokenSaverToGitignore\": true,", content, StringComparison.Ordinal);
+        Assert.Contains("// \"optimizeInstructions\": true", content, StringComparison.Ordinal);
+        Assert.Contains("// \"autoSplitOversizedInstructions\": true", content, StringComparison.Ordinal);
+        Assert.Contains("// \"autoEnabled\": true,", content, StringComparison.Ordinal);
+        Assert.Contains("// \"enableDistill\": true,", content, StringComparison.Ordinal);
+        Assert.Contains("// \"contextSizeLimit\": 120000,", content, StringComparison.Ordinal);
 
         // ...and each setting has a preceding description comment.
-        Assert.Contains("// Master switch for CodeHelper auto-workflow.", content);
+        Assert.Contains("// Master switch for CodeHelper auto-workflow.", content, StringComparison.Ordinal);
 
         // File still parses as valid JSON-with-comments once loaded through the same reader
         // BehaviorConfigService uses (comments/commented-out lines are all ignored), yielding an
@@ -89,12 +96,7 @@ public sealed class WorkspaceConfigDefaultsTests : IDisposable
         // is uncommented.
         TokenSaverBehaviorConfig? parsed = System.Text.Json.JsonSerializer.Deserialize<TokenSaverBehaviorConfig>(
             content,
-            new System.Text.Json.JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true,
-                ReadCommentHandling = System.Text.Json.JsonCommentHandling.Skip,
-                AllowTrailingCommas = true,
-            });
+            s_jsonOptions);
         Assert.NotNull(parsed);
         Assert.Null(parsed!.RepoHelper?.AddTokenSaverToGitignore);
         Assert.Null(parsed.RepoHelper?.OptimizeInstructions);
@@ -107,7 +109,7 @@ public sealed class WorkspaceConfigDefaultsTests : IDisposable
 
         string path = Path.Combine(LocalDir, ".ignore-additional");
         Assert.True(File.Exists(path));
-        Assert.Contains("TokenSaver: extra gitignore-syntax patterns", File.ReadAllText(path));
+        Assert.Contains("TokenSaver: extra gitignore-syntax patterns", File.ReadAllText(path), StringComparison.Ordinal);
     }
 
     [Fact]
@@ -117,7 +119,7 @@ public sealed class WorkspaceConfigDefaultsTests : IDisposable
 
         string path = Path.Combine(LocalDir, ".ignore-bypass");
         Assert.True(File.Exists(path));
-        Assert.Contains("force-include paths", File.ReadAllText(path));
+        Assert.Contains("force-include paths", File.ReadAllText(path), StringComparison.Ordinal);
     }
 
     [Fact]
@@ -129,40 +131,35 @@ public sealed class WorkspaceConfigDefaultsTests : IDisposable
         string content = File.ReadAllText(GlobalConfigPath);
 
         // Every top-level section is present, same as the local template...
-        Assert.Contains("\"repoHelper\"", content);
-        Assert.Contains("\"codeHelper\"", content);
-        Assert.Contains("\"tokenEconomy\"", content);
-        Assert.Contains("\"context\"", content);
-        Assert.Contains("\"agentConfig\"", content);
-        Assert.Contains("\"lazyContext\"", content);
+        Assert.Contains("\"repoHelper\"", content, StringComparison.Ordinal);
+        Assert.Contains("\"codeHelper\"", content, StringComparison.Ordinal);
+        Assert.Contains("\"tokenEconomy\"", content, StringComparison.Ordinal);
+        Assert.Contains("\"context\"", content, StringComparison.Ordinal);
+        Assert.Contains("\"agentConfig\"", content, StringComparison.Ordinal);
+        Assert.Contains("\"lazyContext\"", content, StringComparison.Ordinal);
 
         // ...but settings are active (uncommented) rather than commented out...
-        Assert.Contains("\"optimizeInstructions\": true", content);
-        Assert.Contains("\"autoSplitOversizedInstructions\": true", content);
-        Assert.Contains("\"autoEnabled\": true,", content);
-        Assert.Contains("\"enableDistill\": true,", content);
-        Assert.Contains("\"contextSizeLimit\": 120000,", content);
-        Assert.DoesNotContain("// \"optimizeInstructions\": true", content);
-        Assert.DoesNotContain("// \"autoSplitOversizedInstructions\": true", content);
-        Assert.DoesNotContain("// \"autoEnabled\": true,", content);
-        Assert.DoesNotContain("// \"enableDistill\": true,", content);
+        Assert.Contains("\"optimizeInstructions\": true", content, StringComparison.Ordinal);
+        Assert.Contains("\"autoSplitOversizedInstructions\": true", content, StringComparison.Ordinal);
+        Assert.Contains("\"autoEnabled\": true,", content, StringComparison.Ordinal);
+        Assert.Contains("\"enableDistill\": true,", content, StringComparison.Ordinal);
+        Assert.Contains("\"contextSizeLimit\": 120000,", content, StringComparison.Ordinal);
+        Assert.DoesNotContain("// \"optimizeInstructions\": true", content, StringComparison.Ordinal);
+        Assert.DoesNotContain("// \"autoSplitOversizedInstructions\": true", content, StringComparison.Ordinal);
+        Assert.DoesNotContain("// \"autoEnabled\": true,", content, StringComparison.Ordinal);
+        Assert.DoesNotContain("// \"enableDistill\": true,", content, StringComparison.Ordinal);
 
         // ...except the stateful "never asked yet" sentinel, which has no real default...
-        Assert.Contains("// \"addTokenSaverToGitignore\": true,", content);
+        Assert.Contains("// \"addTokenSaverToGitignore\": true,", content, StringComparison.Ordinal);
 
         // ...and each setting still has a preceding description comment.
-        Assert.Contains("// Master switch for CodeHelper auto-workflow.", content);
+        Assert.Contains("// Master switch for CodeHelper auto-workflow.", content, StringComparison.Ordinal);
 
         // Parses to exactly TokenSaverBehaviorConfig.Defaults() (all real defaults populated,
         // only the gitignore-prompt sentinel left null).
         TokenSaverBehaviorConfig? parsed = System.Text.Json.JsonSerializer.Deserialize<TokenSaverBehaviorConfig>(
             content,
-            new System.Text.Json.JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true,
-                ReadCommentHandling = System.Text.Json.JsonCommentHandling.Skip,
-                AllowTrailingCommas = true,
-            });
+            s_jsonOptions);
         Assert.NotNull(parsed);
         Assert.Null(parsed!.RepoHelper?.AddTokenSaverToGitignore);
         Assert.True(parsed.RepoHelper?.OptimizeInstructions);

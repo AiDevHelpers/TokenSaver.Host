@@ -88,7 +88,7 @@ public sealed class AgentDetectionMiddlewareTests
         (TestServer server, SpyCallerDetectionService spy) = CreateServer("C:\\workspace");
         using HttpClient client = server.CreateClient();
 
-        HttpResponseMessage response = await client.GetAsync("/mcp");
+        HttpResponseMessage response = await client.GetAsync(new Uri("/mcp", UriKind.RelativeOrAbsolute));
 
         Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
         Assert.Equal(0, spy.CallCount);
@@ -101,7 +101,7 @@ public sealed class AgentDetectionMiddlewareTests
         using HttpClient client = server.CreateClient();
 
         HttpResponseMessage response = await client.PostAsync(
-            "/other", new StringContent("""{"method":"initialize"}""", Encoding.UTF8, "application/json"));
+            new Uri("/other", UriKind.RelativeOrAbsolute), new StringContent("""{"method":"initialize"}""", Encoding.UTF8, "application/json"));
 
         Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
         Assert.Equal(0, spy.CallCount);
@@ -115,7 +115,7 @@ public sealed class AgentDetectionMiddlewareTests
 
         const string payload = """{"method":"initialize","id":1}""";
         HttpResponseMessage response = await client.PostAsync(
-            "/mcp", new StringContent(payload, Encoding.UTF8, "application/json"));
+            new Uri("/mcp", UriKind.RelativeOrAbsolute), new StringContent(payload, Encoding.UTF8, "application/json"));
 
         Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
         string echoed = await response.Content.ReadAsStringAsync();
@@ -131,7 +131,7 @@ public sealed class AgentDetectionMiddlewareTests
 
         const string payload = """{"method":"tools/call","id":2}""";
         HttpResponseMessage response = await client.PostAsync(
-            "/mcp", new StringContent(payload, Encoding.UTF8, "application/json"));
+            new Uri("/mcp", UriKind.RelativeOrAbsolute), new StringContent(payload, Encoding.UTF8, "application/json"));
 
         Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
         string echoed = await response.Content.ReadAsStringAsync();
@@ -147,7 +147,7 @@ public sealed class AgentDetectionMiddlewareTests
 
         const string payload = "{not valid json";
         HttpResponseMessage response = await client.PostAsync(
-            "/mcp", new StringContent(payload, Encoding.UTF8, "application/json"));
+            new Uri("/mcp", UriKind.RelativeOrAbsolute), new StringContent(payload, Encoding.UTF8, "application/json"));
 
         Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
         string echoed = await response.Content.ReadAsStringAsync();
@@ -174,7 +174,7 @@ public sealed class AgentDetectionMiddlewareTests
 
             const string payload = """{"method":"initialize","id":1}""";
             HttpResponseMessage response = await client.PostAsync(
-                "/mcp", new StringContent(payload, Encoding.UTF8, "application/json"));
+                new Uri("/mcp", UriKind.RelativeOrAbsolute), new StringContent(payload, Encoding.UTF8, "application/json"));
 
             Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
             Assert.True(File.Exists(configPath), "Session connect should recreate a missing local config.json.");
@@ -209,7 +209,7 @@ public sealed class AgentDetectionMiddlewareTests
 
         const string payload = """{"method":"initialize"}""";
         HttpResponseMessage response = await client.PostAsync(
-            "/mcp", new StringContent(payload, Encoding.UTF8, "application/json"));
+            new Uri("/mcp", UriKind.RelativeOrAbsolute), new StringContent(payload, Encoding.UTF8, "application/json"));
 
         Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
         string echoed = await response.Content.ReadAsStringAsync();
@@ -227,7 +227,7 @@ public sealed class AgentDetectionMiddlewareTests
         // never be read/parsed.
         string oversized = new('x', (1 * 1024 * 1024) + 10);
         HttpResponseMessage response = await client.PostAsync(
-            "/mcp", new StringContent(oversized, Encoding.UTF8, "application/json"));
+            new Uri("/mcp", UriKind.RelativeOrAbsolute), new StringContent(oversized, Encoding.UTF8, "application/json"));
 
         Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
         string echoed = await response.Content.ReadAsStringAsync();
