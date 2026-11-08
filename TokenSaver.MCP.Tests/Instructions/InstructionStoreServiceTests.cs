@@ -136,4 +136,14 @@ public sealed class InstructionStoreServiceTests : IDisposable
         Assert.DoesNotContain("this", terms);
         Assert.DoesNotContain("with", terms);
     }
+
+    [Fact]
+    public void SelectRelevantSections_TermInsideLongerWord_DoesNotMatch()
+    {
+        WriteSkill("ops", "---\nname: ops\ndescription: Ops.\n---\n## Lightest mechanism\n\nPick the lightest option.");
+
+        string result = new InstructionStoreService(_root).SelectRelevantSections("a failing test in the parser");
+
+        Assert.Equal("", result);
+    }
 }
