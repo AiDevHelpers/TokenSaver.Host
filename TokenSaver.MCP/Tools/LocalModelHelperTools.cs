@@ -48,6 +48,7 @@ internal sealed class LocalModelHelperTools
     private readonly BehaviorConfigService _behaviorConfig;
     private readonly LazyContextResolver _lazyContext;
     private readonly WorkspaceRootSessionResolver _workspaceRootResolver;
+    private readonly InstructionStoreService _instructionStore;
 
     public LocalModelHelperTools(
         OllamaService ollama,
@@ -65,8 +66,10 @@ internal sealed class LocalModelHelperTools
         OllamaEndpointRegistry endpoints,
         BehaviorConfigService behaviorConfig,
         LazyContextResolver lazyContext,
-        WorkspaceRootSessionResolver workspaceRootResolver)
+        WorkspaceRootSessionResolver workspaceRootResolver,
+        InstructionStoreService? instructionStore = null)
     {
+        _instructionStore = instructionStore ?? new InstructionStoreService(InstructionStoreService.DefaultRoot);
         _behaviorConfig = behaviorConfig;
         _ollama = ollama;
         _cleaner = cleaner;
@@ -324,6 +327,17 @@ internal sealed class LocalModelHelperTools
         string mcpBlock = _mcpContext.GetContextBlock(assessment.TaskType);
 
         string response = prefix + meta + "\n\n" + adapted;
+
+        // Relevant instruction sections go into the response itself: the client only sees what this
+        // tool returns, so injecting into the prompt (as the intercept middleware does) never reaches it.
+        if (InstructionStoreService.InjectionEnabled)
+        {
+            string instructions = _instructionStore.SelectRelevantSections(prompt);
+            if (instructions.Length > 0)
+            {
+                response += "\n\n" + instructions;
+            }
+        }
 
         // When the agent won't ask for missing content, advise the user about the
         // preferFullFileContent preference if they haven't already set it.

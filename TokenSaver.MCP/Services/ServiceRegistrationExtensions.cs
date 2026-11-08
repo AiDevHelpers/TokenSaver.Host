@@ -236,6 +236,7 @@ internal static class ServiceRegistrationExtensions
         services.AddSingleton<LazyContextResolver>();
         services.AddSingleton<InstructionCacheService>();
         services.AddSingleton<InstructionOptimizerService>();
+        services.AddSingleton(_ => new InstructionStoreService(InstructionStoreService.DefaultRoot));
         services.AddSingleton<IPromptAdapter, AgentHelpersPromptAdapter>();
 
         // Register AgentHelpers with client-specific adapters (priority 90) before
