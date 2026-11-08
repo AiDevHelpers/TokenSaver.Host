@@ -14,7 +14,7 @@ internal sealed class InstructionTools(InstructionStoreService store)
     [McpServerTool]
     [Description(
         "List the editable instruction store: the name and one-line description of each skill. " +
-        "Call GetInstruction with a name to read the full text.")]
+        "Call get_instruction with a name to read the full text.")]
     public string ListInstructions()
     {
         IReadOnlyList<InstructionInfo> items = store.List();
@@ -34,11 +34,11 @@ internal sealed class InstructionTools(InstructionStoreService store)
     }
 
     [McpServerTool]
-    [Description("Return the full text of one instruction from the store. Use ListInstructions to find names.")]
+    [Description("Return the full text of one instruction from the store. Use list_instructions to find names.")]
     public string GetInstruction(
-        [Description("Instruction name from ListInstructions, e.g. 'tdd' or 'implement-plan'")] string name)
+        [Description("Instruction name from list_instructions, e.g. 'tdd' or 'implement-plan'")] string name)
     {
         string? text = store.Get(name);
-        return text ?? $"No instruction named '{name}'. Call ListInstructions to see available names.";
+        return text ?? $"No instruction named '{name}'. Call list_instructions to see available names.";
     }
 }

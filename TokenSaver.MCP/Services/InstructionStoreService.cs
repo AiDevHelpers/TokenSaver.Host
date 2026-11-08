@@ -165,12 +165,14 @@ public sealed class InstructionStoreService
         int score = 0;
         foreach (string term in terms)
         {
-            if (body.Contains(term, StringComparison.OrdinalIgnoreCase))
+            // Word-start match: "test" must not match inside "lightest".
+            Regex wordStart = new(@"\b" + Regex.Escape(term), RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+            if (wordStart.IsMatch(body))
             {
                 score += 1;
             }
 
-            if (heading.Contains(term, StringComparison.OrdinalIgnoreCase))
+            if (wordStart.IsMatch(heading))
             {
                 score += 2;
             }
