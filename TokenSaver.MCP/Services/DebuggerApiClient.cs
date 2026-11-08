@@ -67,6 +67,14 @@ public sealed record DebuggerApiResponse(
     /// <summary>Create an error response.</summary>
     public static DebuggerApiResponse Fail(string error, string message = "Operation failed") =>
         new(Success: false, Message: message, Error: error, StatusCode: 400);
+
+    /// <summary>Create a success response with data.</summary>
+    public static DebuggerApiResponse<T> Ok<T>(T data, string message = "Success") =>
+        new DebuggerApiResponse<T>(Success: true, Message: message, Data: data);
+
+    /// <summary>Create an error response with data type <typeparamref name="T"/>.</summary>
+    public static DebuggerApiResponse<T> Fail<T>(string error, string message = "Operation failed") =>
+        new DebuggerApiResponse<T>(Success: false, Message: message, Error: error, StatusCode: 400);
 }
 
 /// <summary>Generic response wrapper with data payload.</summary>
@@ -75,16 +83,7 @@ public sealed record DebuggerApiResponse<T>(
     string Message,
     T? Data = default,
     string? Error = null,
-    int? StatusCode = null)
-{
-    /// <summary>Create a success response with data.</summary>
-    public static DebuggerApiResponse<T> Ok(T data, string message = "Success") =>
-        new(Success: true, Message: message, Data: data);
-
-    /// <summary>Create an error response.</summary>
-    public static DebuggerApiResponse<T> Fail(string error, string message = "Operation failed") =>
-        new(Success: false, Message: message, Error: error, StatusCode: 400);
-}
+    int? StatusCode = null);
 
 /// <summary>Request to start a debug session.</summary>
 public sealed record DebuggerStartSessionRequest(

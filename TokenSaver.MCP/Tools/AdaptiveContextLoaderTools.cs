@@ -93,7 +93,7 @@ internal sealed class AdaptiveContextLoaderTools
             {
                 _ = sb.AppendLine(CultureInfo.InvariantCulture,
                     $"  {seg.Label,-30} ({seg.Id,-25}) ~{seg.EstimatedTokens:N0} tokens");
-                if (seg.PrimaryTaskTypes.Length > 0)
+                if (seg.PrimaryTaskTypes.Count > 0)
                 {
                     _ = sb.AppendLine(CultureInfo.InvariantCulture,
                         $"    Primary tasks: {string.Join(", ", seg.PrimaryTaskTypes)}");

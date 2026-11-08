@@ -34,18 +34,18 @@ internal sealed class DebuggerApiImplementation : IDebuggerApiClient
                 ct);
 
             return result.Success
-                ? DebuggerApiResponse<DebugSessionResult>.Ok(result, "Debug session started")
-                : DebuggerApiResponse<DebugSessionResult>.Fail(result.Message);
+                ? DebuggerApiResponse.Ok<DebugSessionResult>(result, "Debug session started")
+                : DebuggerApiResponse.Fail<DebugSessionResult>(result.Message);
         }
         catch (ArgumentException ex)
         {
             _logger.LogWarning("Invalid start session request: {Error}", ex.Message);
-            return DebuggerApiResponse<DebugSessionResult>.Fail(ex.Message);
+            return DebuggerApiResponse.Fail<DebugSessionResult>(ex.Message);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error starting debug session");
-            return DebuggerApiResponse<DebugSessionResult>.Fail(ex.Message);
+            return DebuggerApiResponse.Fail<DebugSessionResult>(ex.Message);
         }
     }
 
@@ -86,18 +86,18 @@ internal sealed class DebuggerApiImplementation : IDebuggerApiClient
                 ct);
 
             return result.Verified
-                ? DebuggerApiResponse<BreakpointResult>.Ok(result, "Breakpoint set")
-                : DebuggerApiResponse<BreakpointResult>.Fail(result.Message);
+                ? DebuggerApiResponse.Ok<BreakpointResult>(result, "Breakpoint set")
+                : DebuggerApiResponse.Fail<BreakpointResult>(result.Message);
         }
         catch (ArgumentException ex)
         {
             _logger.LogWarning("Invalid breakpoint request: {Error}", ex.Message);
-            return DebuggerApiResponse<BreakpointResult>.Fail(ex.Message);
+            return DebuggerApiResponse.Fail<BreakpointResult>(ex.Message);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error setting breakpoint");
-            return DebuggerApiResponse<BreakpointResult>.Fail(ex.Message);
+            return DebuggerApiResponse.Fail<BreakpointResult>(ex.Message);
         }
     }
 
@@ -131,17 +131,17 @@ internal sealed class DebuggerApiImplementation : IDebuggerApiClient
         try
         {
             var breakpoints = await _debugger.ListBreakpointsAsync(ideType, sessionId, ct);
-            return DebuggerApiResponse<IReadOnlyList<BreakpointInfo>>.Ok(breakpoints, $"Found {breakpoints.Count} breakpoints");
+            return DebuggerApiResponse.Ok<IReadOnlyList<BreakpointInfo>>(breakpoints, $"Found {breakpoints.Count} breakpoints");
         }
         catch (ArgumentException ex)
         {
             _logger.LogWarning("Invalid list breakpoints request: {Error}", ex.Message);
-            return DebuggerApiResponse<IReadOnlyList<BreakpointInfo>>.Fail(ex.Message);
+            return DebuggerApiResponse.Fail<IReadOnlyList<BreakpointInfo>>(ex.Message);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error listing breakpoints");
-            return DebuggerApiResponse<IReadOnlyList<BreakpointInfo>>.Fail(ex.Message);
+            return DebuggerApiResponse.Fail<IReadOnlyList<BreakpointInfo>>(ex.Message);
         }
     }
 
@@ -158,18 +158,18 @@ internal sealed class DebuggerApiImplementation : IDebuggerApiClient
                 ct);
 
             return result.Success
-                ? DebuggerApiResponse<ExecutionResult>.Ok(result, $"{request.Command} executed")
-                : DebuggerApiResponse<ExecutionResult>.Fail(result.Message ?? "Step command failed");
+                ? DebuggerApiResponse.Ok<ExecutionResult>(result, $"{request.Command} executed")
+                : DebuggerApiResponse.Fail<ExecutionResult>(result.Message ?? "Step command failed");
         }
         catch (ArgumentException ex)
         {
             _logger.LogWarning("Invalid step request: {Error}", ex.Message);
-            return DebuggerApiResponse<ExecutionResult>.Fail(ex.Message);
+            return DebuggerApiResponse.Fail<ExecutionResult>(ex.Message);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error executing step");
-            return DebuggerApiResponse<ExecutionResult>.Fail(ex.Message);
+            return DebuggerApiResponse.Fail<ExecutionResult>(ex.Message);
         }
     }
 
@@ -181,17 +181,17 @@ internal sealed class DebuggerApiImplementation : IDebuggerApiClient
         try
         {
             var state = await _debugger.GetDebugStateAsync(ideType, sessionId, ct);
-            return DebuggerApiResponse<DebugStateResult>.Ok(state, "Debug state retrieved");
+            return DebuggerApiResponse.Ok<DebugStateResult>(state, "Debug state retrieved");
         }
         catch (ArgumentException ex)
         {
             _logger.LogWarning("Invalid get state request: {Error}", ex.Message);
-            return DebuggerApiResponse<DebugStateResult>.Fail(ex.Message);
+            return DebuggerApiResponse.Fail<DebugStateResult>(ex.Message);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting debug state");
-            return DebuggerApiResponse<DebugStateResult>.Fail(ex.Message);
+            return DebuggerApiResponse.Fail<DebugStateResult>(ex.Message);
         }
     }
 
@@ -203,6 +203,6 @@ internal sealed class DebuggerApiImplementation : IDebuggerApiClient
         // For now, return empty as this would require exposing session management publicly
         var sessions = new List<DebugSessionInfo>().AsReadOnly();
         return Task.FromResult(
-            DebuggerApiResponse<IReadOnlyList<DebugSessionInfo>>.Ok(sessions, "Sessions listed"));
+            DebuggerApiResponse.Ok<IReadOnlyList<DebugSessionInfo>>(sessions, "Sessions listed"));
     }
 }
