@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using System.Globalization;
 using System.Text.Json;
 using System.Threading.Channels;
 using TokenSaver.Common.Core.Contracts;
@@ -42,7 +43,10 @@ internal sealed class DebuggerEventLogWriter : IHostedService
         try
         {
             Directory.CreateDirectory(_logDirectory);
-            _logger.LogInformation("Debug event logging started, output directory: {LogDirectory}", _logDirectory);
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation("Debug event logging started, output directory: {LogDirectory}", _logDirectory);
+            }
         }
         catch (Exception ex)
         {
@@ -62,7 +66,10 @@ internal sealed class DebuggerEventLogWriter : IHostedService
 
         if (_backgroundTask != null)
         {
-            _cancellationTokenSource?.Cancel();
+            if (_cancellationTokenSource is not null)
+            {
+                await _cancellationTokenSource.CancelAsync();
+            }
             try
             {
                 await _backgroundTask.ConfigureAwait(false);
@@ -74,7 +81,10 @@ internal sealed class DebuggerEventLogWriter : IHostedService
         }
 
         _cancellationTokenSource?.Dispose();
-        _logger.LogInformation("Debug event logging stopped");
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation("Debug event logging stopped");
+        }
     }
 
     /// <summary>
@@ -131,7 +141,7 @@ internal sealed class DebuggerEventLogWriter : IHostedService
                         // Check if rotation needed (max file size)
                         if (currentFileSizeBytes > _maxLogFileSizeMb * 1024 * 1024)
                         {
-                            await writer.FlushAsync();
+                            await writer.FlushAsync(CancellationToken.None);
                             await writer.DisposeAsync();
 
                             currentLogFile = GetCurrentLogFilePath();
@@ -151,7 +161,7 @@ internal sealed class DebuggerEventLogWriter : IHostedService
             }
             finally
             {
-                await writer.FlushAsync();
+                await writer.FlushAsync(CancellationToken.None);
                 await writer.DisposeAsync();
             }
 
@@ -170,7 +180,7 @@ internal sealed class DebuggerEventLogWriter : IHostedService
 
     private string GetCurrentLogFilePath()
     {
-        var date = DateTime.UtcNow.ToString("yyyy-MM-dd");
+        var date = DateTime.UtcNow.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
         return Path.Combine(_logDirectory, $"events-{date}.jsonl");
     }
 
@@ -186,7 +196,7 @@ internal sealed class DebuggerEventLogWriter : IHostedService
                 .Where(f =>
                 {
                     var filename = Path.GetFileNameWithoutExtension(f);
-                    var datePart = filename.Replace("events-", "");
+                    var datePart = filename.Replace("events-", "", StringComparison.Ordinal);
                     return DateTime.TryParse(datePart, out var fileDate) && fileDate < cutoffDate;
                 })
                 .ToList();
@@ -196,7 +206,10 @@ internal sealed class DebuggerEventLogWriter : IHostedService
                 try
                 {
                     File.Delete(file);
-                    _logger.LogInformation("Deleted old debug log: {File}", Path.GetFileName(file));
+                    if (_logger.IsEnabled(LogLevel.Information))
+                    {
+                        _logger.LogInformation("Deleted old debug log: {File}", Path.GetFileName(file));
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -257,7 +270,7 @@ internal sealed class DebuggerEventQueryService
             foreach (var logFile in logFiles)
             {
                 var filename = Path.GetFileNameWithoutExtension(logFile);
-                var datePart = filename.Replace("events-", "");
+                var datePart = filename.Replace("events-", "", StringComparison.Ordinal);
 
                 if (!DateTime.TryParse(datePart, out var fileDate))
                     continue;
@@ -310,7 +323,7 @@ internal sealed class DebuggerEventQueryService
             foreach (var logFile in logFiles)
             {
                 var filename = Path.GetFileNameWithoutExtension(logFile);
-                var datePart = filename.Replace("events-", "");
+                var datePart = filename.Replace("events-", "", StringComparison.Ordinal);
 
                 if (DateTime.TryParse(datePart, out var fileDate))
                 {
@@ -366,7 +379,7 @@ internal sealed class DebuggerEventQueryService
 
                     var record = new DebuggerEventLogRecord(
                         Id: root.GetProperty("id").GetString() ?? "",
-                        Timestamp: DateTime.Parse(root.GetProperty("timestamp").GetString() ?? ""),
+                        Timestamp: DateTime.Parse(root.GetProperty("timestamp").GetString() ?? "", CultureInfo.InvariantCulture),
                         Type: eventType ?? "",
                         Severity: severity ?? "",
                         ToolName: root.TryGetProperty("toolName", out var tn) ? tn.GetString() : null,

@@ -64,7 +64,7 @@ public sealed class DebuggerEventServiceTests
         Assert.Equal("TestTool", evt.ToolName);
         Assert.Equal("VsCode", evt.CallerInfo.ClientName);
         Assert.Equal("session-123", evt.SessionId);
-        Assert.Contains("InvalidOperationException", evt.Data["exceptionType"].ToString()!);
+        Assert.Contains("InvalidOperationException", evt.Data["exceptionType"].ToString()!, StringComparison.Ordinal);
         Assert.Equal("Test error", evt.Data["message"]);
         Assert.NotNull(evt.StackTrace);
     }
@@ -110,15 +110,15 @@ public sealed class DebuggerEventServiceTests
 
         var latest5 = _service.GetAllEvents(5);
         Assert.Equal(5, latest5.Count);
-        Assert.Equal("Tool9", latest5.Last().ToolName);
-        Assert.Equal("Tool5", latest5.First().ToolName);
+        Assert.Equal("Tool9", latest5[^1].ToolName);
+        Assert.Equal("Tool5", latest5[0].ToolName);
     }
 
     [Fact]
     public void QueryEvents_ByEventType_FiltersCorrectly()
     {
         _service.RecordToolExecution("Tool1", 100);
-        _service.RecordException(new Exception("Test"));
+        _service.RecordException(new InvalidOperationException("Test"));
         _service.RecordToolExecution("Tool2", 200);
 
         var toolEvents = _service.QueryEvents(eventType: DebuggerEventType.ToolExecution);
@@ -134,7 +134,7 @@ public sealed class DebuggerEventServiceTests
     {
         _service.RecordToolExecution("Tool1", 100, isError: false);
         _service.RecordToolExecution("Tool2", 200, isError: true);
-        _service.RecordException(new Exception("Test"));
+        _service.RecordException(new InvalidOperationException("Test"));
 
         var errors = _service.QueryEvents(severity: DebugSeverity.Error);
         Assert.Equal(2, errors.Count);
@@ -186,7 +186,7 @@ public sealed class DebuggerEventServiceTests
     {
         _service.RecordToolExecution("Tool1", 100, "VsCode", isError: false);
         _service.RecordToolExecution("Tool2", 200, "Continue", isError: true);
-        _service.RecordException(new Exception("Test"), clientName: "VsCode");
+        _service.RecordException(new InvalidOperationException("Test"), clientName: "VsCode");
 
         var stats = _service.GetEventStats();
 
@@ -212,8 +212,8 @@ public sealed class DebuggerEventServiceTests
 
         var events = smallService.GetAllEvents();
         Assert.Equal(5, events.Count);
-        Assert.Equal("Tool5", events.First().ToolName);
-        Assert.Equal("Tool9", events.Last().ToolName);
+        Assert.Equal("Tool5", events[0].ToolName);
+        Assert.Equal("Tool9", events[^1].ToolName);
     }
 
     [Fact]

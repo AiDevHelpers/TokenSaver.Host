@@ -613,12 +613,12 @@ internal sealed class ManageConfigTools(
 
     private static bool TryParseScope(string? scope, out TokenSaver.Config.Contracts.ConfigScope configScope)
     {
-        switch (scope?.Trim().ToLowerInvariant())
+        switch (scope?.Trim().ToUpperInvariant())
         {
-            case "local":
+            case "LOCAL":
                 configScope = TokenSaver.Config.Contracts.ConfigScope.Local;
                 return true;
-            case "global":
+            case "GLOBAL":
                 configScope = TokenSaver.Config.Contracts.ConfigScope.Global;
                 return true;
             default:

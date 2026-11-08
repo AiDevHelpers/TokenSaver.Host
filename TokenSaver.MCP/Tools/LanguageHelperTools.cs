@@ -70,10 +70,10 @@ internal sealed class LanguageHelperTools
             return error;
         }
 
-        return operation.Trim().ToLowerInvariant() switch
+        return operation.Trim().ToUpperInvariant() switch
         {
-            "syntax" => Render("syntax", helper, await helper.RunSyntaxCheckerAsync(scope, ct)),
-            "lint" => Render("lint", helper, await helper.RunLintAsync(scope, LintOptions.Default, ct)),
+            "SYNTAX" => Render("syntax", helper, await helper.RunSyntaxCheckerAsync(scope, ct)),
+            "LINT" => Render("lint", helper, await helper.RunLintAsync(scope, LintOptions.Default, ct)),
             _ => $"Unknown operation '{operation}'. Use 'syntax' or 'lint'.",
         };
     }
@@ -117,13 +117,13 @@ internal sealed class LanguageHelperTools
             return error;
         }
 
-        return operation.Trim().ToLowerInvariant() switch
+        return operation.Trim().ToUpperInvariant() switch
         {
-            "enable-analysis" or "enable" => Render("enable-analysis", helper, await helper.EnableCodeAnalysisAsync(scope, null, ct)),
-            "fix-syntax" => Render("fix-syntax", helper, await helper.FixSyntaxAsync(scope, ct)),
-            "fix-imports" => Render("fix-imports", helper, await helper.FixImportsAsync(scope, ct)),
-            "fix-namespace" => Render("fix-namespace", helper, await helper.FixNamespaceAsync(scope, ct)),
-            "format" => Render("format", helper, await helper.FormatCodeAsync(scope, new FormatOptions { PreferExtensionTool = preferExtensionTool }, ct)),
+            "ENABLE-ANALYSIS" or "ENABLE" => Render("enable-analysis", helper, await helper.EnableCodeAnalysisAsync(scope, null, ct)),
+            "FIX-SYNTAX" => Render("fix-syntax", helper, await helper.FixSyntaxAsync(scope, ct)),
+            "FIX-IMPORTS" => Render("fix-imports", helper, await helper.FixImportsAsync(scope, ct)),
+            "FIX-NAMESPACE" => Render("fix-namespace", helper, await helper.FixNamespaceAsync(scope, ct)),
+            "FORMAT" => Render("format", helper, await helper.FormatCodeAsync(scope, new FormatOptions { PreferExtensionTool = preferExtensionTool }, ct)),
             _ => $"Unknown operation '{operation}'. Use 'enable-analysis', 'fix-syntax', 'fix-imports', 'fix-namespace', or 'format'.",
         };
     }
@@ -200,15 +200,15 @@ internal sealed class LanguageHelperTools
 
     private static bool TryParseLanguage(string value, out LanguageId language)
     {
-        switch (value.Trim().ToLowerInvariant())
+        switch (value.Trim().ToUpperInvariant())
         {
-            case "csharp" or "c#" or "cs" or "dotnet":
+            case "CSHARP" or "C#" or "CS" or "DOTNET":
                 language = LanguageId.CSharp;
                 return true;
-            case "powershell" or "pwsh" or "ps" or "ps1":
+            case "POWERSHELL" or "PWSH" or "PS" or "PS1":
                 language = LanguageId.PowerShell;
                 return true;
-            case "python" or "py":
+            case "PYTHON" or "PY":
                 language = LanguageId.Python;
                 return true;
             default:

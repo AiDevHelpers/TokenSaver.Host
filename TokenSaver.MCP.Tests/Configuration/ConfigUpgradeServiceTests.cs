@@ -11,6 +11,13 @@ public sealed class ConfigUpgradeServiceTests : IDisposable
 {
     private const string GlobalDirOverrideEnvVar = "TOKENSAVER_GLOBAL_CONFIG_DIR";
 
+    private static readonly System.Text.Json.JsonSerializerOptions s_jsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true,
+        ReadCommentHandling = System.Text.Json.JsonCommentHandling.Skip,
+        AllowTrailingCommas = true,
+    };
+
     private readonly string _workspaceRoot;
     private readonly string _globalDir;
 
@@ -82,12 +89,7 @@ public sealed class ConfigUpgradeServiceTests : IDisposable
         // Still parses, and the pre-existing value survived the round trip.
         TokenSaverBehaviorConfig? parsed = System.Text.Json.JsonSerializer.Deserialize<TokenSaverBehaviorConfig>(
             updated,
-            new System.Text.Json.JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true,
-                ReadCommentHandling = System.Text.Json.JsonCommentHandling.Skip,
-                AllowTrailingCommas = true,
-            });
+            s_jsonOptions);
         Assert.NotNull(parsed);
         Assert.True(parsed!.CodeHelper?.AutoEnabled);
     }
@@ -157,12 +159,7 @@ public sealed class ConfigUpgradeServiceTests : IDisposable
         // top-level sections — verify codeHelper's own added leaf survives re-parsing too).
         TokenSaverBehaviorConfig? parsed = System.Text.Json.JsonSerializer.Deserialize<TokenSaverBehaviorConfig>(
             updated,
-            new System.Text.Json.JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true,
-                ReadCommentHandling = System.Text.Json.JsonCommentHandling.Skip,
-                AllowTrailingCommas = true,
-            });
+            s_jsonOptions);
         Assert.True(parsed!.CodeHelper?.AutoEnabled);
         Assert.Null(parsed.CodeHelper?.RequireAnchorMatch);
     }
@@ -188,12 +185,7 @@ public sealed class ConfigUpgradeServiceTests : IDisposable
 
         TokenSaverBehaviorConfig? parsed = System.Text.Json.JsonSerializer.Deserialize<TokenSaverBehaviorConfig>(
             updated,
-            new System.Text.Json.JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true,
-                ReadCommentHandling = System.Text.Json.JsonCommentHandling.Skip,
-                AllowTrailingCommas = true,
-            });
+            s_jsonOptions);
         Assert.Equal(0.9, parsed!.CodeHelper?.Ownership?.CanDoThreshold);
         Assert.Null(parsed.CodeHelper?.Ownership?.DeferThreshold);
     }
@@ -209,12 +201,7 @@ public sealed class ConfigUpgradeServiceTests : IDisposable
 
         TokenSaverBehaviorConfig? parsed = System.Text.Json.JsonSerializer.Deserialize<TokenSaverBehaviorConfig>(
             updated,
-            new System.Text.Json.JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true,
-                ReadCommentHandling = System.Text.Json.JsonCommentHandling.Skip,
-                AllowTrailingCommas = true,
-            });
+            s_jsonOptions);
         Assert.NotNull(parsed);
 
         // Result should be textually identical to a freshly-generated file for a fresh workspace
@@ -223,12 +210,7 @@ public sealed class ConfigUpgradeServiceTests : IDisposable
         string freshParsedNormalized = System.Text.Json.JsonSerializer.Serialize(
             System.Text.Json.JsonSerializer.Deserialize<TokenSaverBehaviorConfig>(
                 fresh,
-                new System.Text.Json.JsonSerializerOptions
-                {
-                    PropertyNameCaseInsensitive = true,
-                    ReadCommentHandling = System.Text.Json.JsonCommentHandling.Skip,
-                    AllowTrailingCommas = true,
-                }));
+                s_jsonOptions));
         string updatedParsedNormalized = System.Text.Json.JsonSerializer.Serialize(parsed);
         Assert.Equal(freshParsedNormalized, updatedParsedNormalized);
     }
@@ -263,7 +245,7 @@ public sealed class ConfigUpgradeServiceTests : IDisposable
         ConfigUpgradeService.UpgradeIfNeeded(_workspaceRoot, NullLogger.Instance);
         string updated = File.ReadAllText(LocalConfigPath);
 
-        Assert.Equal(1, System.Text.RegularExpressions.Regex.Matches(updated, "\"debug\"").Count);
+        Assert.Equal(1, System.Text.RegularExpressions.Regex.Count(updated, "\"debug\""));
     }
 
     [Fact]

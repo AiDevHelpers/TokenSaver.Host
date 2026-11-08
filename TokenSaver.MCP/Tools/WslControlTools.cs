@@ -231,15 +231,15 @@ internal sealed class WslControlTools
 
     private static bool TryParseRuntime(string value, out WslRuntime runtime)
     {
-        switch (value.Trim().ToLowerInvariant())
+        switch (value.Trim().ToUpperInvariant())
         {
-            case "dotnet" or ".net" or "coreclr" or "csharp":
+            case "DOTNET" or ".NET" or "CORECLR" or "CSHARP":
                 runtime = WslRuntime.DotNet;
                 return true;
-            case "python" or "py":
+            case "PYTHON" or "PY":
                 runtime = WslRuntime.Python;
                 return true;
-            case "node" or "nodejs" or "javascript" or "js":
+            case "NODE" or "NODEJS" or "JAVASCRIPT" or "JS":
                 runtime = WslRuntime.Node;
                 return true;
             default:

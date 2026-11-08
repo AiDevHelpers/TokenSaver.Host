@@ -377,7 +377,7 @@ public sealed class ContextDiagnosticsToolsTests : IDisposable
     // ── gitignore ────────────────────────────────────────────────────────────
 
     [Fact]
-    public void Gitignore_UncoveredGeneratedDirs_ReportsIssues()
+    public async Task Gitignore_UncoveredGeneratedDirs_ReportsIssues()
     {
         _ = Directory.CreateDirectory(Path.Combine(_workspaceRoot, "bin"));
         _ = Directory.CreateDirectory(Path.Combine(_workspaceRoot, "obj"));
@@ -385,7 +385,7 @@ public sealed class ContextDiagnosticsToolsTests : IDisposable
 
         ContextDiagnosticsTools tools = CreateTools();
 
-        string result = tools.ContextDiag("gitignore", root: _workspaceRoot).GetAwaiter().GetResult();
+        string result = await tools.ContextDiag("gitignore", root: _workspaceRoot);
 
         Assert.Contains("CONFIRMED", result, StringComparison.Ordinal);
         Assert.Contains("bin/", result, StringComparison.Ordinal);
@@ -394,14 +394,14 @@ public sealed class ContextDiagnosticsToolsTests : IDisposable
     }
 
     [Fact]
-    public void Gitignore_AllCovered_ReportsClean()
+    public async Task Gitignore_AllCovered_ReportsClean()
     {
         _ = Directory.CreateDirectory(Path.Combine(_workspaceRoot, "bin"));
-        File.WriteAllText(Path.Combine(_workspaceRoot, ".gitignore"), "bin/\n");
+        await File.WriteAllTextAsync(Path.Combine(_workspaceRoot, ".gitignore"), "bin/\n");
 
         ContextDiagnosticsTools tools = CreateTools();
 
-        string result = tools.ContextDiag("gitignore", root: _workspaceRoot).GetAwaiter().GetResult();
+        string result = await tools.ContextDiag("gitignore", root: _workspaceRoot);
 
         Assert.Contains("No gitignore issues found", result, StringComparison.Ordinal);
     }

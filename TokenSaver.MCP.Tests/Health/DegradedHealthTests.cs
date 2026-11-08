@@ -22,7 +22,7 @@ public sealed class DegradedHealthTests
     {
         await using HealthTestHost host = HealthTestHost.Create();
 
-        using HttpResponseMessage response = await host.Client.GetAsync("/health");
+        using HttpResponseMessage response = await host.Client.GetAsync(new Uri("/health", UriKind.RelativeOrAbsolute));
         JsonDocument doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -37,12 +37,12 @@ public sealed class DegradedHealthTests
         // /throw triggers a real unhandled exception through FaultTrackingMiddleware — the exact
         // same code path a genuinely-broken MCP tool call or any other request would hit, not a
         // test-only injection hook.
-        await Assert.ThrowsAnyAsync<Exception>(() => host.Client.GetAsync("/throw"));
+        await Assert.ThrowsAnyAsync<Exception>(() => host.Client.GetAsync(new Uri("/throw", UriKind.RelativeOrAbsolute)));
 
         Assert.True(host.FaultTracker.HasRecentFault);
         Assert.Equal("simulated tool failure", host.FaultTracker.LastFaultMessage);
 
-        using HttpResponseMessage healthResponse = await host.Client.GetAsync("/health");
+        using HttpResponseMessage healthResponse = await host.Client.GetAsync(new Uri("/health", UriKind.RelativeOrAbsolute));
         JsonDocument doc = JsonDocument.Parse(await healthResponse.Content.ReadAsStringAsync());
 
         Assert.Equal("Degraded", doc.RootElement.GetProperty("status").GetString());
@@ -50,10 +50,10 @@ public sealed class DegradedHealthTests
         JsonElement faultCheck = doc.RootElement.GetProperty("checks").EnumerateArray()
             .Single(c => c.GetProperty("name").GetString() == "unhandled-fault");
         Assert.Equal("Degraded", faultCheck.GetProperty("status").GetString());
-        Assert.Contains("simulated tool failure", faultCheck.GetProperty("description").GetString());
+        Assert.Contains("simulated tool failure", faultCheck.GetProperty("description").GetString(), StringComparison.Ordinal);
 
         // Fault tracking is untagged (not "ready"), so /health/ready must stay unaffected.
-        using HttpResponseMessage readyResponse = await host.Client.GetAsync("/health/ready");
+        using HttpResponseMessage readyResponse = await host.Client.GetAsync(new Uri("/health/ready", UriKind.RelativeOrAbsolute));
         JsonDocument readyDoc = JsonDocument.Parse(await readyResponse.Content.ReadAsStringAsync());
         Assert.Equal("Healthy", readyDoc.RootElement.GetProperty("status").GetString());
         Assert.Empty(readyDoc.RootElement.GetProperty("checks").EnumerateArray());
@@ -65,7 +65,7 @@ public sealed class DegradedHealthTests
         await using HealthTestHost host = HealthTestHost.Create();
         host.SelfTestCheck.ExtraChecks.Add(("always-fails", () => false));
 
-        using HttpResponseMessage healthResponse = await host.Client.GetAsync("/health");
+        using HttpResponseMessage healthResponse = await host.Client.GetAsync(new Uri("/health", UriKind.RelativeOrAbsolute));
         JsonDocument doc = JsonDocument.Parse(await healthResponse.Content.ReadAsStringAsync());
 
         Assert.Equal("Degraded", doc.RootElement.GetProperty("status").GetString());
@@ -73,7 +73,7 @@ public sealed class DegradedHealthTests
             .Single(c => c.GetProperty("name").GetString() == "self-test");
         Assert.Equal("Degraded", selfTestCheck.GetProperty("status").GetString());
 
-        using HttpResponseMessage readyResponse = await host.Client.GetAsync("/health/ready");
+        using HttpResponseMessage readyResponse = await host.Client.GetAsync(new Uri("/health/ready", UriKind.RelativeOrAbsolute));
         JsonDocument readyDoc = JsonDocument.Parse(await readyResponse.Content.ReadAsStringAsync());
         Assert.Equal("Healthy", readyDoc.RootElement.GetProperty("status").GetString());
     }
@@ -84,7 +84,7 @@ public sealed class DegradedHealthTests
         await using HealthTestHost host = HealthTestHost.Create();
         host.SelfTestCheck.ExtraChecks.Add(("throws", () => throw new InvalidOperationException("boom")));
 
-        using HttpResponseMessage response = await host.Client.GetAsync("/health");
+        using HttpResponseMessage response = await host.Client.GetAsync(new Uri("/health", UriKind.RelativeOrAbsolute));
 
         // A throwing self-test check must not itself surface as a 500 to the /health caller.
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -98,7 +98,7 @@ public sealed class DegradedHealthTests
         await using HealthTestHost host = HealthTestHost.Create();
         host.FaultTracker.RecordFault(new InvalidOperationException("temporary"));
 
-        using (HttpResponseMessage degraded = await host.Client.GetAsync("/health"))
+        using (HttpResponseMessage degraded = await host.Client.GetAsync(new Uri("/health", UriKind.RelativeOrAbsolute)))
         {
             JsonDocument degradedDoc = JsonDocument.Parse(await degraded.Content.ReadAsStringAsync());
             Assert.Equal("Degraded", degradedDoc.RootElement.GetProperty("status").GetString());
@@ -106,7 +106,7 @@ public sealed class DegradedHealthTests
 
         host.FaultTracker.ClearFault();
 
-        using HttpResponseMessage healthy = await host.Client.GetAsync("/health");
+        using HttpResponseMessage healthy = await host.Client.GetAsync(new Uri("/health", UriKind.RelativeOrAbsolute));
         JsonDocument healthyDoc = JsonDocument.Parse(await healthy.Content.ReadAsStringAsync());
         Assert.Equal("Healthy", healthyDoc.RootElement.GetProperty("status").GetString());
     }

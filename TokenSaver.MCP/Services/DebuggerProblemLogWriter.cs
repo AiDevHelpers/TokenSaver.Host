@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using System.Globalization;
 using System.Text.Json;
 using System.Threading.Channels;
 using TokenSaver.Common.Core.Contracts;
@@ -42,7 +43,10 @@ internal sealed class DebuggerProblemLogWriter : IHostedService
         try
         {
             Directory.CreateDirectory(_logDirectory);
-            _logger.LogInformation("Problem logging started, output directory: {LogDirectory}", _logDirectory);
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation("Problem logging started, output directory: {LogDirectory}", _logDirectory);
+            }
         }
         catch (Exception ex)
         {
@@ -62,7 +66,10 @@ internal sealed class DebuggerProblemLogWriter : IHostedService
 
         if (_backgroundTask != null)
         {
-            _cancellationTokenSource?.Cancel();
+            if (_cancellationTokenSource is not null)
+            {
+                await _cancellationTokenSource.CancelAsync();
+            }
             try
             {
                 await _backgroundTask.ConfigureAwait(false);
@@ -74,7 +81,10 @@ internal sealed class DebuggerProblemLogWriter : IHostedService
         }
 
         _cancellationTokenSource?.Dispose();
-        _logger.LogInformation("Problem logging stopped");
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation("Problem logging stopped");
+        }
     }
 
     /// <summary>
@@ -136,7 +146,7 @@ internal sealed class DebuggerProblemLogWriter : IHostedService
                         // Check if rotation needed
                         if (currentFileSizeBytes > _maxLogFileSizeMb * 1024 * 1024)
                         {
-                            await writer.FlushAsync();
+                            await writer.FlushAsync(CancellationToken.None);
                             await writer.DisposeAsync();
 
                             currentLogFile = GetCurrentLogFilePath();
@@ -156,7 +166,7 @@ internal sealed class DebuggerProblemLogWriter : IHostedService
             }
             finally
             {
-                await writer.FlushAsync();
+                await writer.FlushAsync(CancellationToken.None);
                 await writer.DisposeAsync();
             }
 
@@ -175,7 +185,7 @@ internal sealed class DebuggerProblemLogWriter : IHostedService
 
     private string GetCurrentLogFilePath()
     {
-        var date = DateTime.UtcNow.ToString("yyyy-MM-dd");
+        var date = DateTime.UtcNow.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
         return Path.Combine(_logDirectory, $"problems-{date}.jsonl");
     }
 
@@ -191,7 +201,7 @@ internal sealed class DebuggerProblemLogWriter : IHostedService
                 .Where(f =>
                 {
                     var filename = Path.GetFileNameWithoutExtension(f);
-                    var datePart = filename.Replace("problems-", "");
+                    var datePart = filename.Replace("problems-", "", StringComparison.Ordinal);
                     return DateTime.TryParse(datePart, out var fileDate) && fileDate < cutoffDate;
                 })
                 .ToList();
@@ -201,7 +211,10 @@ internal sealed class DebuggerProblemLogWriter : IHostedService
                 try
                 {
                     File.Delete(file);
-                    _logger.LogInformation("Deleted old problem log: {File}", Path.GetFileName(file));
+                    if (_logger.IsEnabled(LogLevel.Information))
+                    {
+                        _logger.LogInformation("Deleted old problem log: {File}", Path.GetFileName(file));
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -262,7 +275,7 @@ internal sealed class DebuggerProblemQueryService
             foreach (var logFile in logFiles)
             {
                 var filename = Path.GetFileNameWithoutExtension(logFile);
-                var datePart = filename.Replace("problems-", "");
+                var datePart = filename.Replace("problems-", "", StringComparison.Ordinal);
 
                 if (!DateTime.TryParse(datePart, out var fileDate))
                     continue;
@@ -315,7 +328,7 @@ internal sealed class DebuggerProblemQueryService
             foreach (var logFile in logFiles)
             {
                 var filename = Path.GetFileNameWithoutExtension(logFile);
-                var datePart = filename.Replace("problems-", "");
+                var datePart = filename.Replace("problems-", "", StringComparison.Ordinal);
 
                 if (DateTime.TryParse(datePart, out var fileDate))
                 {
@@ -371,7 +384,7 @@ internal sealed class DebuggerProblemQueryService
 
                     var record = new DebuggerProblemLogRecord(
                         Id: root.GetProperty("id").GetString() ?? "",
-                        Timestamp: DateTime.Parse(root.GetProperty("timestamp").GetString() ?? ""),
+                        Timestamp: DateTime.Parse(root.GetProperty("timestamp").GetString() ?? "", CultureInfo.InvariantCulture),
                         Type: type ?? "",
                         Severity: severity ?? "",
                         Title: root.GetProperty("title").GetString() ?? "",

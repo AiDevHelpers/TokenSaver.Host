@@ -97,7 +97,10 @@ internal sealed class DebugOutputCaptureService : IDebugOutputCapture
             if (_captures.TryGetValue(processId, out var capture))
             {
                 capture.Lines.Clear();
-                _logger.LogInformation("Cleared output for process {ProcessId}", processId);
+                if (_logger.IsEnabled(LogLevel.Information))
+                {
+                    _logger.LogInformation("Cleared output for process {ProcessId}", processId);
+                }
             }
         }
 
@@ -199,7 +202,10 @@ internal sealed class DebugOutputCaptureService : IDebugOutputCapture
                 _ = Task.Run(() => ReadStreamAsync(process.StandardError, capture, "stderr"));
             }
 
-            _logger.LogInformation("Started capturing output for process {ProcessId}", process.Id);
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation("Started capturing output for process {ProcessId}", process.Id);
+            }
         }
     }
 
@@ -226,7 +232,10 @@ internal sealed class DebugOutputCaptureService : IDebugOutputCapture
                 _ = Task.Run(() => ReadStreamAsync(process.StandardError, capture, "stderr"));
             }
 
-            _logger.LogInformation("Started capturing output for IDE {IdeType} (PID {ProcessId})", ideType, process.Id);
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation("Started capturing output for IDE {IdeType} (PID {ProcessId})", ideType, process.Id);
+            }
         }
     }
 
@@ -288,12 +297,12 @@ internal sealed class DebugOutputCaptureService : IDebugOutputCapture
 
     private DebugSeverity ClassifySeverity(string line)
     {
-        var lowerLine = line.ToLowerInvariant();
-        if (lowerLine.Contains("fatal") || lowerLine.Contains("critical"))
+        var upperLine = line.ToUpperInvariant();
+        if (upperLine.Contains("FATAL", StringComparison.Ordinal) || upperLine.Contains("CRITICAL", StringComparison.Ordinal))
             return DebugSeverity.Fatal;
-        if (lowerLine.Contains("error") || lowerLine.Contains("exception"))
+        if (upperLine.Contains("ERROR", StringComparison.Ordinal) || upperLine.Contains("EXCEPTION", StringComparison.Ordinal))
             return DebugSeverity.Error;
-        if (lowerLine.Contains("warning") || lowerLine.Contains("warn"))
+        if (upperLine.Contains("WARNING", StringComparison.Ordinal) || upperLine.Contains("WARN", StringComparison.Ordinal))
             return DebugSeverity.Warning;
         return DebugSeverity.Info;
     }

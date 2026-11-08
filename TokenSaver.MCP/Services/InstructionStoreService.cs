@@ -129,7 +129,7 @@ public sealed class InstructionStoreService
     internal const string InjectEnvVarName = "TOKENSAVER_INSTRUCTIONS_INJECT";
     internal const int MinSectionScore = 3;
 
-    private static readonly HashSet<string> Stopwords = new(StringComparer.Ordinal)
+    private static readonly HashSet<string> Stopwords = new(StringComparer.OrdinalIgnoreCase)
     {
         "about", "after", "before", "could", "from", "have", "into", "make", "need", "should",
         "that", "their", "them", "then", "there", "this", "what", "when", "where", "which",
@@ -140,8 +140,8 @@ public sealed class InstructionStoreService
 
     internal static HashSet<string> PromptTerms(string prompt)
     {
-        HashSet<string> terms = new(StringComparer.Ordinal);
-        foreach (Match m in Regex.Matches(prompt.ToLowerInvariant(), "[a-z][a-z0-9]{3,}"))
+        HashSet<string> terms = new(StringComparer.OrdinalIgnoreCase);
+        foreach (Match m in Regex.Matches(prompt, "[a-z][a-z0-9]{3,}", RegexOptions.IgnoreCase))
         {
             string term = m.Value;
             if (term.Length > 4 && term.EndsWith('s'))
@@ -160,17 +160,17 @@ public sealed class InstructionStoreService
 
     internal static int ScoreSection(InstructionSection section, HashSet<string> terms)
     {
-        string body = section.Text.ToLowerInvariant();
-        string heading = section.Heading.ToLowerInvariant();
+        string body = section.Text;
+        string heading = section.Heading;
         int score = 0;
         foreach (string term in terms)
         {
-            if (body.Contains(term, StringComparison.Ordinal))
+            if (body.Contains(term, StringComparison.OrdinalIgnoreCase))
             {
                 score += 1;
             }
 
-            if (heading.Contains(term, StringComparison.Ordinal))
+            if (heading.Contains(term, StringComparison.OrdinalIgnoreCase))
             {
                 score += 2;
             }
@@ -184,7 +184,7 @@ public sealed class InstructionStoreService
         List<InstructionSection> sections = [];
         string heading = "(intro)";
         StringBuilder current = new();
-        foreach (string line in body.Replace("\r\n", "\n").Split('\n'))
+        foreach (string line in body.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n'))
         {
             if (line.StartsWith("# ", StringComparison.Ordinal) || line.StartsWith("## ", StringComparison.Ordinal))
             {
@@ -210,7 +210,7 @@ public sealed class InstructionStoreService
 
     internal static string StripFrontmatter(string text)
     {
-        string normalized = text.Replace("\r\n", "\n");
+        string normalized = text.Replace("\r\n", "\n", StringComparison.Ordinal);
         if (!normalized.StartsWith("---\n", StringComparison.Ordinal))
         {
             return normalized;
@@ -227,7 +227,7 @@ public sealed class InstructionStoreService
 
     internal static (string? Name, string? Description) ParseFrontmatter(string text)
     {
-        string normalized = text.Replace("\r\n", "\n");
+        string normalized = text.Replace("\r\n", "\n", StringComparison.Ordinal);
         if (!normalized.StartsWith("---\n", StringComparison.Ordinal))
         {
             return (null, null);
@@ -243,7 +243,7 @@ public sealed class InstructionStoreService
         string? description = null;
         foreach (string line in normalized[4..end].Split('\n'))
         {
-            int colon = line.IndexOf(':');
+            int colon = line.IndexOf(':', StringComparison.Ordinal);
             if (colon <= 0)
             {
                 continue;

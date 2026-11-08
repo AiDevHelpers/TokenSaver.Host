@@ -43,9 +43,12 @@ internal sealed class DebuggerControlService : IDebuggerControl
 
             _activeSessions[sessionId] = session;
 
-            _logger.LogInformation(
-                "Started debug session {SessionId} in {IdeType} with config {ConfigName}",
-                sessionId, ideType, configName);
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation(
+                    "Started debug session {SessionId} in {IdeType} with config {ConfigName}",
+                    sessionId, ideType, configName);
+            }
 
             return Task.FromResult(new DebugSessionResult(
                 SessionId: sessionId,
@@ -83,9 +86,12 @@ internal sealed class DebuggerControlService : IDebuggerControl
             {
                 if (_activeSessions.Remove(sessionId))
                 {
-                    _logger.LogInformation(
-                        "Stopped debug session {SessionId} in {IdeType}",
-                        sessionId, ideType);
+                    if (_logger.IsEnabled(LogLevel.Information))
+                    {
+                        _logger.LogInformation(
+                            "Stopped debug session {SessionId} in {IdeType}",
+                            sessionId, ideType);
+                    }
                 }
             }
         }
@@ -130,9 +136,12 @@ internal sealed class DebuggerControlService : IDebuggerControl
 
                 session.Breakpoints[breakpointId] = breakpoint;
 
-                _logger.LogInformation(
-                    "Set breakpoint {BreakpointId} at {FilePath}:{LineNumber}",
-                    breakpointId, filePath, lineNumber);
+                if (_logger.IsEnabled(LogLevel.Information))
+                {
+                    _logger.LogInformation(
+                        "Set breakpoint {BreakpointId} at {FilePath}:{LineNumber}",
+                        breakpointId, filePath, lineNumber);
+                }
 
                 return Task.FromResult(new BreakpointResult(
                     BreakpointId: breakpointId,
@@ -166,9 +175,12 @@ internal sealed class DebuggerControlService : IDebuggerControl
 
             if (session?.Breakpoints.Remove(breakpointId) ?? false)
             {
-                _logger.LogInformation(
-                    "Removed breakpoint {BreakpointId} in {IdeType}",
-                    breakpointId, ideType);
+                if (_logger.IsEnabled(LogLevel.Information))
+                {
+                    _logger.LogInformation(
+                        "Removed breakpoint {BreakpointId} in {IdeType}",
+                        breakpointId, ideType);
+                }
             }
         }
 
@@ -242,9 +254,12 @@ internal sealed class DebuggerControlService : IDebuggerControl
                 session.CurrentFile = session.CurrentFile ?? "<unknown>";
                 session.CurrentLine = session.CurrentLine ?? 1;
 
-                _logger.LogInformation(
-                    "Executed {Command} in session {SessionId}",
-                    command, session.Id);
+                if (_logger.IsEnabled(LogLevel.Information))
+                {
+                    _logger.LogInformation(
+                        "Executed {Command} in session {SessionId}",
+                        command, session.Id);
+                }
 
                 return Task.FromResult(new ExecutionResult(
                     Success: true,

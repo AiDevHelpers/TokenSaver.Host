@@ -54,12 +54,15 @@ internal sealed class ClientDebugContextService : IClientDebugContextService, IA
 
         if (_clients.TryAdd(clientId, context))
         {
-            _logger.LogInformation(
-                "Client registered: {ClientType} v{Version} (ID: {ClientId}, PID: {ProcessId})",
-                clientType,
-                clientVersion ?? "unknown",
-                clientId,
-                processId ?? 0);
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation(
+                    "Client registered: {ClientType} v{Version} (ID: {ClientId}, PID: {ProcessId})",
+                    clientType,
+                    clientVersion ?? "unknown",
+                    clientId,
+                    processId ?? 0);
+            }
         }
 
         return clientId;
@@ -101,11 +104,14 @@ internal sealed class ClientDebugContextService : IClientDebugContextService, IA
                 _clients[clientId] = updated;
             }
 
-            _logger.LogInformation(
-                "Debug session started: {SessionName} (ID: {SessionId}) for client {ClientId}",
-                sessionInfo.SessionName,
-                sessionId,
-                clientId);
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation(
+                    "Debug session started: {SessionName} (ID: {SessionId}) for client {ClientId}",
+                    sessionInfo.SessionName,
+                    sessionId,
+                    clientId);
+            }
         }
 
         return sessionId;
@@ -127,10 +133,13 @@ internal sealed class ClientDebugContextService : IClientDebugContextService, IA
                 _clients[sessionInfo.ClientId] = clientUpdated;
             }
 
-            _logger.LogInformation(
-                "Debug session ended: {SessionId} (duration: {DurationMs}ms)",
-                sessionId,
-                (updated.EndedAt - sessionInfo.StartedAt)?.TotalMilliseconds ?? 0);
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation(
+                    "Debug session ended: {SessionId} (duration: {DurationMs}ms)",
+                    sessionId,
+                    (updated.EndedAt - sessionInfo.StartedAt)?.TotalMilliseconds ?? 0);
+            }
         }
     }
 
@@ -170,7 +179,10 @@ internal sealed class ClientDebugContextService : IClientDebugContextService, IA
                 EndSession(context.ActiveSessionId);
             }
 
-            _logger.LogInformation("Client unregistered: {ClientId}", clientId);
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation("Client unregistered: {ClientId}", clientId);
+            }
         }
     }
 
@@ -248,17 +260,22 @@ internal sealed class ClientDebugContextService : IClientDebugContextService, IA
 
         if (staleClientIds.Count > 0 || staleSessionIds.Count > 0)
         {
-            _logger.LogDebug(
-                "Cleanup: removed {ClientCount} stale clients and {SessionCount} old sessions",
-                staleClientIds.Count,
-                staleSessionIds.Count);
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug(
+                    "Cleanup: removed {ClientCount} stale clients and {SessionCount} old sessions",
+                    staleClientIds.Count,
+                    staleSessionIds.Count);
+            }
         }
     }
 
     async ValueTask IAsyncDisposable.DisposeAsync()
     {
-        _cleanupTimer?.Dispose();
-        await Task.CompletedTask;
+        if (_cleanupTimer is not null)
+        {
+            await _cleanupTimer.DisposeAsync();
+        }
     }
 }
 

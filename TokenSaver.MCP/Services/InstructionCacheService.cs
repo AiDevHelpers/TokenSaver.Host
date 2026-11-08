@@ -202,7 +202,7 @@ public sealed partial class InstructionCacheService : IDisposable
     ///     walk to actual repo nesting is what makes the discovered chain meaningful.
     ///     </para>
     /// </summary>
-    private static IReadOnlyList<(string Path, string Content)> DiscoverClaudeMdChain(string workspaceRoot)
+    private static List<(string Path, string Content)> DiscoverClaudeMdChain(string workspaceRoot)
     {
         List<(string Path, string Content)> chain = [];
 
@@ -349,7 +349,7 @@ public sealed partial class InstructionCacheService : IDisposable
     }
 
     private InstructionManifest Regenerate(
-        string workspaceRoot, string mainContent, IReadOnlyList<DiscoveredSubDoc> subDocs, string sourceHash)
+        string workspaceRoot, string mainContent, List<DiscoveredSubDoc> subDocs, string sourceHash)
     {
         string cacheDir = CacheDir(workspaceRoot);
         string subDocsDir = SubDocsDir(workspaceRoot);

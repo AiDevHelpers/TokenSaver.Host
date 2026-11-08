@@ -68,8 +68,8 @@ public sealed class DebuggerProblemServiceTests
 
         var latest3 = _service.GetAllProblems(3);
         Assert.Equal(3, latest3.Count);
-        Assert.Equal("Warning 9", latest3.Last().Title);
-        Assert.Equal("Warning 7", latest3.First().Title);
+        Assert.Equal("Warning 9", latest3[^1].Title);
+        Assert.Equal("Warning 7", latest3[0].Title);
     }
 
     [Fact]
@@ -221,8 +221,8 @@ public sealed class DebuggerProblemServiceTests
 
         var problems = smallService.GetAllProblems();
         Assert.Equal(5, problems.Count);
-        Assert.Equal("Warning 5", problems.First().Title);
-        Assert.Equal("Warning 9", problems.Last().Title);
+        Assert.Equal("Warning 5", problems[0].Title);
+        Assert.Equal("Warning 9", problems[^1].Title);
     }
 
     [Fact]

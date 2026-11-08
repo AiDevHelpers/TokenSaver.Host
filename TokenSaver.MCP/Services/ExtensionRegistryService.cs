@@ -26,18 +26,24 @@ internal sealed class ExtensionRegistryService
     {
         if (_registry.TryAdd(info.ExtensionId, info))
         {
-            _logger.LogInformation(
-                "Extension registered: {ExtensionName} v{Version}",
-                info.Name,
-                info.CurrentVersion);
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation(
+                    "Extension registered: {ExtensionName} v{Version}",
+                    info.Name,
+                    info.CurrentVersion);
+            }
         }
         else
         {
             _registry[info.ExtensionId] = info;
-            _logger.LogInformation(
-                "Extension updated: {ExtensionName} v{Version}",
-                info.Name,
-                info.CurrentVersion);
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation(
+                    "Extension updated: {ExtensionName} v{Version}",
+                    info.Name,
+                    info.CurrentVersion);
+            }
         }
     }
 
@@ -122,14 +128,14 @@ internal sealed class ExtensionRegistryService
             DebuggerSupported: true,
             CurrentVersion: "1.0.0",
             MinimumMcpVersion: "1.0.0",
-            Features: new[]
+            Features: new List<string>
             {
                 "debugging",
                 "streaming",
                 "persistence",
                 "context-building",
                 "code-search"
-            }.ToList()));
+            }));
 
         // Cursor IDE
         RegisterExtension(new ExtensionInfo(
@@ -138,13 +144,13 @@ internal sealed class ExtensionRegistryService
             DebuggerSupported: true,
             CurrentVersion: "1.0.0",
             MinimumMcpVersion: "1.0.0",
-            Features: new[]
+            Features: new List<string>
             {
                 "debugging",
                 "streaming",
                 "context-building",
                 "code-search"
-            }.ToList()));
+            }));
 
         // Continue IDE
         RegisterExtension(new ExtensionInfo(
@@ -153,12 +159,12 @@ internal sealed class ExtensionRegistryService
             DebuggerSupported: true,
             CurrentVersion: "1.0.0",
             MinimumMcpVersion: "1.0.0",
-            Features: new[]
+            Features: new List<string>
             {
                 "debugging",
                 "streaming",
                 "context-building"
-            }.ToList()));
+            }));
 
         // Visual Studio
         RegisterExtension(new ExtensionInfo(
@@ -167,12 +173,12 @@ internal sealed class ExtensionRegistryService
             DebuggerSupported: true,
             CurrentVersion: "1.0.0",
             MinimumMcpVersion: "1.0.0",
-            Features: new[]
+            Features: new List<string>
             {
                 "debugging",
                 "context-building",
                 "code-search"
-            }.ToList()));
+            }));
 
         // LM Studio
         RegisterExtension(new ExtensionInfo(
@@ -181,11 +187,11 @@ internal sealed class ExtensionRegistryService
             DebuggerSupported: false,
             CurrentVersion: "1.0.0",
             MinimumMcpVersion: "1.0.0",
-            Features: new[]
+            Features: new List<string>
             {
                 "context-building",
                 "code-search"
-            }.ToList()));
+            }));
 
         // Claude Desktop
         RegisterExtension(new ExtensionInfo(
@@ -194,15 +200,18 @@ internal sealed class ExtensionRegistryService
             DebuggerSupported: true,
             CurrentVersion: "1.0.0",
             MinimumMcpVersion: "1.0.0",
-            Features: new[]
+            Features: new List<string>
             {
                 "debugging",
                 "streaming",
                 "persistence",
                 "context-building"
-            }.ToList()));
+            }));
 
-        _logger.LogInformation("Extension registry initialized with {Count} extensions", _registry.Count);
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation("Extension registry initialized with {Count} extensions", _registry.Count);
+        }
     }
 
     private static int CompareVersions(string version1, string version2)

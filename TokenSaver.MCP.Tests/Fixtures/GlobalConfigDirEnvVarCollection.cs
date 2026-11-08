@@ -10,4 +10,4 @@ namespace TokenSaver.MCP.Tests;
 ///     test's constructor/dispose could clobber the env var mid-run of another.
 /// </summary>
 [CollectionDefinition("GlobalConfigDirEnvVar", DisableParallelization = true)]
-public sealed class GlobalConfigDirEnvVarCollection;
+public sealed class GlobalConfigDirEnvVarGroup;

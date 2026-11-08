@@ -3,6 +3,7 @@ using TokenSaver.Common.Core.Contracts;
 using ModelContextProtocol.Server;
 
 using System.ComponentModel;
+using System.Globalization;
 using System.Text.Json;
 
 namespace TokenSaver.MCP.Tools;
@@ -49,7 +50,7 @@ internal sealed class DebugOutputTools(IDebugOutputCapture outputCapture)
             lines = output.Lines.Select(l => new
             {
                 line_number = l.LineNumber,
-                timestamp = l.Timestamp.ToString("HH:mm:ss.fff"),
+                timestamp = l.Timestamp.ToString("HH:mm:ss.fff", CultureInfo.InvariantCulture),
                 severity = l.Severity.ToString(),
                 stream = l.Stream,
                 content = l.Content
@@ -87,7 +88,7 @@ internal sealed class DebugOutputTools(IDebugOutputCapture outputCapture)
             matches = resultList.Select(l => new
             {
                 line_number = l.LineNumber,
-                timestamp = l.Timestamp.ToString("HH:mm:ss.fff"),
+                timestamp = l.Timestamp.ToString("HH:mm:ss.fff", CultureInfo.InvariantCulture),
                 severity = l.Severity.ToString(),
                 stream = l.Stream,
                 content = l.Content

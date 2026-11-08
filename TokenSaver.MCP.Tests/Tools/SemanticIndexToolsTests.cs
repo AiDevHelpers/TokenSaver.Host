@@ -58,7 +58,7 @@ public class SemanticIndexToolsTests
         SemanticIndexTools tools = CreateTools(retrieval);
 
         string json = await tools.SemanticGrep("does this exist");
-        JsonElement result = JsonDocument.Parse(json).RootElement;
+        JsonElement result = JsonElement.Parse(json);
 
         Assert.Equal("none", result.GetProperty("match").GetString());
         Assert.Equal(0.6, result.GetProperty("confidence").GetDouble());
@@ -76,7 +76,7 @@ public class SemanticIndexToolsTests
         SemanticIndexTools tools = CreateTools(retrieval);
 
         string json = await tools.SemanticGrep("find Foo");
-        JsonElement result = JsonDocument.Parse(json).RootElement;
+        JsonElement result = JsonElement.Parse(json);
 
         Assert.Equal(JsonValueKind.Array, result.ValueKind);
         Assert.Equal("Foo.cs", result[0].GetProperty("file").GetString());
@@ -92,7 +92,7 @@ public class SemanticIndexToolsTests
         SemanticIndexTools tools = CreateTools(retrieval);
 
         string json = await tools.SemanticGrep("anything");
-        JsonElement result = JsonDocument.Parse(json).RootElement;
+        JsonElement result = JsonElement.Parse(json);
 
         Assert.Equal(JsonValueKind.Array, result.ValueKind);
         Assert.Equal(0, result.GetArrayLength());
