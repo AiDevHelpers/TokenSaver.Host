@@ -25,7 +25,6 @@ using TokenSaver.MCP.Services;
 using TokenSaver.MCP.Tools;
 using TokenSaver.MCP;
 using TokenSaver.MCP.Endpoints;
-using TokenSaver.MCP.Middleware;
 using TokenSaver.OllamaIntegration.Services;
 
 // ── Stdio detection ──
