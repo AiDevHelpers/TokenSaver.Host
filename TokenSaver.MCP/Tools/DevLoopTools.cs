@@ -13,6 +13,7 @@ using ModelContextProtocol.Server;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace TokenSaver.MCP.Tools;
 
@@ -35,6 +36,9 @@ internal sealed class DevLoopTools(
 {
     private readonly TokenSaverConfig _config = config.Value;
 
+    /// <summary>Docker container names: letters, digits, '_', '.', '-'. Keeps caller input from adding docker arguments.</summary>
+    private static readonly Regex ContainerNamePattern = new(@"^[A-Za-z0-9][A-Za-z0-9_.-]*\z", RegexOptions.CultureInvariant);
+
     /// <summary>docker inspect format: state|health|exitCode|finishedAt.</summary>
     private const string InspectFormat =
         "{{.State.Status}}|{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}|{{.State.ExitCode}}|{{.State.FinishedAt}}";
@@ -55,41 +59,13 @@ internal sealed class DevLoopTools(
     {
         await workspaceRootResolver.EnsureResolvedAsync(server, ct);
 
-        // 1. Is the docker CLI installed?
-        try
+        (string? error, string header) = await DockerPreflightAsync(containerName, ct);
+        if (error is not null)
         {
-            (int cliExit, _, string cliErr) = await RunProcessAsync("docker", "--version", ct);
-            if (cliExit != 0)
-            {
-                return $"Docker CLI is installed but failed (exit {cliExit}): {cliErr.Trim()}";
-            }
-        }
-        catch (Exception ex) when (ex is Win32Exception or InvalidOperationException)
-        {
-            return $"Docker is not installed or not on PATH: {ex.Message}";
+            return error;
         }
 
-        // 2. Is the daemon (Docker Desktop) running?
-        (int infoExit, _, string infoErr) = await RunProcessAsync("docker", "info --format \"{{.ServerVersion}}\"", ct);
-        if (infoExit != 0)
-        {
-            return $"Docker is installed but the daemon is not running (start Docker Desktop): {infoErr.Trim()}";
-        }
-
-        // 3. Container state and health.
-        (int inspectExit, string inspectOut, string inspectErr) =
-            await RunProcessAsync("docker", $"inspect -f \"{InspectFormat}\" {containerName}", ct);
-        if (inspectExit != 0)
-        {
-            return $"Container '{containerName}' not found: {inspectErr.Trim()}";
-        }
-
-        string[] state = inspectOut.Trim().Split('|');
-        string header = state.Length == 4
-            ? $"Docker: installed, daemon running.\nContainer '{containerName}': status={state[0]}, health={state[1]}, exitCode={state[2]}, finished={state[3]}\n\n"
-            : $"Docker: installed, daemon running.\nContainer '{containerName}': {inspectOut.Trim()}\n\n";
-
-        // 4. Logs (fetched even when the container is stopped, since that is when they matter most).
+        // Logs are fetched even when the container is stopped, since that is when they matter most.
         string raw;
         try
         {
@@ -112,6 +88,100 @@ internal sealed class DevLoopTools(
 
         string tail = rawPath is not null ? $"\n\n[{result.RawTokens}→{result.DistilledTokens} tokens; full log: {rawPath}]" : "";
         return header + result.Summary + tail;
+    }
+
+    [McpServerTool]
+    [Description("Start a stopped Docker container, then report its status and health.")]
+    public Task<string> ContainerStart(
+        [Description("Container name or ID")] string containerName,
+        McpServer server = null!,
+        CancellationToken ct = default)
+        => RunContainerActionAsync("start", "started", containerName, server, ct);
+
+    [McpServerTool]
+    [Description("Stop a running Docker container (Docker's default 10 s grace period), then report its status.")]
+    public Task<string> ContainerStop(
+        [Description("Container name or ID")] string containerName,
+        McpServer server = null!,
+        CancellationToken ct = default)
+        => RunContainerActionAsync("stop", "stopped", containerName, server, ct);
+
+    [McpServerTool]
+    [Description("Restart a Docker container, then report its status and health.")]
+    public Task<string> ContainerRestart(
+        [Description("Container name or ID")] string containerName,
+        McpServer server = null!,
+        CancellationToken ct = default)
+        => RunContainerActionAsync("restart", "restarted", containerName, server, ct);
+
+    /// <summary>Runs a docker lifecycle verb on a container after the same preflight as container_logs.</summary>
+    private async Task<string> RunContainerActionAsync(
+        string verb, string pastTense, string containerName, McpServer server, CancellationToken ct)
+    {
+        await workspaceRootResolver.EnsureResolvedAsync(server, ct);
+
+        (string? error, _) = await DockerPreflightAsync(containerName, ct);
+        if (error is not null)
+        {
+            return error;
+        }
+
+        (int exitCode, _, string stderr) = await RunProcessAsync("docker", $"{verb} {containerName}", ct);
+        if (exitCode != 0)
+        {
+            return $"docker {verb} {containerName} failed (exit {exitCode}): {stderr.Trim()}";
+        }
+
+        (string? afterError, string header) = await DockerPreflightAsync(containerName, ct);
+        return afterError ?? $"Container '{containerName}' {pastTense}.\n{header}";
+    }
+
+    /// <summary>
+    ///     Checks the name is a valid docker container name, the docker CLI is installed, the daemon is
+    ///     running, and the container exists. Returns an error to hand back to the caller, or the status header.
+    /// </summary>
+    private static async Task<(string? Error, string Header)> DockerPreflightAsync(string containerName, CancellationToken ct)
+    {
+        if (!ContainerNamePattern.IsMatch(containerName))
+        {
+            return ($"Invalid container name '{containerName}': use letters, digits, '_', '.' and '-' only.", "");
+        }
+
+        // 1. Is the docker CLI installed?
+        try
+        {
+            (int cliExit, _, string cliErr) = await RunProcessAsync("docker", "--version", ct);
+            if (cliExit != 0)
+            {
+                return ($"Docker CLI is installed but failed (exit {cliExit}): {cliErr.Trim()}", "");
+            }
+        }
+        catch (Exception ex) when (ex is Win32Exception or InvalidOperationException)
+        {
+            return ($"Docker is not installed or not on PATH: {ex.Message}", "");
+        }
+
+        // 2. Is the daemon (Docker Desktop) running?
+        (int infoExit, _, string infoErr) = await RunProcessAsync("docker", "info --format \"{{.ServerVersion}}\"", ct);
+        if (infoExit != 0)
+        {
+            return ($"Docker is installed but the daemon is not running (start Docker Desktop): {infoErr.Trim()}", "");
+        }
+
+        // 3. Container state and health.
+        (int inspectExit, string inspectOut, string inspectErr) =
+            await RunProcessAsync("docker", $"inspect -f \"{InspectFormat}\" {containerName}", ct);
+        if (inspectExit != 0)
+        {
+            return ($"Container '{containerName}' not found: {inspectErr.Trim()}", "");
+        }
+
+        string[] state = inspectOut.Trim().Split('|');
+        string header = state.Length == 4
+            ? $"Docker: installed, daemon running.\nContainer '{containerName}': status={state[0]}, health={state[1]}, exitCode={state[2]}, finished={state[3]}\n\n"
+            : $"Docker: installed, daemon running.\nContainer '{containerName}': {inspectOut.Trim()}\n\n";
+
+        return (null, header);
     }
 
     [McpServerTool]
