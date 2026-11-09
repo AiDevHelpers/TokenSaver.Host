@@ -118,7 +118,6 @@ internal static class ServiceRegistrationExtensions
         services.AddSingleton<AiProviderConfigService>();
         services.AddSingleton<WorkspaceCodeScanner>();
         services.AddSingleton<AccuracyTestService>();
-        services.AddSingleton<AgentConfigService>();
         services.AddSingleton<ITestRunner, TestRunnerService>();
         services.AddHostedService<ProviderAutoRegistrationService>();
         return services;
@@ -164,6 +163,13 @@ internal static class ServiceRegistrationExtensions
 
         // SimpleModelServer capacity check client (10-second timeout, quick checks only)
         services.AddHttpClient<SimpleModelServerCapacityClient>(client =>
+        {
+            client.BaseAddress = new Uri(config.OllamaUrl);
+            client.Timeout = TimeSpan.FromSeconds(10);
+        }).AddHttpMessageHandler<EndpointRoutingHandler>();
+
+        // SimpleModelServer admin config client (GET/POST /admin/config on the router)
+        services.AddHttpClient<AgentConfigService>(client =>
         {
             client.BaseAddress = new Uri(config.OllamaUrl);
             client.Timeout = TimeSpan.FromSeconds(10);

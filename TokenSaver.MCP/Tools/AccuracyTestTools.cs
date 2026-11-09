@@ -114,8 +114,8 @@ internal sealed class AccuracyTestTools(
         string? raw = await agentConfig.GetRawConfigAsync(ct);
         if (raw is null)
         {
-            return "SimpleModelServer.config.json not found. " +
-                   "Ensure SIMPLEMODELSERVER_WORKSPACE points to the workspace root and SimpleModelServer has run at least once.";
+            return "SimpleModelServer admin API unavailable. " +
+                   "Check that the router is running on OllamaUrl (default http://localhost:11435) and that GET /admin/config is reachable from localhost.";
         }
 
         try
