@@ -35,11 +35,15 @@ internal sealed class DevLoopTools(
 {
     private readonly TokenSaverConfig _config = config.Value;
 
+    /// <summary>docker inspect format: state|health|exitCode|finishedAt.</summary>
+    private const string InspectFormat =
+        "{{.State.Status}}|{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}|{{.State.ExitCode}}|{{.State.FinishedAt}}";
+
     [McpServerTool]
     [Description(
-        "Fetch a Docker container's recent logs and distill them to new/anomalous error lines only. " +
-        "Requires the `docker` CLI to be on PATH and a running Docker Desktop/daemon — returns a clear " +
-        "error message (not raw log noise) if either is unavailable.")]
+        "Check Docker is installed, the daemon is running, and the container's status and health, then fetch " +
+        "its recent logs distilled to new/anomalous error lines only. Each failed check returns a clear " +
+        "message instead of logs.")]
     public async Task<string> ContainerLogs(
         [Description("Container name or ID")] string containerName,
         [Description("Number of trailing log lines to fetch (default 500)")]
@@ -51,6 +55,41 @@ internal sealed class DevLoopTools(
     {
         await workspaceRootResolver.EnsureResolvedAsync(server, ct);
 
+        // 1. Is the docker CLI installed?
+        try
+        {
+            (int cliExit, _, string cliErr) = await RunProcessAsync("docker", "--version", ct);
+            if (cliExit != 0)
+            {
+                return $"Docker CLI is installed but failed (exit {cliExit}): {cliErr.Trim()}";
+            }
+        }
+        catch (Exception ex) when (ex is Win32Exception or InvalidOperationException)
+        {
+            return $"Docker is not installed or not on PATH: {ex.Message}";
+        }
+
+        // 2. Is the daemon (Docker Desktop) running?
+        (int infoExit, _, string infoErr) = await RunProcessAsync("docker", "info --format \"{{.ServerVersion}}\"", ct);
+        if (infoExit != 0)
+        {
+            return $"Docker is installed but the daemon is not running (start Docker Desktop): {infoErr.Trim()}";
+        }
+
+        // 3. Container state and health.
+        (int inspectExit, string inspectOut, string inspectErr) =
+            await RunProcessAsync("docker", $"inspect -f \"{InspectFormat}\" {containerName}", ct);
+        if (inspectExit != 0)
+        {
+            return $"Container '{containerName}' not found: {inspectErr.Trim()}";
+        }
+
+        string[] state = inspectOut.Trim().Split('|');
+        string header = state.Length == 4
+            ? $"Docker: installed, daemon running.\nContainer '{containerName}': status={state[0]}, health={state[1]}, exitCode={state[2]}, finished={state[3]}\n\n"
+            : $"Docker: installed, daemon running.\nContainer '{containerName}': {inspectOut.Trim()}\n\n";
+
+        // 4. Logs (fetched even when the container is stopped, since that is when they matter most).
         string raw;
         try
         {
@@ -58,21 +97,21 @@ internal sealed class DevLoopTools(
         }
         catch (Exception ex) when (ex is Win32Exception or InvalidOperationException)
         {
-            return $"docker CLI unavailable or container '{containerName}' not found: {ex.Message}";
+            return header + $"docker logs failed: {ex.Message}";
         }
 
         string? rawPath = await rawWriter.WriteAsync("containerLogs", raw, ct);
 
         if (verbose)
         {
-            return raw;
+            return header + raw;
         }
 
         DistillResult result = await distill.DistillAsync(
             _config.WorkspaceRoot, "containerLogs", DistillRole.LogErrors, raw, ct: ct);
 
         string tail = rawPath is not null ? $"\n\n[{result.RawTokens}→{result.DistilledTokens} tokens; full log: {rawPath}]" : "";
-        return result.Summary + tail;
+        return header + result.Summary + tail;
     }
 
     [McpServerTool]
