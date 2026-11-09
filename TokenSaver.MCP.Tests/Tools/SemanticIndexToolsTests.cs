@@ -1,9 +1,12 @@
 using TokenSaver.Common.Core.Configuration;
+using TokenSaver.Database.Context;
 using TokenSaver.TokenEconomy.Models.TokenEconomy;
 using TokenSaver.TokenEconomy.Contracts;
+using TokenSaver.TokenEconomy.Services;
 using TokenSaver.MCP.Services;
 using TokenSaver.MCP.Tools;
 
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
 using System.Text.Json;
@@ -44,7 +47,10 @@ public class SemanticIndexToolsTests
     {
         TokenSaverConfig config = new() { WorkspaceRoot = Path.GetTempPath() };
         WorkspaceRootSessionResolver workspaceRootResolver = WorkspaceRootSessionResolverTestFactory.Create(config);
-        return new SemanticIndexTools(new NoOpRepoIndexer(), retrieval, Options.Create(config), workspaceRootResolver);
+        NoOpRepoIndexer indexer = new();
+        SemanticIndexBackgroundTrigger indexTrigger = new(
+            indexer, new TokenEconomyDbAccessor(), NullLogger<SemanticIndexBackgroundTrigger>.Instance);
+        return new SemanticIndexTools(indexer, retrieval, Options.Create(config), workspaceRootResolver, indexTrigger);
     }
 
     [Fact]
@@ -80,6 +86,17 @@ public class SemanticIndexToolsTests
 
         Assert.Equal(JsonValueKind.Array, result.ValueKind);
         Assert.Equal("Foo.cs", result[0].GetProperty("file").GetString());
+    }
+
+    [Fact]
+    public async Task IndexRepo_ReturnsStartedImmediately_WithoutWaitingForTheRun()
+    {
+        SemanticIndexTools tools = CreateTools(new FakeConditionalRetrievalService());
+
+        string json = await tools.IndexRepo();
+        JsonElement result = JsonElement.Parse(json);
+
+        Assert.Equal("started", result.GetProperty("status").GetString());
     }
 
     [Fact]

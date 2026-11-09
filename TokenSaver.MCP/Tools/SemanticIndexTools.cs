@@ -11,6 +11,7 @@ using System.ComponentModel;
 using System.Text.Json;
 using TokenSaver.OllamaIntegration.Services;
 using TokenSaver.TokenEconomy.Contracts;
+using TokenSaver.TokenEconomy.Services;
 using TokenSaver.Utilities.Services;
 
 namespace TokenSaver.MCP.Tools;
@@ -27,14 +28,16 @@ internal sealed class SemanticIndexTools(
     IRepoIndexer indexer,
     IConditionalRetrievalService retrieval,
     IOptions<TokenSaverConfig> config,
-    WorkspaceRootSessionResolver workspaceRootResolver)
+    WorkspaceRootSessionResolver workspaceRootResolver,
+    SemanticIndexBackgroundTrigger indexTrigger)
 {
     private readonly TokenSaverConfig _config = config.Value;
 
     [McpServerTool]
     [Description(
-        "Chunk the workspace into function/class/markdown-section pieces and summarize+embed each new or " +
-        "changed one via the local model (incremental — unchanged chunks are skipped by content hash). Run this " +
+        "Start chunking the workspace into function/class/markdown-section pieces and summarizing+embedding " +
+        "each new or changed one via the local model (incremental — unchanged chunks are skipped by content " +
+        "hash). Runs in the background and returns immediately; call IndexStatus to check progress. Run this " +
         "before SemanticGrep the first time, and again after significant edits.")]
     public async Task<string> IndexRepo(
         [Description("Workspace root to index; defaults to the configured WorkspaceRoot")]
@@ -49,14 +52,54 @@ internal sealed class SemanticIndexTools(
         await workspaceRootResolver.EnsureResolvedAsync(server, ct);
 
         string root = string.IsNullOrWhiteSpace(rootPath) ? _config.WorkspaceRoot : rootPath;
-        RepoIndexStats stats = await indexer.IndexRepoAsync(root, extensions, concurrency, ct);
+        SemanticIndexTriggerStatus status = indexTrigger.StartManual(root, extensions, concurrency);
         return JsonSerializer.Serialize(new
         {
-            files = stats.FilesScanned,
-            chunks_indexed = stats.ChunksIndexed,
-            chunks_skipped = stats.ChunksSkipped,
-            chunks_deleted = stats.ChunksDeleted,
-            elapsed_seconds = Math.Round(stats.Elapsed.TotalSeconds, 1)
+            status = status == SemanticIndexTriggerStatus.Started ? "started" : "already_running",
+            root,
+            next = "Call IndexStatus to check progress."
+        });
+    }
+
+    [McpServerTool]
+    [Description(
+        "Report the state of the background semantic index for a workspace: whether a run is in flight, " +
+        "the stats of the last completed run, and the last error if it failed.")]
+    public Task<string> IndexStatus(
+        [Description("Workspace root to check; defaults to the configured WorkspaceRoot")]
+        string? rootPath = null,
+        McpServer server = null!,
+        CancellationToken ct = default)
+    {
+        return IndexStatusAsync(rootPath, server, ct);
+    }
+
+    private async Task<string> IndexStatusAsync(string? rootPath, McpServer server, CancellationToken ct)
+    {
+        await workspaceRootResolver.EnsureResolvedAsync(server, ct);
+
+        string root = string.IsNullOrWhiteSpace(rootPath) ? _config.WorkspaceRoot : rootPath;
+        bool running = indexTrigger.IsRunning(root);
+        string? error = indexTrigger.GetLastError(root);
+        object? last = null;
+        if (indexTrigger.TryGetLastStats(root, out RepoIndexStats? stats) && stats is not null)
+        {
+            last = new
+            {
+                files = stats.FilesScanned,
+                chunks_indexed = stats.ChunksIndexed,
+                chunks_skipped = stats.ChunksSkipped,
+                chunks_deleted = stats.ChunksDeleted,
+                elapsed_seconds = Math.Round(stats.Elapsed.TotalSeconds, 1)
+            };
+        }
+
+        return JsonSerializer.Serialize(new
+        {
+            root,
+            state = running ? "running" : error is not null ? "failed" : last is not null ? "idle" : "not_started",
+            last_completed = last,
+            last_error = error
         });
     }
 

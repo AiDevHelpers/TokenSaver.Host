@@ -67,7 +67,8 @@ internal sealed partial class WorkspaceRootSessionResolver
     private readonly BehaviorConfigOverlay _behaviorConfigOverlay;
     private readonly InstructionOptimizerService _instructionOptimizer;
     private readonly ILogger<WorkspaceRootSessionResolver> _logger;
-    private int _warmupTriggered;
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<string, byte> _warmedRoots =
+        new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
     ///     Test-only escape hatch: unit tests construct tool classes (and this resolver) directly,
@@ -186,7 +187,9 @@ internal sealed partial class WorkspaceRootSessionResolver
     /// </summary>
     private void TriggerWarmupOnce(string root)
     {
-        if (Interlocked.Exchange(ref _warmupTriggered, 1) != 0)
+        // Once per workspace root, not once per process: a later session that connects to a
+        // different folder in the same process must still get its own index and warm-up.
+        if (!_warmedRoots.TryAdd(root, 0))
         {
             return;
         }
