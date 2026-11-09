@@ -114,6 +114,104 @@ internal sealed class DevLoopTools(
         CancellationToken ct = default)
         => RunContainerActionAsync("restart", "restarted", containerName, server, ct);
 
+    [McpServerTool]
+    [Description(
+        "Run one shell command inside a container (via /bin/sh -c) and return its exit code, stdout and stderr. " +
+        "One-shot only: there is no interactive console. A timeout kills the docker client; the command itself may " +
+        "keep running inside the container.")]
+    public async Task<string> ContainerExec(
+        [Description("Container name or ID")] string containerName,
+        [Description("Shell command to run inside the container, passed to /bin/sh -c")] string command,
+        [Description("Seconds before the docker client is killed (1-600, default 60)")]
+        int timeoutSeconds = 60,
+        McpServer server = null!,
+        CancellationToken ct = default)
+    {
+        await workspaceRootResolver.EnsureResolvedAsync(server, ct);
+
+        (string? error, _) = await DockerPreflightAsync(containerName, ct);
+        if (error is not null)
+        {
+            return error;
+        }
+
+        if (string.IsNullOrWhiteSpace(command))
+        {
+            return "command is empty.";
+        }
+
+        if (timeoutSeconds is < 1 or > 600)
+        {
+            return "timeoutSeconds must be between 1 and 600.";
+        }
+
+        (int exitCode, string stdout, string stderr, bool timedOut) =
+            await RunDockerExecAsync(containerName, command, TimeSpan.FromSeconds(timeoutSeconds), ct);
+
+        if (timedOut)
+        {
+            return $"Timed out after {timeoutSeconds} s; the docker client was killed (the command may still run inside the container).";
+        }
+
+        return $"exit={exitCode}\n--- stdout\n{Capped(stdout)}\n--- stderr\n{Capped(stderr)}";
+    }
+
+    /// <summary>Caps one output stream so a chatty command can't flood the caller's context.</summary>
+    private static string Capped(string text)
+    {
+        const int maxChars = 20_000;
+        return text.Length <= maxChars ? text : text[..maxChars] + $"\n[truncated: {text.Length - maxChars} more characters]";
+    }
+
+    /// <summary>
+    ///     Runs `docker exec &lt;container&gt; /bin/sh -c &lt;command&gt;` with arguments passed as a list (no shell
+    ///     quoting of the caller's text). Kills the docker client on timeout or cancellation.
+    /// </summary>
+    private static async Task<(int ExitCode, string Stdout, string Stderr, bool TimedOut)> RunDockerExecAsync(
+        string containerName, string command, TimeSpan timeout, CancellationToken ct)
+    {
+        ProcessStartInfo startInfo = new()
+        {
+            FileName = "docker",
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+            CreateNoWindow = true
+        };
+        startInfo.ArgumentList.Add("exec");
+        startInfo.ArgumentList.Add(containerName);
+        startInfo.ArgumentList.Add("/bin/sh");
+        startInfo.ArgumentList.Add("-c");
+        startInfo.ArgumentList.Add(command);
+
+        using Process process = new() { StartInfo = startInfo };
+        _ = process.Start();
+        Task<string> stdoutTask = process.StandardOutput.ReadToEndAsync(ct);
+        Task<string> stderrTask = process.StandardError.ReadToEndAsync(ct);
+
+        using CancellationTokenSource timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        timeoutCts.CancelAfter(timeout);
+        bool timedOut = false;
+        try
+        {
+            await process.WaitForExitAsync(timeoutCts.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            timedOut = !ct.IsCancellationRequested;
+            process.Kill(entireProcessTree: true);
+            await process.WaitForExitAsync(CancellationToken.None);
+            if (!timedOut)
+            {
+                throw;
+            }
+        }
+
+        string stdout = await stdoutTask;
+        string stderr = await stderrTask;
+        return (timedOut ? -1 : process.ExitCode, stdout, stderr, timedOut);
+    }
+
     /// <summary>Runs a docker lifecycle verb on a container after the same preflight as container_logs.</summary>
     private async Task<string> RunContainerActionAsync(
         string verb, string pastTense, string containerName, McpServer server, CancellationToken ct)
