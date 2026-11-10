@@ -5,9 +5,11 @@ using TokenSaver.MCP.Services;
 
 using Microsoft.Extensions.Options;
 
+using ModelContextProtocol;
 using ModelContextProtocol.Server;
 
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Text.Json;
 using TokenSaver.OllamaIntegration.Services;
 using TokenSaver.TokenEconomy.Contracts;
@@ -22,6 +24,11 @@ namespace TokenSaver.MCP.Tools;
 ///     natural-language queries ("where do we retry a failed Ollama call") where a function/
 ///     section-level summary is more useful than an exact symbol name match. See
 ///     TokenSaver/docs/token-economy-tools-contract.md.
+///     <para>
+///     The workspace folder is never guessed from the server's own working directory. It comes from
+///     the tool's <c>rootPath</c> argument or from the client's MCP roots; if neither is given the
+///     tool returns <c>status: no_root</c> and the client has to send the path.
+///     </para>
 /// </summary>
 [McpServerToolType]
 internal sealed class SemanticIndexTools(
@@ -31,6 +38,10 @@ internal sealed class SemanticIndexTools(
     WorkspaceRootSessionResolver workspaceRootResolver,
     SemanticIndexBackgroundTrigger indexTrigger)
 {
+    private static readonly TimeSpan IndexWaitCap = TimeSpan.FromMinutes(45);
+    private static readonly TimeSpan PollInterval = TimeSpan.FromMilliseconds(500);
+    private static readonly TimeSpan ProgressInterval = TimeSpan.FromSeconds(15);
+
     private readonly TokenSaverConfig _config = config.Value;
 
     [McpServerTool]
@@ -38,9 +49,10 @@ internal sealed class SemanticIndexTools(
         "Start chunking the workspace into function/class/markdown-section pieces and summarizing+embedding " +
         "each new or changed one via the local model (incremental — unchanged chunks are skipped by content " +
         "hash). Runs in the background and returns immediately; call IndexStatus to check progress. Run this " +
-        "before SemanticGrep the first time, and again after significant edits.")]
+        "before SemanticGrep the first time, and again after significant edits. Pass rootPath (the client's " +
+        "workspace folder) when the client does not send MCP roots.")]
     public async Task<string> IndexRepo(
-        [Description("Workspace root to index; defaults to the configured WorkspaceRoot")]
+        [Description("Workspace root to index; required unless the client sends MCP roots")]
         string? rootPath = null,
         [Description("File extensions to include, e.g. ['.cs','.md']; defaults to .cs/.js/.ts/.py/.md")]
         string[]? extensions = null,
@@ -49,9 +61,12 @@ internal sealed class SemanticIndexTools(
         McpServer server = null!,
         CancellationToken ct = default)
     {
-        await workspaceRootResolver.EnsureResolvedAsync(server, ct);
+        string? root = await ResolveIndexRootAsync(rootPath, server, ct);
+        if (root is null)
+        {
+            return NoRootJson();
+        }
 
-        string root = string.IsNullOrWhiteSpace(rootPath) ? _config.WorkspaceRoot : rootPath;
         SemanticIndexTriggerStatus status = indexTrigger.StartManual(root, extensions, concurrency);
         return JsonSerializer.Serialize(new
         {
@@ -64,23 +79,24 @@ internal sealed class SemanticIndexTools(
     [McpServerTool]
     [Description(
         "Report the state of the background semantic index for a workspace: whether a run is in flight, " +
-        "the stats of the last completed run, and the last error if it failed.")]
-    public Task<string> IndexStatus(
-        [Description("Workspace root to check; defaults to the configured WorkspaceRoot")]
+        "the stats of the last completed run, and the last error if it failed. Pass rootPath (the client's " +
+        "workspace folder) when the client does not send MCP roots.")]
+    public async Task<string> IndexStatus(
+        [Description("Workspace root to check; required unless the client sends MCP roots")]
         string? rootPath = null,
         McpServer server = null!,
         CancellationToken ct = default)
     {
-        return IndexStatusAsync(rootPath, server, ct);
-    }
+        string? root = await ResolveIndexRootAsync(rootPath, server, ct);
+        if (root is null)
+        {
+            return NoRootJson();
+        }
 
-    private async Task<string> IndexStatusAsync(string? rootPath, McpServer server, CancellationToken ct)
-    {
-        await workspaceRootResolver.EnsureResolvedAsync(server, ct);
-
-        string root = string.IsNullOrWhiteSpace(rootPath) ? _config.WorkspaceRoot : rootPath;
         bool running = indexTrigger.IsRunning(root);
         string? error = indexTrigger.GetLastError(root);
+        // Read from the database, not process memory: a restarted server still has chunks on disk.
+        int chunksStored = await indexTrigger.CountChunksAsync(root, ct);
         object? last = null;
         if (indexTrigger.TryGetLastStats(root, out RepoIndexStats? stats) && stats is not null)
         {
@@ -90,6 +106,7 @@ internal sealed class SemanticIndexTools(
                 chunks_indexed = stats.ChunksIndexed,
                 chunks_skipped = stats.ChunksSkipped,
                 chunks_deleted = stats.ChunksDeleted,
+                chunks_failed = stats.ChunksFailed,
                 elapsed_seconds = Math.Round(stats.Elapsed.TotalSeconds, 1)
             };
         }
@@ -97,7 +114,11 @@ internal sealed class SemanticIndexTools(
         return JsonSerializer.Serialize(new
         {
             root,
-            state = running ? "running" : error is not null ? "failed" : last is not null ? "idle" : "not_started",
+            state = running ? "running"
+                : chunksStored > 0 ? "built"
+                : error is not null ? "failed"
+                : "not_started",
+            chunks_stored = chunksStored,
             last_completed = last,
             last_error = error
         });
@@ -106,23 +127,38 @@ internal sealed class SemanticIndexTools(
     [McpServerTool]
     [Description(
         "Natural-language search over the chunk index built by IndexRepo. Returns file/lines/summary/score per " +
-        "hit — not raw code; read the actual file only for the 1-2 hits that look relevant. Returns an empty " +
-        "result set (not an error) if IndexRepo hasn't been run yet. Ambiguous queries are silently reranked by " +
-        "a second local model pass before ranking; if the best hit still scores below the confidence floor, " +
-        "returns {\"match\":\"none\", best_candidate, confidence} instead — treat that as \"nothing relevant is " +
-        "indexed for this,\" not as a prompt to use best_candidate anyway.")]
+        "hit — not raw code; read the actual file only for the 1-2 hits that look relevant. If the index for " +
+        "this workspace has not been built yet, the call starts the build and waits for it, sending progress " +
+        "notifications while it runs. Ambiguous queries are silently reranked by a second local model pass " +
+        "before ranking; if the best hit still scores below the confidence floor, returns " +
+        "{\"match\":\"none\", best_candidate, confidence} instead — treat that as \"nothing relevant is " +
+        "indexed for this,\" not as a prompt to use best_candidate anyway. Pass rootPath (the client's " +
+        "workspace folder) when the client does not send MCP roots.")]
     public async Task<string> SemanticGrep(
         [Description("Natural-language query")] string query,
         [Description("Optional substring filter on the relative file path")]
         string? pathFilter = null,
         [Description("Number of top results to return (default 5)")]
         int topK = 5,
+        [Description("Workspace root to search; required unless the client sends MCP roots")]
+        string? rootPath = null,
         McpServer server = null!,
+        IProgress<ProgressNotificationValue>? progress = null,
         CancellationToken ct = default)
     {
-        await workspaceRootResolver.EnsureResolvedAsync(server, ct);
+        string? root = await ResolveIndexRootAsync(rootPath, server, ct);
+        if (root is null)
+        {
+            return NoRootJson();
+        }
 
-        RetrievalOutcome outcome = await retrieval.RetrieveAsync(_config.WorkspaceRoot, query, pathFilter, topK, ct);
+        string? waitResult = await WaitForIndexAsync(root, progress, ct);
+        if (waitResult is not null)
+        {
+            return waitResult;
+        }
+
+        RetrievalOutcome outcome = await retrieval.RetrieveAsync(root, query, pathFilter, topK, ct);
 
         if (outcome.Abstained)
         {
@@ -136,6 +172,104 @@ internal sealed class SemanticIndexTools(
 
         return JsonSerializer.Serialize(outcome.Hits.Select(ToHitJson));
     }
+
+    /// <summary>
+    ///     Returns the workspace root for an index tool call: the explicit <paramref name="rootPath" />
+    ///     if given, otherwise the root the client supplied through MCP roots. Never the server's own
+    ///     working directory. Null when neither is available.
+    /// </summary>
+    private async Task<string?> ResolveIndexRootAsync(string? rootPath, McpServer server, CancellationToken ct)
+    {
+        if (!string.IsNullOrWhiteSpace(rootPath))
+        {
+            await workspaceRootResolver.EnsureResolvedAsync(server, rootPath, ct);
+            return Path.TrimEndingDirectorySeparator(Path.GetFullPath(rootPath));
+        }
+
+        await workspaceRootResolver.EnsureResolvedAsync(server, ct);
+        return string.IsNullOrWhiteSpace(_config.WorkspaceRoot) ? null : _config.WorkspaceRoot;
+    }
+
+    /// <summary>
+    ///     Waits while the index for <paramref name="root" /> has no chunks yet: starts the build if
+    ///     nothing is running, reports progress every <see cref="ProgressInterval" />, and returns a
+    ///     JSON status when the wait ends without an index. Returns null when the search can proceed.
+    /// </summary>
+    private async Task<string?> WaitForIndexAsync(
+        string root, IProgress<ProgressNotificationValue>? progress, CancellationToken ct)
+    {
+        int chunks = await indexTrigger.CountChunksAsync(root, ct);
+        if (chunks > 0)
+        {
+            return null;
+        }
+
+        if (!indexTrigger.IsRunning(root))
+        {
+            _ = indexTrigger.StartManual(root, null, 4);
+        }
+
+        Stopwatch sw = Stopwatch.StartNew();
+        TimeSpan nextReport = TimeSpan.Zero;
+        while (indexTrigger.IsRunning(root))
+        {
+            if (sw.Elapsed >= IndexWaitCap)
+            {
+                return JsonSerializer.Serialize(new
+                {
+                    status = "indexing",
+                    root,
+                    message = "The index is still being built. Call SemanticGrep again to keep waiting."
+                });
+            }
+
+            if (sw.Elapsed >= nextReport)
+            {
+                chunks = await indexTrigger.CountChunksAsync(root, ct);
+                ReportProgress(progress, chunks, sw.Elapsed);
+                nextReport += ProgressInterval;
+            }
+
+            await Task.Delay(PollInterval, ct);
+        }
+
+        chunks = await indexTrigger.CountChunksAsync(root, ct);
+        if (chunks > 0)
+        {
+            return null;
+        }
+
+        string? error = indexTrigger.GetLastError(root);
+        if (error is null)
+        {
+            // Finished without error but still empty: the search runs and returns no hits.
+            return null;
+        }
+
+        return JsonSerializer.Serialize(new
+        {
+            status = "failed",
+            root,
+            chunks,
+            last_error = error,
+            message = "The index build failed. Fix the cause and call IndexRepo again."
+        });
+    }
+
+    private static void ReportProgress(IProgress<ProgressNotificationValue>? progress, int chunks, TimeSpan elapsed)
+    {
+        progress?.Report(new ProgressNotificationValue
+        {
+            Progress = chunks,
+            Message = $"Building the semantic index: {chunks} chunks stored, {elapsed:mm\\:ss} elapsed"
+        });
+    }
+
+    private static string NoRootJson() => JsonSerializer.Serialize(new
+    {
+        status = "no_root",
+        message = "The client did not send a workspace folder. Call again with rootPath set to the folder to index."
+    });
 
     private static object ToHitJson(SemanticSearchHit h) => new
     {

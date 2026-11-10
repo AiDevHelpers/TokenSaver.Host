@@ -40,7 +40,7 @@ public class SemanticIndexToolsTests
     {
         public Task<RepoIndexStats> IndexRepoAsync(
             string workspaceRoot, string[]? extensions = null, int concurrency = 4, CancellationToken ct = default) =>
-            throw new NotSupportedException("Not exercised by these tests");
+            Task.FromResult(new RepoIndexStats(0, 0, 0, 0, TimeSpan.Zero));
     }
 
     private static SemanticIndexTools CreateTools(FakeConditionalRetrievalService retrieval)
@@ -63,7 +63,7 @@ public class SemanticIndexToolsTests
         };
         SemanticIndexTools tools = CreateTools(retrieval);
 
-        string json = await tools.SemanticGrep("does this exist");
+        string json = await tools.SemanticGrep("does this exist", rootPath: Path.GetTempPath());
         JsonElement result = JsonElement.Parse(json);
 
         Assert.Equal("none", result.GetProperty("match").GetString());
@@ -81,7 +81,7 @@ public class SemanticIndexToolsTests
         };
         SemanticIndexTools tools = CreateTools(retrieval);
 
-        string json = await tools.SemanticGrep("find Foo");
+        string json = await tools.SemanticGrep("find Foo", rootPath: Path.GetTempPath());
         JsonElement result = JsonElement.Parse(json);
 
         Assert.Equal(JsonValueKind.Array, result.ValueKind);
@@ -93,7 +93,7 @@ public class SemanticIndexToolsTests
     {
         SemanticIndexTools tools = CreateTools(new FakeConditionalRetrievalService());
 
-        string json = await tools.IndexRepo();
+        string json = await tools.IndexRepo(rootPath: Path.GetTempPath());
         JsonElement result = JsonElement.Parse(json);
 
         Assert.Equal("started", result.GetProperty("status").GetString());
@@ -108,7 +108,7 @@ public class SemanticIndexToolsTests
         };
         SemanticIndexTools tools = CreateTools(retrieval);
 
-        string json = await tools.SemanticGrep("anything");
+        string json = await tools.SemanticGrep("anything", rootPath: Path.GetTempPath());
         JsonElement result = JsonElement.Parse(json);
 
         Assert.Equal(JsonValueKind.Array, result.ValueKind);

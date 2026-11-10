@@ -6,6 +6,7 @@ using TokenSaver.Config;
 using TokenSaver.ContextHelper.Configuration;
 using TokenSaver.Common.Core.Configuration;
 using TokenSaver.TokenEconomy.Models.Context;
+using TokenSaver.TokenEconomy.Services;
 using TokenSaver.OllamaIntegration.Services;
 
 using Microsoft.Extensions.Options;
@@ -41,7 +42,7 @@ internal sealed partial class WorkspaceRootSessionResolver
     private static partial void LogWorkspaceRootResolved(ILogger logger, string root);
 
     [LoggerMessage(Level = LogLevel.Information,
-        Message = "No workspace root available yet (client has no roots and no repo markers found from cwd) — indexing and context warm-up deferred.")]
+        Message = "No workspace root available yet (client sent no MCP roots and no rootPath was given) — indexing and context warm-up deferred.")]
     private static partial void LogWorkspaceRootUnresolved(ILogger logger);
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Unified index ready: {Files} files, {Symbols} symbols ({Skipped} unchanged) in {Elapsed:F1}s")]
@@ -49,6 +50,9 @@ internal sealed partial class WorkspaceRootSessionResolver
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Initial unified index skipped")]
     private static partial void LogInitialIndexSkipped(ILogger logger, Exception ex);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Initial semantic index start skipped")]
+    private static partial void LogSemanticIndexStartSkipped(ILogger logger, Exception ex);
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "SimpleModelServer not available after 10 min — context warm-up skipped.")]
     private static partial void LogSimpleModelServerNotAvailable(ILogger logger);
@@ -66,6 +70,7 @@ internal sealed partial class WorkspaceRootSessionResolver
     private readonly OllamaService _ollama;
     private readonly BehaviorConfigOverlay _behaviorConfigOverlay;
     private readonly InstructionOptimizerService _instructionOptimizer;
+    private readonly SemanticIndexBackgroundTrigger _semanticIndexTrigger;
     private readonly ILogger<WorkspaceRootSessionResolver> _logger;
     private readonly System.Collections.Concurrent.ConcurrentDictionary<string, byte> _warmedRoots =
         new(StringComparer.OrdinalIgnoreCase);
@@ -87,6 +92,7 @@ internal sealed partial class WorkspaceRootSessionResolver
         OllamaService ollama,
         BehaviorConfigOverlay behaviorConfigOverlay,
         InstructionOptimizerService instructionOptimizer,
+        SemanticIndexBackgroundTrigger semanticIndexTrigger,
         ILogger<WorkspaceRootSessionResolver> logger)
     {
         _config = config.Value;
@@ -96,6 +102,7 @@ internal sealed partial class WorkspaceRootSessionResolver
         _ollama = ollama;
         _behaviorConfigOverlay = behaviorConfigOverlay;
         _instructionOptimizer = instructionOptimizer;
+        _semanticIndexTrigger = semanticIndexTrigger;
         _logger = logger;
     }
 
@@ -105,16 +112,33 @@ internal sealed partial class WorkspaceRootSessionResolver
     ///     failure just leaves <see cref="TokenSaverConfig.WorkspaceRoot" /> empty, same as the
     ///     "not configured" case tools already tolerate today.
     /// </summary>
-    public async Task EnsureResolvedAsync(McpServer server, CancellationToken ct)
+    public Task EnsureResolvedAsync(McpServer server, CancellationToken ct) =>
+        EnsureResolvedAsync(server, rootHint: null, ct);
+
+    /// <summary>
+    ///     Same as <see cref="EnsureResolvedAsync(McpServer, CancellationToken)" />, plus an explicit
+    ///     folder from the tool call (e.g. IndexRepo's rootPath). A hint that names an existing
+    ///     directory starts that folder's warm-up and semantic index on this call, once per process,
+    ///     without changing the default <see cref="TokenSaverConfig.WorkspaceRoot" />. Clients that
+    ///     send no MCP roots otherwise never resolve a root here.
+    /// </summary>
+    public async Task EnsureResolvedAsync(McpServer server, string? rootHint, CancellationToken ct)
     {
+        if (!string.IsNullOrWhiteSpace(rootHint) && Directory.Exists(rootHint))
+        {
+            TriggerWarmupOnce(Path.TrimEndingDirectorySeparator(Path.GetFullPath(rootHint)));
+        }
+
         if (!string.IsNullOrWhiteSpace(_config.WorkspaceRoot))
         {
             TriggerWarmupOnce(_config.WorkspaceRoot);
             return;
         }
 
+        // Only the client's MCP roots are trusted. The server's own working directory is never used:
+        // it says nothing about which folder the session is in. A tool call that carries rootPath
+        // resolves through the hint overload instead.
         string? resolved = await TryResolveViaClientRootsAsync(server, ct);
-        resolved ??= WorkspaceRootResolver.FindRepoRoot(Directory.GetCurrentDirectory());
 
         if (resolved is null)
         {
@@ -209,6 +233,21 @@ internal sealed partial class WorkspaceRootSessionResolver
             catch (Exception ex)
             {
                 LogInitialIndexSkipped(_logger, ex);
+            }
+        });
+
+        // Chunk/embedding index for SemanticGrep. Runs on every new session root, independent of
+        // AutoWarmOnStartup and of the router being ready: EnsureStartedAsync is a cheap no-op once
+        // the Chunks table has rows, and otherwise starts a detached run with CancellationToken.None.
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await _semanticIndexTrigger.EnsureStartedAsync(root, CancellationToken.None);
+            }
+            catch (Exception ex)
+            {
+                LogSemanticIndexStartSkipped(_logger, ex);
             }
         });
 

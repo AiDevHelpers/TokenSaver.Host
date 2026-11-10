@@ -13,6 +13,7 @@ using TokenSaver.ContextHelper.Models;
 using TokenSaver.ContextHelper.Pipeline;
 using TokenSaver.Common.Core.Configuration;
 using TokenSaver.MCP.Services;
+using TokenSaver.TokenEconomy.Services;
 
 using Microsoft.Extensions.Options;
 
@@ -40,6 +41,8 @@ internal sealed class CodeHelperTools
     private readonly AgentAdapterRegistry _registry;
     private readonly PlanStore _store;
     private readonly WorkspaceRootSessionResolver _workspaceRootResolver;
+    private readonly SemanticIndexBackgroundTrigger _semanticIndex;
+    private readonly SymbolScanBackgroundTrigger _symbolScan;
 
     public CodeHelperTools(
         WorkspaceIndexService index,
@@ -54,8 +57,12 @@ internal sealed class CodeHelperTools
         ICallerDetectionService detection,
         AgentAdapterRegistry registry,
         IHttpContextAccessor httpContext,
-        WorkspaceRootSessionResolver workspaceRootResolver)
+        WorkspaceRootSessionResolver workspaceRootResolver,
+        SemanticIndexBackgroundTrigger semanticIndex,
+        SymbolScanBackgroundTrigger symbolScan)
     {
+        _symbolScan = symbolScan;
+        _semanticIndex = semanticIndex;
         _index = index;
         _symbolSearch = symbolSearch;
         _dependencies = dependencies;
@@ -76,12 +83,14 @@ internal sealed class CodeHelperTools
     [McpServerTool]
     [Description(
         "Query the workspace code index. action determines what happens:\n" +
-        "  scan         — scan and index all source files (incremental on repeat calls). root optional.\n" +
+        "  scan         — scan and index all source files (incremental on repeat calls). Runs in the background " +
+        "and returns at once; call action 'status' to check it. root optional.\n" +
         "  find         — find a symbol by name. name required; kind and filePath are optional filters.\n" +
         "  dependencies — show what a file imports and what imports it. filePath required; " +
-        "direction: 'uses' | 'usedBy' | 'both' (default).")]
+        "direction: 'uses' | 'usedBy' | 'both' (default).\n" +
+        "  status       — read-only: symbols indexed and semantic chunks stored for the workspace. Does not scan.")]
     public async Task<string> CodeIndex(
-        [Description("Action: 'scan', 'find', or 'dependencies'")]
+        [Description("Action: 'scan', 'find', 'dependencies', or 'status'")]
         string action,
         [Description("Symbol name — required for 'find'")]
         string? name = null,
@@ -100,18 +109,51 @@ internal sealed class CodeHelperTools
         string r = root ?? _config.WorkspaceRoot;
         return action.Trim().ToUpperInvariant() switch
         {
-            "SCAN" => await DoScan(r, ct),
+            "SCAN" => DoScan(r),
             "FIND" => await DoFind(name, kind, filePath, r, ct),
             "DEPENDENCIES" => await DoDeps(filePath, direction, r, ct),
-            _ => "Unknown action. Use 'scan', 'find', or 'dependencies'."
+            "STATUS" => await DoStatus(r, ct),
+            _ => "Unknown action. Use 'scan', 'find', 'dependencies', or 'status'."
         };
     }
 
-    private async Task<string> DoScan(string root, CancellationToken ct)
+    private async Task<string> DoStatus(string root, CancellationToken ct)
     {
-        IndexStats stats = await _index.IndexWorkspaceAsync(root, ct);
-        return $"Index complete: {stats.FilesIndexed} files indexed, {stats.SymbolsIndexed} symbols, " +
-               $"{stats.FilesSkipped} unchanged, completed in {stats.Elapsed.TotalSeconds:F1}s.";
+        int symbols = await _symbolSearch.CountAllSymbolsAsync(root, ct);
+        int chunks = await _semanticIndex.CountChunksAsync(root, ct);
+        object? lastScan = null;
+        if (_symbolScan.TryGetLastStats(root, out IndexStats? scan) && scan is not null)
+        {
+            lastScan = new
+            {
+                files_indexed = scan.FilesIndexed,
+                symbols = scan.SymbolsIndexed,
+                files_unchanged = scan.FilesSkipped,
+                elapsed_seconds = Math.Round(scan.Elapsed.TotalSeconds, 1)
+            };
+        }
+
+        return System.Text.Json.JsonSerializer.Serialize(new
+        {
+            root,
+            symbols_indexed = symbols,
+            semantic_chunks_stored = chunks,
+            semantic_index_state = _semanticIndex.IsRunning(root) ? "running" : chunks > 0 ? "built" : "not_built",
+            symbol_scan_state = _symbolScan.IsRunning(root) ? "running" : _symbolScan.GetLastError(root) is not null ? "failed" : "idle",
+            symbol_scan_last_completed = lastScan,
+            symbol_scan_last_error = _symbolScan.GetLastError(root)
+        });
+    }
+
+    private string DoScan(string root)
+    {
+        bool started = _symbolScan.StartScan(root);
+        return System.Text.Json.JsonSerializer.Serialize(new
+        {
+            status = started ? "started" : "already_running",
+            root,
+            next = "Call CodeIndex(action: 'status') to check progress."
+        });
     }
 
     private async Task<string> DoFind(string? name, string? kind, string? filePath, string root, CancellationToken ct)

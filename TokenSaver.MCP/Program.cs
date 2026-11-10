@@ -62,6 +62,17 @@ if (isStdio)
     Console.SetOut(Console.Error);
 }
 
+// ── Record fatal and unobserved exceptions ──
+// Written to %ProgramData%\TokenSaver\logs\fatal.log and the Application event log, so they
+// survive even under the SCM, where nothing reads the console. Without these an unhandled
+// exception in a background task or a crash during startup leaves no trace.
+AppDomain.CurrentDomain.UnhandledException += (_, e) => Program.WriteFatal("UnhandledException", e.ExceptionObject);
+TaskScheduler.UnobservedTaskException += (_, e) =>
+{
+    Program.WriteFatal("UnobservedTaskException", e.Exception);
+    e.SetObserved();
+};
+
 // ── Pause on unhandled startup failure (interactive console only) ──
 // A crash during startup (bad --server-config path, malformed JSON, etc.) would otherwise print
 // the exception and instantly close the window it's running in — unreadable in practice for any
@@ -118,6 +129,7 @@ if (!string.IsNullOrWhiteSpace(serverConfigPath))
             }
         }
 
+        Program.WriteFatal("BadArgument", $"--server-config must be an absolute path (got '{serverConfigPath}').");
         Environment.Exit(1);
     }
 
@@ -342,6 +354,18 @@ using (IServiceScope scope = app.Services.CreateScope())
     // when WorkspaceRoot is actually known (resolved by WorkspaceRootSessionResolver).
 }
 
+// ── Log who asked for shutdown ──
+// The Windows SCM does not report which process sent a stop, so a client that stops the service
+// on purpose (the VS Code extension) writes %ProgramData%\TokenSaver\stop-request.json first. The
+// stop logged here reads that file; when it is missing the stop came from outside those clients.
+{
+    IHostApplicationLifetime lifetime = app.Services.GetRequiredService<IHostApplicationLifetime>();
+    ILogger<Program> stopLogger = app.Services.GetRequiredService<ILogger<Program>>();
+    DateTimeOffset startedAt = DateTimeOffset.UtcNow;
+    _ = lifetime.ApplicationStopping.Register(() =>
+        Program.LogShutdownRequested(stopLogger, (DateTimeOffset.UtcNow - startedAt).TotalSeconds, ReadAndClearStopRequest()));
+}
+
 // ── Start the server ──
 // Listen on * to bind both IPv4 (0.0.0.0) and IPv6 (::) so that clients
 // resolving "localhost" to ::1 can connect alongside IPv4-only callers.
@@ -360,6 +384,13 @@ catch (IOException ex) when (ex.InnerException is AddressInUseException)
     }
 
     Environment.Exit(1);
+}
+catch (Exception ex)
+{
+    // Anything that stops the server after startup (host failure, fatal error in a hosted service)
+    // is recorded before the process exits; the exception then propagates as before.
+    Program.WriteFatal("ServerStopped", ex);
+    throw;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -408,6 +439,83 @@ internal partial class Program
 
     [LoggerMessage(Level = LogLevel.Critical, Message = "Port {Port} already in use — another TokenSaver.MCP instance is likely already running. Exiting.")]
     internal static partial void LogPortInUse(ILogger logger, int port);
+
+    /// <summary>
+    ///     Records a fatal or unobserved error to %ProgramData%\TokenSaver\logs\fatal.log and the
+    ///     Application event log (source TokenSaver). Usable before the DI logger exists and under the
+    ///     SCM, where a console write is lost. Never throws.
+    /// </summary>
+    internal static void WriteFatal(string kind, object error)
+    {
+        string text = $"{DateTimeOffset.Now:O} [{kind}] {error}";
+        try
+        {
+            string dir = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "TokenSaver", "logs");
+            _ = Directory.CreateDirectory(dir);
+            File.AppendAllText(Path.Combine(dir, "fatal.log"), text + Environment.NewLine);
+        }
+        catch (IOException)
+        {
+            // Disk full or locked: the event log entry below still goes out.
+        }
+        catch (UnauthorizedAccessException)
+        {
+            // No rights to the logs folder: the event log entry below still goes out.
+        }
+
+        if (OperatingSystem.IsWindows())
+        {
+            try
+            {
+                System.Diagnostics.EventLog.WriteEntry("TokenSaver", text, System.Diagnostics.EventLogEntryType.Error);
+            }
+            catch (System.ComponentModel.Win32Exception)
+            {
+                // Source not registered (interactive run): the file entry above is the record.
+            }
+            catch (InvalidOperationException)
+            {
+                // Event log unavailable: the file entry above is the record.
+            }
+            catch (System.Security.SecurityException)
+            {
+                // Not permitted to write to the event log: the file entry above is the record.
+            }
+        }
+    }
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Shutdown requested after {UptimeSeconds:F0}s uptime — {Source}")]
+    internal static partial void LogShutdownRequested(ILogger logger, double uptimeSeconds, string source);
+
+    /// <summary>
+    ///     Reads and deletes the stop request a client left in %ProgramData%\TokenSaver\stop-request.json.
+    ///     Returns a description of who asked for the stop, or that no request was recorded.
+    /// </summary>
+    internal static string ReadAndClearStopRequest()
+    {
+        string path = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "TokenSaver", "stop-request.json");
+        try
+        {
+            if (!File.Exists(path))
+            {
+                return "no stop request recorded (SCM stop from outside TokenSaver clients, or host shutdown)";
+            }
+
+            string json = File.ReadAllText(path);
+            File.Delete(path);
+            using System.Text.Json.JsonDocument doc = System.Text.Json.JsonDocument.Parse(json);
+            System.Text.Json.JsonElement root = doc.RootElement;
+            string Field(string name) =>
+                root.TryGetProperty(name, out System.Text.Json.JsonElement value) ? value.ToString() : "?";
+            return $"caller={Field("caller")}, reason={Field("reason")}, requestedAt={Field("requestedAt")}";
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Text.Json.JsonException)
+        {
+            return $"stop request file unreadable: {ex.Message}";
+        }
+    }
 }
 
 internal static class EventLogRegistration

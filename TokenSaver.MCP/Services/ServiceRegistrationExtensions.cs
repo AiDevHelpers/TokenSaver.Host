@@ -137,6 +137,7 @@ internal static class ServiceRegistrationExtensions
         services.AddSingleton<IRerankService, RerankService>();
         services.AddSingleton<IConditionalRetrievalService, ConditionalRetrievalService>();
         services.AddSingleton<SemanticIndexBackgroundTrigger>();
+        services.AddSingleton<SymbolScanBackgroundTrigger>();
         return services;
     }
 

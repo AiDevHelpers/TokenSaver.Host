@@ -182,7 +182,8 @@ public sealed class LocalModelHelperToolsTests : IDisposable
 
         WorkspaceRootSessionResolver workspaceRootResolver = new(
             configOptions, contextHelperOptions, orchestrator, contextPipeline, ollama,
-            behaviorConfigOverlay, instructionOptimizer, NullLogger<WorkspaceRootSessionResolver>.Instance)
+            behaviorConfigOverlay, instructionOptimizer, semanticIndexTrigger,
+            NullLogger<WorkspaceRootSessionResolver>.Instance)
         {
             SkipBackgroundWarmupForTests = true
         };
