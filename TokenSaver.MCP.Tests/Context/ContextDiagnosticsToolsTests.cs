@@ -12,6 +12,7 @@ using TokenSaver.Common.Core.Configuration;
 using TokenSaver.MCP.Services;
 using TokenSaver.MCP.Tools;
 using TokenSaver.OllamaIntegration.Services;
+using TokenSaver.OllamaIntegration.Tests;
 using TokenSaver.TokenEconomy.Contracts;
 using TokenSaver.TokenEconomy.Services;
 using TokenSaver.Utilities.Services;
@@ -146,7 +147,15 @@ public sealed class ContextDiagnosticsToolsTests : IDisposable
             SkipBackgroundWarmupForTests = true
         };
 
-        ContextDiagnosticsTools tools = new(cleaner, contextPipeline, folderTree, workspaceConfig, workspaceRootResolver, calibration);
+        // The index self-test step runs against a fake Ollama so it finishes without the network.
+        IndexSelfTest indexSelfTest = new(
+            new RepoIndexer(new ChunkExtractor(),
+                new OllamaService(new HttpClient(new FakeOllamaHandler()) { BaseAddress = new Uri("http://fake-ollama.local") },
+                    tokenSaverOptions, NullLogger<OllamaService>.Instance),
+                modelRoutes, tokenEconomyDb, tokenSaverOptions),
+            tokenEconomyDb);
+
+        ContextDiagnosticsTools tools = new(cleaner, contextPipeline, folderTree, workspaceConfig, workspaceRootResolver, calibration, indexSelfTest);
         return new Rig(tools, cleaner, accessor, root);
     }
 
@@ -248,6 +257,17 @@ public sealed class ContextDiagnosticsToolsTests : IDisposable
         string result = await tools.ContextDiag("self-test");
 
         Assert.Contains("PASS", result, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task SelfTest_DebugEnabled_IndexStepScansEveryKnownFileAndStoresEveryChunk()
+    {
+        ContextDiagnosticsTools tools = CreateTools(debug: true);
+
+        string result = await tools.ContextDiag("self-test");
+
+        Assert.Contains("✓ PASS — index: 3 of 3 known files scanned", result, StringComparison.Ordinal);
+        Assert.Contains("failed 0", result, StringComparison.Ordinal);
     }
 
     [Fact]

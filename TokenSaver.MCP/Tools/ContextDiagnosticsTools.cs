@@ -6,6 +6,7 @@ using TokenSaver.ContextHelper.Models.Diagnostics;
 using TokenSaver.ContextHelper.Pipeline;
 using TokenSaver.OllamaIntegration.Services; using TokenSaver.Common.Models;
 using TokenSaver.MCP.Services;
+using TokenSaver.TokenEconomy.Services;
 using TokenSaver.Utilities.Services;
 
 using ModelContextProtocol.Server;
@@ -23,7 +24,8 @@ internal sealed class ContextDiagnosticsTools(
     FolderTreeManager folderTree,
     WorkspaceConfigManager workspaceConfig,
     WorkspaceRootSessionResolver workspaceRootResolver,
-    RetrievalCalibrationService retrievalCalibration)
+    RetrievalCalibrationService retrievalCalibration,
+    IndexSelfTest indexSelfTest)
 {
     // ── ContextDiag ───────────────────────────────────────────────────────────
 
@@ -241,10 +243,17 @@ internal sealed class ContextDiagnosticsTools(
             ? string.Format(CultureInfo.InvariantCulture, "✓ PASS — synthetic payload shrank {0:N0} → {1:N0} tokens (saved {2}%).", result.RawTokens, result.CleanedTokens, result.SavingsPercent)
             : string.Format(CultureInfo.InvariantCulture, "✗ FAIL — synthetic payload did NOT shrink: {0:N0} → {1:N0} tokens. The cleaning pipeline appears broken (a stage may have regressed to a no-op).", result.RawTokens, result.CleanedTokens);
 
+        IndexSelfTestResult index = await indexSelfTest.RunAsync(ct);
+        string indexVerdict = index.Passed
+            ? string.Format(CultureInfo.InvariantCulture, "✓ PASS — index: {0} of {1} known files scanned, {2} chunks stored.", index.FilesScanned, index.FilesExpected, index.ChunksStored)
+            : string.Format(CultureInfo.InvariantCulture, "✗ FAIL — index: {0} of {1} known files scanned, {2} indexed, {3} stored, {4} failed.", index.FilesScanned, index.FilesExpected, index.ChunksIndexed, index.ChunksStored, index.ChunksFailed);
+
         StringBuilder sb = new();
         _ = sb.AppendLine(verdict);
-        _ = sb.AppendLine();
         _ = sb.AppendLine(result.Narrative);
+        _ = sb.AppendLine();
+        _ = sb.AppendLine(indexVerdict);
+        _ = sb.AppendLine(index.Narrative);
 
         return sb.ToString().TrimEnd();
     }
