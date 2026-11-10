@@ -120,7 +120,6 @@ internal sealed class CodeHelperTools
     private async Task<string> DoStatus(string root, CancellationToken ct)
     {
         int symbols = await _symbolSearch.CountAllSymbolsAsync(root, ct);
-        int chunks = await _semanticIndex.CountChunksAsync(root, ct);
         object? lastScan = null;
         if (_symbolScan.TryGetLastStats(root, out IndexStats? scan) && scan is not null)
         {
@@ -133,15 +132,41 @@ internal sealed class CodeHelperTools
             };
         }
 
+        string? codeError = _symbolScan.GetLastError(root);
+        string? semanticError = _semanticIndex.GetLastError(root);
+        DateTimeOffset? codeDate = _symbolScan.GetLastCompletedAt(root);
+        (int semanticChunks, long? semanticUpdatedMs) = await _semanticIndex.ChunkSummaryAsync(root, ct);
+
+        // Both indexes always report the same four fields: type, chunks, status, date.
         return System.Text.Json.JsonSerializer.Serialize(new
         {
             root,
-            symbols_indexed = symbols,
-            semantic_chunks_stored = chunks,
-            semantic_index_state = _semanticIndex.IsRunning(root) ? "running" : chunks > 0 ? "built" : "not_built",
-            symbol_scan_state = _symbolScan.IsRunning(root) ? "running" : _symbolScan.GetLastError(root) is not null ? "failed" : "idle",
-            symbol_scan_last_completed = lastScan,
-            symbol_scan_last_error = _symbolScan.GetLastError(root)
+            indexes = new object[]
+            {
+                new
+                {
+                    type = "code",
+                    chunks = symbols,
+                    status = _symbolScan.IsRunning(root) ? "running"
+                        : codeError is not null ? "failed"
+                        : symbols > 0 ? "built"
+                        : "not_started",
+                    date = codeDate?.ToString("o"),
+                    last_completed = lastScan,
+                    last_error = codeError
+                },
+                new
+                {
+                    type = "semantic",
+                    chunks = semanticChunks,
+                    status = _semanticIndex.IsRunning(root) ? "running"
+                        : semanticChunks > 0 ? "built"
+                        : semanticError is not null ? "failed"
+                        : "not_started",
+                    date = semanticUpdatedMs is long ms ? DateTimeOffset.FromUnixTimeMilliseconds(ms).ToString("o") : null,
+                    last_error = semanticError
+                }
+            }
         });
     }
 

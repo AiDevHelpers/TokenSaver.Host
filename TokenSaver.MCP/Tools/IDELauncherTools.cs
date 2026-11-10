@@ -1,5 +1,8 @@
+using TokenSaver.Common.Core.Configuration;
 using TokenSaver.Common.Core.Contracts;
 using TokenSaver.MCP.Services;
+
+using Microsoft.Extensions.Options;
 
 using ModelContextProtocol.Server;
 
@@ -16,6 +19,7 @@ namespace TokenSaver.MCP.Tools;
 [McpServerToolType]
 internal sealed class IDELauncherTools(
     IIDELauncher ideLauncher,
+    IOptions<TokenSaverConfig> config,
     WorkspaceRootSessionResolver workspaceRootResolver)
 {
     [McpServerTool]
@@ -33,7 +37,17 @@ internal sealed class IDELauncherTools(
     {
         await workspaceRootResolver.EnsureResolvedAsync(server, ct);
 
-        string root = workspaceRoot ?? Directory.GetCurrentDirectory();
+        // No working-directory fallback: the IDE must open a folder the client actually named.
+        string? root = workspaceRoot ?? config.Value.WorkspaceRoot;
+        if (string.IsNullOrWhiteSpace(root))
+        {
+            return JsonSerializer.Serialize(new
+            {
+                success = false,
+                status = "no_root",
+                message = "The client did not send a workspace folder. Pass workspaceRoot to choose one."
+            });
+        }
 
         IDELaunchResult result = await ideLauncher.LaunchAsync(ideType, root, waitForReady, ct);
 

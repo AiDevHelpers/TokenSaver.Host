@@ -16,6 +16,7 @@ public sealed partial class SymbolScanBackgroundTrigger(
 {
     private readonly ConcurrentDictionary<string, byte> _running = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<string, IndexStats> _lastStats = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, DateTimeOffset> _lastCompletedAt = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<string, string> _lastError = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>Starts a scan for <paramref name="root" />. False when one is already in flight.</summary>
@@ -43,12 +44,17 @@ public sealed partial class SymbolScanBackgroundTrigger(
 
     public string? GetLastError(string root) => _lastError.TryGetValue(root, out string? message) ? message : null;
 
+    /// <summary>When the most recent successful scan for this root finished (UTC), if any.</summary>
+    public DateTimeOffset? GetLastCompletedAt(string root) =>
+        _lastCompletedAt.TryGetValue(root, out DateTimeOffset at) ? at : null;
+
     private async Task RunAsync(string root)
     {
         try
         {
             IndexStats stats = await index.IndexWorkspaceAsync(root, CancellationToken.None);
             _lastStats[root] = stats;
+            _lastCompletedAt[root] = DateTimeOffset.UtcNow;
             LogCompleted(logger, root, stats.FilesIndexed, stats.SymbolsIndexed, stats.FilesSkipped, stats.Elapsed.TotalSeconds);
         }
         catch (Exception ex)

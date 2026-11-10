@@ -44,8 +44,18 @@ internal sealed class SessionTools(
     {
         await workspaceRootResolver.EnsureResolvedAsync(server, ct);
 
-        string root = string.IsNullOrWhiteSpace(_config.WorkspaceRoot) ? Directory.GetCurrentDirectory() : _config.WorkspaceRoot;
-        string dest = outputPath ?? Path.Combine(root, ".tokensaver", "sessions", $"{sessionId}.json");
+        // No working-directory fallback: without a client-supplied root or an explicit outputPath,
+        // there is nowhere correct to write the snapshot.
+        if (outputPath is null && string.IsNullOrWhiteSpace(_config.WorkspaceRoot))
+        {
+            return JsonSerializer.Serialize(new
+            {
+                status = "no_root",
+                message = "The client did not send a workspace folder and no outputPath was given."
+            });
+        }
+
+        string dest = outputPath ?? Path.Combine(_config.WorkspaceRoot, ".tokensaver", "sessions", $"{sessionId}.json");
         _ = Directory.CreateDirectory(Path.GetDirectoryName(dest)!);
 
         string summary;

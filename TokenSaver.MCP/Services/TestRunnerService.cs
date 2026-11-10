@@ -98,7 +98,21 @@ internal sealed class TestRunnerService : ITestRunner
         bool failedOnly,
         CancellationToken ct)
     {
-        var workspaceRoot = _config.Value.WorkspaceRoot ?? Environment.CurrentDirectory;
+        // No working-directory fallback: searching for test projects needs a root the client named.
+        if (projectPath is null && string.IsNullOrWhiteSpace(_config.Value.WorkspaceRoot))
+        {
+            return new TestExecutionResult(
+                Success: false,
+                TotalTests: 0,
+                PassedTests: 0,
+                FailedTests: 0,
+                SkippedTests: 0,
+                ElapsedMilliseconds: 0,
+                Failures: new List<TestFailure>().AsReadOnly(),
+                Message: "No workspace root known. Pass projectPath, or send a workspace folder from the client.");
+        }
+
+        var workspaceRoot = _config.Value.WorkspaceRoot!;
         var testProject = projectPath ?? FindDefaultTestProject(workspaceRoot);
 
         if (string.IsNullOrWhiteSpace(testProject))

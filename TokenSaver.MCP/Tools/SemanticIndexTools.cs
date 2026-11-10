@@ -96,7 +96,7 @@ internal sealed class SemanticIndexTools(
         bool running = indexTrigger.IsRunning(root);
         string? error = indexTrigger.GetLastError(root);
         // Read from the database, not process memory: a restarted server still has chunks on disk.
-        int chunksStored = await indexTrigger.CountChunksAsync(root, ct);
+        (int chunksStored, long? lastUpdatedMs) = await indexTrigger.ChunkSummaryAsync(root, ct);
         object? last = null;
         if (indexTrigger.TryGetLastStats(root, out RepoIndexStats? stats) && stats is not null)
         {
@@ -113,12 +113,14 @@ internal sealed class SemanticIndexTools(
 
         return JsonSerializer.Serialize(new
         {
+            type = "semantic",
             root,
-            state = running ? "running"
+            chunks = chunksStored,
+            status = running ? "running"
                 : chunksStored > 0 ? "built"
                 : error is not null ? "failed"
                 : "not_started",
-            chunks_stored = chunksStored,
+            date = lastUpdatedMs is long ms ? DateTimeOffset.FromUnixTimeMilliseconds(ms).ToString("o") : null,
             last_completed = last,
             last_error = error
         });

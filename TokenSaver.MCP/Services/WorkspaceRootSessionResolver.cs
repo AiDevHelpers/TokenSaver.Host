@@ -129,16 +129,11 @@ internal sealed partial class WorkspaceRootSessionResolver
             TriggerWarmupOnce(Path.TrimEndingDirectorySeparator(Path.GetFullPath(rootHint)));
         }
 
-        if (!string.IsNullOrWhiteSpace(_config.WorkspaceRoot))
-        {
-            TriggerWarmupOnce(_config.WorkspaceRoot);
-            return;
-        }
-
         // Only the client's MCP roots are trusted. The server's own working directory is never used:
         // it says nothing about which folder the session is in. A tool call that carries rootPath
         // resolves through the hint overload instead.
-        string? resolved = await TryResolveViaClientRootsAsync(server, ct);
+        // A null server has no client roots to ask (in-process callers such as tests); treat it as unresolved.
+        string? resolved = server is null ? null : await TryResolveViaClientRootsAsync(server, ct);
 
         if (resolved is null)
         {
