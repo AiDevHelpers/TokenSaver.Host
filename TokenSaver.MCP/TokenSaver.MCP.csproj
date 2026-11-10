@@ -78,8 +78,11 @@
     service is actually running and this process isn't already elevated; a stopped/not-installed
     service means this is a no-op with no prompt. Scoped to Debug + Windows so it never fires
     during a Release publish (rebuild-and-replace-mcp.ps1 owns that path) or non-Windows CI.
+    Also scoped to an F5 dev session (Visual Studio) or an explicit -p:TokenSaverStopService=true:
+    plain "dotnet build"/"dotnet test" must NOT stop the always-on service, because that kills any
+    in-flight index run and forces the next one to start over.
   -->
-  <Target Name="StopTokenSaverServiceForDebug" BeforeTargets="Build" Condition="'$(OS)' == 'Windows_NT' AND '$(Configuration)' == 'Debug'">
+  <Target Name="StopTokenSaverServiceForDebug" BeforeTargets="Build" Condition="'$(OS)' == 'Windows_NT' AND '$(Configuration)' == 'Debug' AND ('$(BuildingInsideVisualStudio)' == 'true' OR '$(TokenSaverStopService)' == 'true')">
     <Exec Command="pwsh -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildThisFileDirectory)..\..\..\scripts\stop-service-for-debug.ps1&quot;" ContinueOnError="WarnAndContinue" />
   </Target>
 
