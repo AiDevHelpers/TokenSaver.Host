@@ -375,9 +375,23 @@ internal sealed class DevLoopTools(
             return "Clean — no remaining lint issues.";
         }
 
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return $"Lint command failed (exit {exitCode}) with no output.";
+        }
+
         DistillResult result = await distill.DistillAsync(_config.WorkspaceRoot, "lintFix", DistillRole.LintSummary, raw, ct: ct);
-        return $"{result.Summary}\n\n[{result.RawTokens}→{result.DistilledTokens} tokens]";
+        if (result.DistilledTokens >= result.RawTokens)
+        {
+            // The model did not shrink the output; returning its text would only add tokens and risk invented detail.
+            string capped = raw.Length > LintRawCapChars ? raw[..LintRawCapChars] + "\n[truncated]" : raw;
+            return $"exit {exitCode}\n{capped}";
+        }
+
+        return $"exit {exitCode}\n{result.Summary}\n\n[{result.RawTokens}→{result.DistilledTokens} tokens]";
     }
+
+    private const int LintRawCapChars = 8000;
 
     [McpServerTool]
     [Description(
