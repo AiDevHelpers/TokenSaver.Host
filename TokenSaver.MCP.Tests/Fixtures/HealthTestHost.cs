@@ -1,3 +1,4 @@
+#pragma warning disable CA1506 // Test factories wire many services together by design; the coupling is intentional.
 using TokenSaver.Common.Core.Configuration;
 using TokenSaver.MCP.HealthChecks;
 using TokenSaver.MCP.Middleware;
