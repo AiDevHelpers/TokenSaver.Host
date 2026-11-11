@@ -10,4 +10,5 @@ namespace TokenSaver.MCP.Tests;
 ///     test's constructor/dispose could clobber the env var mid-run of another.
 /// </summary>
 [CollectionDefinition("GlobalConfigDirEnvVar", DisableParallelization = true)]
+#pragma warning disable CA1515 // xUnit requires collection definitions to be public.
 public sealed class GlobalConfigDirEnvVarGroup;
