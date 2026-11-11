@@ -385,6 +385,13 @@ internal sealed class LocalModelHelperTools
                 $"\n\n<!-- ⚠ stale-cache: {result.StaleFiles.Count} file(s) changed since last index: {staleList}{more} — re-run BuildConciseContext to refresh -->";
         }
 
+        // Folder/file index drift (only for workspaces that have a docs/ folder).
+        string? folderIndexLine = FolderFileTable.StatusLine(root);
+        if (folderIndexLine is not null && folderIndexLine != "folder-index: in sync")
+        {
+            response += $"\n\n<!-- ⚠ {folderIndexLine} -->";
+        }
+
         // Retrieval self-tuning: a file requested this turn scored below the relevance bar the
         // filter applied last turn — the narrow-filter threshold is being nudged wider.
         if (result.CalibrationCheck is { AnyFailure: true } check)

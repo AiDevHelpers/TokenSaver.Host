@@ -117,6 +117,20 @@ public static class FolderFileTable
         return problems;
     }
 
+    /// <summary>
+    ///     One line for the context footer, or null when the workspace has no <c>docs/</c> folder to index.
+    /// </summary>
+    public static string? StatusLine(string root)
+    {
+        if (!Directory.Exists(Path.Combine(root, "docs")))
+        {
+            return null;
+        }
+
+        IReadOnlyList<string> problems = CheckSync(root);
+        return problems.Count == 0 ? "folder-index: in sync" : "folder-index: " + string.Join(" ", problems);
+    }
+
     /// <summary>Writes <paramref name="content" /> to <paramref name="path" /> only when it differs. Returns true when written.</summary>
     public static bool WriteIfChanged(string path, string content)
     {

@@ -173,6 +173,36 @@ public sealed class FolderFileTableTests : IDisposable
     }
 
     [Fact]
+    public void StatusLine_NoDocsFolder_ReturnsNull()
+    {
+        Assert.Null(FolderFileTable.StatusLine(_root));
+    }
+
+    [Fact]
+    public void StatusLine_TableStale_ReportsStale()
+    {
+        Directory.CreateDirectory(Path.Combine(_root, "docs"));
+        File.WriteAllText(Path.Combine(_root, "CLAUDE.md"), "See docs/folder-index.md.\n");
+        File.WriteAllText(Path.Combine(_root, "docs", "folder-index.md"), "| old |\n");
+
+        string? line = FolderFileTable.StatusLine(_root);
+
+        Assert.NotNull(line);
+        Assert.Contains("stale", line!, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void StatusLine_InSync_ReportsInSync()
+    {
+        Directory.CreateDirectory(Path.Combine(_root, "docs"));
+        File.WriteAllText(Path.Combine(_root, "CLAUDE.md"), "See docs/folder-index.md.\n");
+        File.WriteAllText(Path.Combine(_root, "docs", "guide.md"), "# Guide\n\nSummary.\n");
+        FolderFileTable.Generate(_root);
+
+        Assert.Equal("folder-index: in sync", FolderFileTable.StatusLine(_root));
+    }
+
+    [Fact]
     public void Collect_Rows_CarryCodeLinkAndNoBody()
     {
         Directory.CreateDirectory(Path.Combine(_root, "docs"));
