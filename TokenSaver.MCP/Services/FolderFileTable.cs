@@ -15,6 +15,7 @@ public sealed record FolderFileRow(
 public static class FolderFileTable
 {
     private const string PendingSemantic = "sem:pending";
+    private const string GeneratedPath = "docs/folder-index.md";
 
     private static readonly HashSet<string> SkippedFolders =
         new(StringComparer.OrdinalIgnoreCase) { "archive", "build", "bin", "obj", "node_modules", "TestResults" };
@@ -68,11 +69,25 @@ public static class FolderFileTable
         foreach (string file in files)
         {
             string relative = Path.GetRelativePath(root, file).Replace('\\', '/');
+            if (relative == GeneratedPath)
+            {
+                continue; // the table never lists itself, so regeneration is stable
+            }
+
             DocMetadata meta = DocMetadataExtractor.Extract(File.ReadAllText(file));
             rows.Add(new FolderFileRow(relative, "file", meta.Title, meta.Summary, "code:" + relative, null));
         }
 
         return rows;
+    }
+
+    /// <summary>Regenerates <c>docs/folder-index.md</c> under <paramref name="root" />. Returns the path and whether it changed.</summary>
+    public static (string Path, bool Changed) Generate(string root)
+    {
+        string path = Path.Combine(root, "docs", "folder-index.md");
+        string content = Render(Collect(root));
+        // Collect skips the generated file, so the content does not depend on a previous run.
+        return (path, WriteIfChanged(path, content));
     }
 
     /// <summary>Writes <paramref name="content" /> to <paramref name="path" /> only when it differs. Returns true when written.</summary>

@@ -88,9 +88,10 @@ internal sealed class CodeHelperTools
         "  find         — find a symbol by name. name required; kind and filePath are optional filters.\n" +
         "  dependencies — show what a file imports and what imports it. filePath required; " +
         "direction: 'uses' | 'usedBy' | 'both' (default).\n" +
-        "  status       — read-only: symbols indexed and semantic chunks stored for the workspace. Does not scan.")]
+        "  status       — read-only: symbols indexed and semantic chunks stored for the workspace. Does not scan.\n" +
+        "  table        — regenerate docs/folder-index.md (metadata-only folder/file table). root optional.")]
     public async Task<string> CodeIndex(
-        [Description("Action: 'scan', 'find', 'dependencies', or 'status'")]
+        [Description("Action: 'scan', 'find', 'dependencies', 'status', or 'table'")]
         string action,
         [Description("Symbol name — required for 'find'")]
         string? name = null,
@@ -113,8 +114,15 @@ internal sealed class CodeHelperTools
             "FIND" => await DoFind(name, kind, filePath, r, ct),
             "DEPENDENCIES" => await DoDeps(filePath, direction, r, ct),
             "STATUS" => await DoStatus(r, ct),
-            _ => "Unknown action. Use 'scan', 'find', 'dependencies', or 'status'."
+            "TABLE" => DoTable(r),
+            _ => "Unknown action. Use 'scan', 'find', 'dependencies', 'status', or 'table'."
         };
+    }
+
+    private static string DoTable(string root)
+    {
+        (string path, bool changed) = FolderFileTable.Generate(root);
+        return changed ? $"Wrote {path}." : $"{path} is already up to date.";
     }
 
     private async Task<string> DoStatus(string root, CancellationToken ct)

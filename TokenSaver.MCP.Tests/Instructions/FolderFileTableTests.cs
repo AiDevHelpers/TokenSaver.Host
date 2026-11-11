@@ -112,6 +112,21 @@ public sealed class FolderFileTableTests : IDisposable
     }
 
     [Fact]
+    public void Generate_WritesDocsFolderIndex_AndIsIdempotent()
+    {
+        Directory.CreateDirectory(Path.Combine(_root, "docs"));
+        File.WriteAllText(Path.Combine(_root, "docs", "guide.md"), "# Guide\n\nSummary.\n");
+
+        (string path, bool changed) first = FolderFileTable.Generate(_root);
+        (string path, bool changed) second = FolderFileTable.Generate(_root);
+
+        Assert.Equal(Path.Combine(_root, "docs", "folder-index.md"), first.path);
+        Assert.True(first.changed);
+        Assert.False(second.changed);
+        Assert.Contains("| docs/guide.md | file | Guide | Summary. |", File.ReadAllText(first.path), StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Collect_Rows_CarryCodeLinkAndNoBody()
     {
         Directory.CreateDirectory(Path.Combine(_root, "docs"));
