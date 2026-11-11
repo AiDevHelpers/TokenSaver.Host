@@ -203,48 +203,9 @@ builder.Services
     .AddWslControlServices()
     .AddLanguageHelperServices();
 
-// ── Health Checks ──
-// simplemodelserver is tagged "ready" (gates /health/ready); others are untagged.
-builder.Services.AddHealthChecks()
-    .AddCheck<SimpleModelServerHealthCheck>("simplemodelserver", tags: ["ready"])
-    .AddCheck<UnhandledFaultHealthCheck>("unhandled-fault")
-    .AddCheck<SelfTestHealthCheck>("self-test")
-    .AddCheck<FolderIndexHealthCheck>("folder-index");
+builder.Services.AddTokenSaverHealthChecks();
 
-// ── MCP Server ──
-// Both SSE (GET) and streamable-http (POST) are supported on the same /mcp endpoint.
-// Stateless=true allows SSE clients while still handling streamable-http from others.
-IMcpServerBuilder mcpBuilder = builder.Services.AddMcpServer(options =>
-    {
-        options.ServerInstructions = DocResourceService.GetAgent();
-    })
-    .WithHttpTransport(o => { o.Stateless = true; })
-    .WithTools<LocalModelHelperTools>()
-    .WithTools<AccuracyTestTools>()
-    .WithTools<ContextDiagnosticsTools>()
-    .WithTools<CodeHelperTools>()
-    .WithTools<AutoWorkflowTools>()
-    .WithTools<HelpTools>()
-    .WithTools<TokenEconomyTools>()
-    .WithTools<SessionTools>()
-    .WithTools<DevLoopTools>()
-    .WithTools<SemanticIndexTools>()
-    .WithTools<ManageConfigTools>()
-    .WithTools<IDELauncherTools>()
-    .WithTools<DebugOutputTools>()
-    .WithTools<DebuggerControlTools>()
-    .WithTools<DebuggerAnalysisTools>()
-    .WithTools<TestExecutionTools>()
-    .WithTools<WslControlTools>()
-    .WithTools<LanguageHelperTools>()
-    .WithTools<InstructionTools>()
-    .WithResources<DocResourceService>()
-    .WithPrompts<BuildConciseContextPrompt>();
-
-if (isStdio)
-{
-    _ = mcpBuilder.WithStdioServerTransport();
-}
+builder.Services.AddTokenSaverMcpServer(isStdio);
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // ── BUILD APP & CONFIGURE MIDDLEWARE ──
@@ -263,53 +224,7 @@ app.UseMiddleware<FaultTrackingMiddleware>();
 app.UseMiddleware<AgentDetectionMiddleware>();
 app.UseMiddleware<ContextInterceptMiddleware>();
 
-// ── Map MCP endpoint ──
-app.MapMcp("/mcp");
-
-// ── Map Debugger API endpoints (for VS Code extension) ──
-app.MapDebuggerEndpoints();
-
-// ── Map Debugger Streaming endpoints (Server-Sent Events) ──
-app.MapDebuggerStreamingEndpoints();
-
-// ── Map provider-registration endpoint (disabled, compatibility only) ──
-app.MapGet("/api/register-providers", async (
-    AiProviderConfigService aiProviders,
-    IOptions<TokenSaverConfig> opts,
-    HttpContext httpCtx) =>
-{
-    int port = opts.Value.ServerPort;
-    string workspaceRoot = opts.Value.WorkspaceRoot;
-
-    string serverExePath = httpCtx.Request.Query["claudeProjectPath"].FirstOrDefault()
-                        ?? httpCtx.Request.Query["serverExePath"].FirstOrDefault()
-                        ?? Process.GetCurrentProcess().MainModule?.FileName
-                        ?? "";
-
-    IReadOnlyList<ConfigUpdateResult> results = await aiProviders.UpdateAllProvidersAsync(
-        port, workspaceRoot: workspaceRoot, serverExePath: serverExePath);
-    return Results.Ok(results.Select(r => new
-    {
-        provider = r.Provider.ToString(),
-        success = r.Success,
-        wasAlreadyConfigured = r.WasAlreadyConfigured,
-        configPath = r.ConfigPath,
-        message = r.Message
-    }));
-});
-
-// ── Map health endpoints ──
-// GET /health → liveness + self-diagnostics (is the process up, is anything broken?)
-// GET /health/ready → readiness (is SimpleModelServer reachable, are models loaded?)
-app.MapHealthChecks("/health", new HealthCheckOptions
-{
-    ResponseWriter = WriteJsonHealthResponse
-});
-app.MapHealthChecks("/health/ready", new HealthCheckOptions
-{
-    Predicate = check => check.Tags.Contains("ready"),
-    ResponseWriter = WriteJsonHealthResponse
-});
+app.MapTokenSaverEndpoints(WriteJsonHealthResponse);
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // ── STARTUP & WARMUP ──
