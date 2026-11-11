@@ -32,7 +32,7 @@ public sealed class WslControlToolsTests
         string result = await tools.WslStatus();
 
         Assert.StartsWith("WSL is not available: wsl.exe not found", result, StringComparison.Ordinal);
-        Assert.Contains(WslAvailability.DefaultInstallUrl, result, StringComparison.Ordinal);
+        Assert.Contains(WslAvailability.DefaultInstallUrl.ToString(), result, StringComparison.Ordinal);
     }
 
     [Fact]
