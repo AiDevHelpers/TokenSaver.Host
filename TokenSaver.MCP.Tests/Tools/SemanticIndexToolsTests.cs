@@ -51,7 +51,7 @@ public class SemanticIndexToolsTests
         NoOpRepoIndexer indexer = new();
         SemanticIndexBackgroundTrigger indexTrigger = new(
             indexer, new TokenEconomyDbAccessor(), NullLogger<SemanticIndexBackgroundTrigger>.Instance);
-        return new SemanticIndexTools(indexer, retrieval, Options.Create(config), workspaceRootResolver, indexTrigger);
+        return new SemanticIndexTools(retrieval, Options.Create(config), workspaceRootResolver, indexTrigger);
     }
 
     [Fact]

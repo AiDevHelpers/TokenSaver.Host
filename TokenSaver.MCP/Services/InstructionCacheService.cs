@@ -438,10 +438,12 @@ internal sealed partial class InstructionCacheService : IDisposable
 
         lock (_watcherSync)
         {
+            #pragma warning disable CA1508 // Double-checked locking: _watcher can be set on another thread between the two checks.
             if (_watcher is not null)
             {
                 return;
             }
+            #pragma warning restore CA1508
 
             string? globalDir = Path.GetDirectoryName(InstructionOptimizerService.GlobalClaudeInstructionsPath);
             if (string.IsNullOrEmpty(globalDir) || !Directory.Exists(globalDir))

@@ -41,6 +41,12 @@ internal sealed partial class GitignoreWatcherService : BackgroundService
     private readonly Lock _sync = new();
     private CancellationTokenSource? _debounceCts;
 
+    public override void Dispose()
+    {
+        _debounceCts?.Dispose();
+        base.Dispose();
+    }
+
     public GitignoreWatcherService(
         WorkspaceIndexService indexService,
         IOptions<TokenSaverConfig> config,

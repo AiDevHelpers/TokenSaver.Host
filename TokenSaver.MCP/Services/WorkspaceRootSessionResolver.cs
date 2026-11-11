@@ -160,7 +160,7 @@ internal sealed partial class WorkspaceRootSessionResolver
         // handshake completes), so a minimal CallerInfo built directly from it is enough here —
         // no HttpContext-dependent header/user-agent signals to fall back to like
         // CallerDetectionService has, but ClientInfo.name is the primary signal anyway.
-        _instructionOptimizer.EnsureSynced(resolved, new CallerInfo { ClientName = server.ClientInfo?.Name ?? "" });
+        _instructionOptimizer.EnsureSynced(resolved, new CallerInfo { ClientName = server?.ClientInfo?.Name ?? "" });
 
         // BehaviorConfigOverlay.Apply() no-ops while WorkspaceRoot is empty (see its own doc
         // comment) — its startup call in Program.cs and any ConfigChanged-triggered call both ran

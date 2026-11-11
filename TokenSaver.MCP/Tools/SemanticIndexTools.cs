@@ -32,7 +32,6 @@ namespace TokenSaver.MCP.Tools;
 /// </summary>
 [McpServerToolType]
 internal sealed class SemanticIndexTools(
-    IRepoIndexer indexer,
     IConditionalRetrievalService retrieval,
     IOptions<TokenSaverConfig> config,
     WorkspaceRootSessionResolver workspaceRootResolver,
