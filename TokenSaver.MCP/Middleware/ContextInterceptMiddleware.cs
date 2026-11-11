@@ -192,6 +192,133 @@ internal sealed partial class ContextInterceptMiddleware
             : "";
 
         // Step 1: Run context cleaning pipeline (gated on autoIntercept, independent of Step 2)
+        string cleanedPrompt = await CleanPromptAsync(context, cleaner, instructionOptimizer, prompt, args, toolName, workspaceRoot, autoIntercept);
+        if (cleanedPrompt != prompt)
+        {
+            string cleanedBody = rpc!.ToJsonString();
+            byte[] cleanedBytes = Encoding.UTF8.GetBytes(cleanedBody);
+            context.Request.Body = new MemoryStream(cleanedBytes);
+            context.Request.ContentLength = cleanedBytes.Length;
+        }
+
+        // Step 2: Draft model interception (gated on autoEnabled) — for code-writing prompts,
+        // try the local model first
+        if (!autoEnabled)
+        {
+            await _next(context);
+            return;
+        }
+
+        if (await TryDraftInterceptAsync(context, simpleModelServerInterceptor, cleanedPrompt, workspaceRoot, toolName, args!, rpc))
+        {
+            return;
+        }
+
+        await _next(context);
+    }
+
+    /// <summary>Runs the draft-model interceptor. Returns true when it fully answered the request (response already written).</summary>
+    private async Task<bool> TryDraftInterceptAsync(
+        HttpContext context,
+        SimpleModelServerInterceptorService simpleModelServerInterceptor,
+        string cleanedPrompt,
+        string workspaceRoot,
+        string toolName,
+        JsonObject args,
+        JsonNode rpc)
+    {
+        try
+        {
+            SimpleModelServerInterceptionResult interceptResult = await simpleModelServerInterceptor.TryInterceptAsync(
+                cleanedPrompt, workspaceRoot, context.RequestAborted);
+
+            if (interceptResult.HandledBySimpleModelServer)
+            {
+                // Draft model implemented the task — return the result directly
+                LogSimpleModelServerHandled(_logger, toolName, interceptResult.Summary);
+
+                await WriteJsonRpcResultAsync(context, interceptResult);
+                return true;
+            }
+
+            if (interceptResult.IsDeferred)
+            {
+                // Draft model needs AI help — augment the prompt with the deferral message
+                string deferredPrompt = interceptResult.Summary + "\n\n---\n\n" + cleanedPrompt;
+
+                args["prompt"] = JsonValue.Create(deferredPrompt);
+                args["_simpleModelServerIntercepted"] = JsonValue.Create(true);
+                if (interceptResult.NeedsArchitectureHelp)
+                {
+                    args["_needsArchitectureHelp"] = JsonValue.Create(true);
+                }
+
+                string newBody = rpc.ToJsonString();
+                byte[] newBytes = Encoding.UTF8.GetBytes(newBody);
+                context.Request.Body = new MemoryStream(newBytes);
+                context.Request.ContentLength = newBytes.Length;
+
+                LogSimpleModelServerDeferred(_logger, toolName);
+            }
+        }
+        catch (Exception ex)
+        {
+            // Interceptor failure — don't block the tool call
+            LogSimpleModelServerInterceptorFailed(_logger, ex, toolName);
+        }
+
+        return false;
+    }
+
+    private static async Task WriteJsonRpcResultAsync(HttpContext context, SimpleModelServerInterceptionResult result)
+    {
+        // Build a JSON-RPC success response
+        JsonObject response = new()
+        {
+            ["jsonrpc"] = "2.0",
+            ["id"] = ExtractRequestId(context),
+            ["result"] = new JsonObject
+            {
+                ["content"] = new JsonArray
+                {
+                    new JsonObject
+                    {
+                        ["type"] = "text",
+                        ["text"] = result.Summary ?? "Draft model processed the request."
+                    }
+                },
+                ["isError"] = false
+            }
+        };
+
+        string json = response.ToJsonString(new JsonSerializerOptions { WriteIndented = false });
+        byte[] bytes = Encoding.UTF8.GetBytes(json);
+
+        context.Response.StatusCode = 200;
+        context.Response.ContentType = "application/json";
+        context.Response.ContentLength = bytes.Length;
+        await context.Response.Body.WriteAsync(bytes);
+    }
+
+    private static JsonNode? ExtractRequestId(HttpContext context)
+    {
+        // The original request body is already consumed. We read what was buffered.
+        // A simpler approach: return a synthetic ID. Real MCP clients don't strictly
+        // validate the response ID against the request — they match on request/response
+        // ordering or content.
+        return "draft-model-intercepted";
+    }
+    /// <summary>Runs the context-cleaning pipeline and draft-doc injection; returns the prompt to forward.</summary>
+    private async Task<string> CleanPromptAsync(
+        HttpContext context,
+        ContextCleanerService cleaner,
+        InstructionOptimizerService instructionOptimizer,
+        string prompt,
+        JsonObject? args,
+        string toolName,
+        string workspaceRoot,
+        bool autoIntercept)
+    {
         string cleanedPrompt = prompt;
         if (autoIntercept)
         {
@@ -240,103 +367,7 @@ internal sealed partial class ContextInterceptMiddleware
         // back to the actual request body now so it reaches the downstream tool even when Step 2
         // is off (previously this rewrite only happened inside Step 2's "deferred" branch, so a
         // cleaned-but-not-deferred prompt silently never took effect).
-        if (cleanedPrompt != prompt)
-        {
-            string cleanedBody = rpc!.ToJsonString();
-            byte[] cleanedBytes = Encoding.UTF8.GetBytes(cleanedBody);
-            context.Request.Body = new MemoryStream(cleanedBytes);
-            context.Request.ContentLength = cleanedBytes.Length;
-        }
-
-        // Step 2: Draft model interception (gated on autoEnabled) — for code-writing prompts,
-        // try the local model first
-        if (!autoEnabled)
-        {
-            await _next(context);
-            return;
-        }
-
-        try
-        {
-            SimpleModelServerInterceptionResult interceptResult = await simpleModelServerInterceptor.TryInterceptAsync(
-                cleanedPrompt, workspaceRoot, context.RequestAborted);
-
-            if (interceptResult.HandledBySimpleModelServer)
-            {
-                // Draft model implemented the task — return the result directly
-                LogSimpleModelServerHandled(_logger, toolName, interceptResult.Summary);
-
-                await WriteJsonRpcResultAsync(context, interceptResult);
-                return;
-            }
-
-            if (interceptResult.IsDeferred)
-            {
-                // Draft model needs AI help — augment the prompt with the deferral message
-                string deferredPrompt = interceptResult.Summary + "\n\n---\n\n" + cleanedPrompt;
-
-                // Update the request body with the augmented prompt
-                args!["prompt"] = JsonValue.Create(deferredPrompt);
-                // Also signal to the tool that this was intercepted
-                args["_simpleModelServerIntercepted"] = JsonValue.Create(true);
-                if (interceptResult.NeedsArchitectureHelp)
-                {
-                    args["_needsArchitectureHelp"] = JsonValue.Create(true);
-                }
-
-                string newBody = rpc.ToJsonString();
-                byte[] newBytes = Encoding.UTF8.GetBytes(newBody);
-                context.Request.Body = new MemoryStream(newBytes);
-                context.Request.ContentLength = newBytes.Length;
-
-                LogSimpleModelServerDeferred(_logger, toolName);
-            }
-        }
-        catch (Exception ex)
-        {
-            // Interceptor failure — don't block the tool call
-            LogSimpleModelServerInterceptorFailed(_logger, ex, toolName);
-        }
-
-        await _next(context);
+        return cleanedPrompt;
     }
 
-    private static async Task WriteJsonRpcResultAsync(HttpContext context, SimpleModelServerInterceptionResult result)
-    {
-        // Build a JSON-RPC success response
-        JsonObject response = new()
-        {
-            ["jsonrpc"] = "2.0",
-            ["id"] = ExtractRequestId(context),
-            ["result"] = new JsonObject
-            {
-                ["content"] = new JsonArray
-                {
-                    new JsonObject
-                    {
-                        ["type"] = "text",
-                        ["text"] = result.Summary ?? "Draft model processed the request."
-                    }
-                },
-                ["isError"] = false
-            }
-        };
-
-        string json = response.ToJsonString(new JsonSerializerOptions { WriteIndented = false });
-        byte[] bytes = Encoding.UTF8.GetBytes(json);
-
-        context.Response.StatusCode = 200;
-        context.Response.ContentType = "application/json";
-        context.Response.ContentLength = bytes.Length;
-        await context.Response.Body.WriteAsync(bytes);
-    }
-
-    private static JsonNode? ExtractRequestId(HttpContext context)
-    {
-        // The original request body is already consumed. We read what was buffered.
-        // A simpler approach: return a synthetic ID. Real MCP clients don't strictly
-        // validate the response ID against the request — they match on request/response
-        // ordering or content.
-        return "draft-model-intercepted";
-    }
 }

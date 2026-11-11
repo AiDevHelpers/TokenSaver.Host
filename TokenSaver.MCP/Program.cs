@@ -80,23 +80,7 @@ TaskScheduler.UnobservedTaskException += (_, e) =>
 // up for a real interactive console: never under the SCM (nothing attached to read a keypress)
 // and never when stdin is redirected (stdio-spawned MCP host, VS Code extension, CI) — those
 // must fail fast, not hang waiting for input nobody can provide.
-if (!isWindowsService && !Console.IsInputRedirected)
-{
-    AppDomain.CurrentDomain.UnhandledException += (_, e) =>
-    {
-        Console.Error.WriteLine();
-        Console.Error.WriteLine($"Unhandled exception: {e.ExceptionObject}");
-        Console.Error.WriteLine("Press Enter to close this window...");
-        try
-        {
-            _ = Console.ReadLine();
-        }
-        catch (InvalidOperationException)
-        {
-            // No console attached after all — nothing to wait on.
-        }
-    };
-}
+Program.RegisterConsolePauseOnUnhandledException(isWindowsService);
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // ── BUILD & CONFIGURE SERVICES ──
@@ -116,18 +100,7 @@ if (!string.IsNullOrWhiteSpace(serverConfigPath))
             $"--server-config must be an absolute path (got '{serverConfigPath}'). " +
             "Relative paths resolve against the project's source directory under `dotnet run`, " +
             "not the shell's working directory — pass a full path instead.");
-        if (!isWindowsService && !Console.IsInputRedirected)
-        {
-            Console.Error.WriteLine("Press Enter to close this window...");
-            try
-            {
-                _ = Console.ReadLine();
-            }
-            catch (InvalidOperationException)
-            {
-                // No console attached after all — nothing to wait on.
-            }
-        }
+        Program.PauseForConsoleIfInteractive(isWindowsService);
 
         Program.WriteFatal("BadArgument", $"--server-config must be an absolute path (got '{serverConfigPath}').");
         Environment.Exit(1);
@@ -429,6 +402,44 @@ static async Task WriteJsonHealthResponse(HttpContext ctx, HealthReport report)
 
 internal partial class Program
 {
+    /// <summary>
+    ///     Keeps an interactive console window open after a fatal error so the message can be read.
+    ///     Never under the SCM or when stdin is redirected (those must fail fast). Never throws.
+    /// </summary>
+    internal static void PauseForConsoleIfInteractive(bool isWindowsService)
+    {
+        if (isWindowsService || Console.IsInputRedirected)
+        {
+            return;
+        }
+
+        Console.Error.WriteLine("Press Enter to close this window...");
+        try
+        {
+            _ = Console.ReadLine();
+        }
+        catch (InvalidOperationException)
+        {
+            // No console attached after all — nothing to wait on.
+        }
+    }
+
+    /// <summary>Writes an unhandled exception to the console and waits for Enter (interactive launches only).</summary>
+    internal static void RegisterConsolePauseOnUnhandledException(bool isWindowsService)
+    {
+        if (isWindowsService || Console.IsInputRedirected)
+        {
+            return;
+        }
+
+        AppDomain.CurrentDomain.UnhandledException += (_, e) =>
+        {
+            Console.Error.WriteLine();
+            Console.Error.WriteLine($"Unhandled exception: {e.ExceptionObject}");
+            PauseForConsoleIfInteractive(isWindowsService: false);
+        };
+    }
+
     [LoggerMessage(Level = LogLevel.Information, Message = "TokenSaver MCP server starting on port {Port}, Ollama router at {Url}, workspace {Workspace}, transport {Transport}")]
     internal static partial void LogServerStarting(ILogger logger, int port, string url, string workspace, string transport);
 

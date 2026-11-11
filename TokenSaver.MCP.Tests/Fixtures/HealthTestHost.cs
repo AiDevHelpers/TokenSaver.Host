@@ -8,6 +8,7 @@ using TokenSaver.OllamaIntegration.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
@@ -51,9 +52,9 @@ internal sealed class HealthTestHost : IAsyncDisposable
 
     public static HealthTestHost Create()
     {
-        IWebHostBuilder builder = new WebHostBuilder()
-            .UseTestServer()
-            .ConfigureServices(services =>
+        WebApplicationBuilder hostBuilder = WebApplication.CreateBuilder();
+        hostBuilder.WebHost.UseTestServer();
+        Action<IServiceCollection> configureServices = services =>
             {
                 services.AddLogging(l => l.ClearProviders());
                 services.AddSingleton<IOptions<TokenSaverConfig>>(
@@ -74,8 +75,8 @@ internal sealed class HealthTestHost : IAsyncDisposable
                 services.AddHealthChecks()
                     .AddCheck<UnhandledFaultHealthCheck>("unhandled-fault")
                     .AddCheck<SelfTestHealthCheck>("self-test");
-            })
-            .Configure(app =>
+            };
+        Action<IApplicationBuilder> configure = app =>
             {
                 app.UseMiddleware<FaultTrackingMiddleware>();
 
@@ -97,9 +98,13 @@ internal sealed class HealthTestHost : IAsyncDisposable
                         ResponseWriter = WriteJsonHealthResponse
                     });
                 });
-            });
+            };
 
-        TestServer server = new(builder);
+        configureServices(hostBuilder.Services);
+        WebApplication host = hostBuilder.Build();
+        configure(host);
+        host.StartAsync().GetAwaiter().GetResult();
+        TestServer server = (TestServer)host.Services.GetRequiredService<IServer>();
         return new HealthTestHost(server);
     }
 

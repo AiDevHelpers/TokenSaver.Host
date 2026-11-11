@@ -192,68 +192,7 @@ internal sealed class LocalModelHelperTools
         List<string> needsConfirmation = []; // git ignored paths awaiting user approval
         List<string> searchNotes = []; // informational notes about search results
 
-        foreach (string raw in requestedFiles ?? [])
-        {
-            string entry = raw.Trim().TrimEnd('/', '\\');
-            if (string.IsNullOrEmpty(entry))
-            {
-                continue;
-            }
-
-            string abs = Path.GetFullPath(Path.Combine(root, entry));
-            bool isBare = !entry.Contains('/', StringComparison.Ordinal) && !entry.Contains('\\', StringComparison.Ordinal);
-
-            if (File.Exists(abs) || Directory.Exists(abs))
-            {
-                // Direct path resolution
-                bool isDir = Directory.Exists(abs);
-                if (!confirmed.Contains(entry) && gitignore.IsIgnored(entry, isDir))
-                {
-                    needsConfirmation.Add(entry);
-                }
-                else if (!excluded.Contains(entry))
-                {
-                    resolvedFiles.Add(entry);
-                }
-            }
-            else if (isBare)
-            {
-                // Bare filename — search the entire workspace
-                string[] found = FolderTreeManager
-                    .SearchFilesByName(root, entry)
-                    .Select(f => Path.GetRelativePath(root, f).Replace('\\', '/'))
-                    .ToArray();
-
-                if (found.Length == 0)
-                {
-                    searchNotes.Add($"'{entry}' was not found anywhere in the workspace.");
-                    continue;
-                }
-
-                string[] ignored = found.Where(r => !confirmed.Contains(r) && gitignore.IsIgnored(r, false)).ToArray();
-                string[] notIgnored = found.Where(r => confirmed.Contains(r) || !gitignore.IsIgnored(r, false)).ToArray();
-
-                needsConfirmation.AddRange(ignored);
-
-                string[] toInclude = notIgnored.Where(r => !excluded.Contains(r)).ToArray();
-                resolvedFiles.AddRange(toInclude);
-
-                if (toInclude.Length > 1)
-                {
-                    searchNotes.Add(
-                        string.Format(CultureInfo.InvariantCulture, "'{0}' found at {1} locations: {2}. All included. Re-call with excludeFiles to narrow down.", entry, toInclude.Length, string.Join(", ", toInclude)));
-                }
-                else if (toInclude.Length == 1 && found.Length > 1)
-                {
-                    searchNotes.Add(
-                        string.Format(CultureInfo.InvariantCulture, "'{0}' found at {1} locations; {2} gitignored. Including: {3}.", entry, found.Length, ignored.Length, toInclude[0]));
-                }
-            }
-            else
-            {
-                searchNotes.Add(string.Format(CultureInfo.InvariantCulture, "'{0}' was not found.", entry));
-            }
-        }
+        ResolveRequestedFiles(requestedFiles, root, gitignore, confirmed, excluded, resolvedFiles, needsConfirmation, searchNotes);
 
         // If any git ignored paths need user approval, pause and ask before building context.
         if (needsConfirmation.Count > 0)
@@ -368,69 +307,7 @@ internal sealed class LocalModelHelperTools
             response += "\n\n" + mcpBlock;
         }
 
-        // Append pipeline narrative as a hidden comment
-        if (result.PipelineSummary?.NarrativeSummary is { } narrative)
-        {
-            response += $"\n\n<!-- pipeline: {narrative.Replace("\n", " | ", StringComparison.Ordinal)} -->";
-        }
-
-        // First-run notice: SemanticGrep is otherwise silently empty until someone remembers to
-        // call IndexRepo manually — tell the caller a background build just started instead.
-        if (result.SemanticIndexStatus == SemanticIndexTriggerStatus.Started)
-        {
-            response +=
-                "\n\n<!-- ℹ Semantic index (SemanticGrep) has never been built for this workspace — " +
-                "started building it in the background now. This does not block context generation; " +
-                "SemanticGrep results will be available once it finishes (a few minutes for a typical repo). -->";
-        }
-
-        // Warn about stale cached files
-        if (result.StaleFiles.Count > 0)
-        {
-            string staleList = string.Join(", ", result.StaleFiles.Take(5));
-            string more = result.StaleFiles.Count > 5 ? $" (+{result.StaleFiles.Count - 5} more)" : "";
-            response +=
-                $"\n\n<!-- ⚠ stale-cache: {result.StaleFiles.Count} file(s) changed since last index: {staleList}{more} — re-run BuildConciseContext to refresh -->";
-        }
-
-        // Folder/file index drift (only for workspaces that have a docs/ folder).
-        string? folderIndexLine = FolderFileTable.StatusLine(root);
-        if (folderIndexLine is not null && folderIndexLine != "folder-index: in sync")
-        {
-            response += $"\n\n<!-- ⚠ {folderIndexLine} -->";
-        }
-
-        // Retrieval self-tuning: a file requested this turn scored below the relevance bar the
-        // filter applied last turn — the narrow-filter threshold is being nudged wider.
-        if (result.CalibrationCheck is { AnyFailure: true } check)
-        {
-            IEnumerable<string> misses = check.Outcomes.Where(o => o.WasFailure)
-                .Select(o => $"'{o.LateFile}' scored {o.LateFileRelevance:F2} vs the {o.PreviousMinKeptRelevance:F2} bar applied last turn");
-            response +=
-                $"\n\n<!-- ⚠ retrieval-calibration: {string.Join("; ", misses)}" +
-                (check.ThresholdAdjusted
-                    ? $" — semantic threshold adjusted (now {check.NewThresholdAdjustment:+0.00;-0.00} from baseline) -->"
-                    : " -->");
-        }
-
-        // Surface warnings from the last pipeline run (stored on the cleaner)
-        PipelineSummary? lastSummary = _cleaner.LastSummary;
-        // Spaghetti: check manifest for any sources with many dropped blocks
-        IGrouping<string, ManifestEntry>? spaghettiEntries = lastSummary?.Manifest.Entries
-            .GroupBy(e => e.Source)
-            .FirstOrDefault(g => g.Count(e => e.WasDropped) >= 5);
-        if (spaghettiEntries != null)
-        {
-            response +=
-                $"\n\n⚠️ Spaghetti code detected in {spaghettiEntries.Key}: {spaghettiEntries.Count(e => e.WasDropped)} near-duplicate blocks found. Would you like a plan to refactor it?";
-        }
-
-        // Ask (once) whether .tokensaver/ should be gitignored, if the user hasn't answered yet.
-        if (GitignorePrompt.ShouldAsk(_behaviorConfig, root))
-        {
-            response += $"\n\n<!-- ℹ gitignore: {GitignorePrompt.PromptText} -->";
-        }
-
+        response = AppendNotices(response, result, root);
         // Drain any messages queued by background services before returning to the active client.
         string pending = _deferred.DrainFormatted();
         return string.IsNullOrEmpty(pending) ? response : pending + response;
@@ -640,4 +517,150 @@ internal sealed class LocalModelHelperTools
 
         return sb.ToString().TrimEnd();
     }
+    /// <summary>Resolves explicitly requested files: direct paths, bare filename searches, and gitignore confirmation.</summary>
+    private static void ResolveRequestedFiles(
+        string[]? requestedFiles,
+        string root,
+        GitignoreFilter gitignore,
+        HashSet<string> confirmed,
+        HashSet<string> excluded,
+        List<string> resolvedFiles,
+        List<string> needsConfirmation,
+        List<string> searchNotes)
+    {
+
+
+        foreach (string raw in requestedFiles ?? [])
+        {
+            string entry = raw.Trim().TrimEnd('/', '\\');
+            if (string.IsNullOrEmpty(entry))
+            {
+                continue;
+            }
+
+            string abs = Path.GetFullPath(Path.Combine(root, entry));
+            bool isBare = !entry.Contains('/', StringComparison.Ordinal) && !entry.Contains('\\', StringComparison.Ordinal);
+
+            if (File.Exists(abs) || Directory.Exists(abs))
+            {
+                // Direct path resolution
+                bool isDir = Directory.Exists(abs);
+                if (!confirmed.Contains(entry) && gitignore.IsIgnored(entry, isDir))
+                {
+                    needsConfirmation.Add(entry);
+                }
+                else if (!excluded.Contains(entry))
+                {
+                    resolvedFiles.Add(entry);
+                }
+            }
+            else if (isBare)
+            {
+                // Bare filename — search the entire workspace
+                string[] found = FolderTreeManager
+                    .SearchFilesByName(root, entry)
+                    .Select(f => Path.GetRelativePath(root, f).Replace('\\', '/'))
+                    .ToArray();
+
+                if (found.Length == 0)
+                {
+                    searchNotes.Add($"'{entry}' was not found anywhere in the workspace.");
+                    continue;
+                }
+
+                string[] ignored = found.Where(r => !confirmed.Contains(r) && gitignore.IsIgnored(r, false)).ToArray();
+                string[] notIgnored = found.Where(r => confirmed.Contains(r) || !gitignore.IsIgnored(r, false)).ToArray();
+
+                needsConfirmation.AddRange(ignored);
+
+                string[] toInclude = notIgnored.Where(r => !excluded.Contains(r)).ToArray();
+                resolvedFiles.AddRange(toInclude);
+
+                if (toInclude.Length > 1)
+                {
+                    searchNotes.Add(
+                        string.Format(CultureInfo.InvariantCulture, "'{0}' found at {1} locations: {2}. All included. Re-call with excludeFiles to narrow down.", entry, toInclude.Length, string.Join(", ", toInclude)));
+                }
+                else if (toInclude.Length == 1 && found.Length > 1)
+                {
+                    searchNotes.Add(
+                        string.Format(CultureInfo.InvariantCulture, "'{0}' found at {1} locations; {2} gitignored. Including: {3}.", entry, found.Length, ignored.Length, toInclude[0]));
+                }
+            }
+            else
+            {
+                searchNotes.Add(string.Format(CultureInfo.InvariantCulture, "'{0}' was not found.", entry));
+            }
+        }
+    }
+
+    /// <summary>Appends pipeline, index, calibration and gitignore notices to the response.</summary>
+    private string AppendNotices(string response, ContextBuildResult result, string root)
+    {
+        // Append pipeline narrative as a hidden comment
+        if (result.PipelineSummary?.NarrativeSummary is { } narrative)
+        {
+            response += $"\n\n<!-- pipeline: {narrative.Replace("\n", " | ", StringComparison.Ordinal)} -->";
+        }
+
+        // First-run notice: SemanticGrep is otherwise silently empty until someone remembers to
+        // call IndexRepo manually — tell the caller a background build just started instead.
+        if (result.SemanticIndexStatus == SemanticIndexTriggerStatus.Started)
+        {
+            response +=
+                "\n\n<!-- ℹ Semantic index (SemanticGrep) has never been built for this workspace — " +
+                "started building it in the background now. This does not block context generation; " +
+                "SemanticGrep results will be available once it finishes (a few minutes for a typical repo). -->";
+        }
+
+        // Warn about stale cached files
+        if (result.StaleFiles.Count > 0)
+        {
+            string staleList = string.Join(", ", result.StaleFiles.Take(5));
+            string more = result.StaleFiles.Count > 5 ? $" (+{result.StaleFiles.Count - 5} more)" : "";
+            response +=
+                $"\n\n<!-- ⚠ stale-cache: {result.StaleFiles.Count} file(s) changed since last index: {staleList}{more} — re-run BuildConciseContext to refresh -->";
+        }
+
+        // Folder/file index drift (only for workspaces that have a docs/ folder).
+        string? folderIndexLine = FolderFileTable.StatusLine(root);
+        if (folderIndexLine is not null && folderIndexLine != "folder-index: in sync")
+        {
+            response += $"\n\n<!-- ⚠ {folderIndexLine} -->";
+        }
+
+        // Retrieval self-tuning: a file requested this turn scored below the relevance bar the
+        // filter applied last turn — the narrow-filter threshold is being nudged wider.
+        if (result.CalibrationCheck is { AnyFailure: true } check)
+        {
+            IEnumerable<string> misses = check.Outcomes.Where(o => o.WasFailure)
+                .Select(o => $"'{o.LateFile}' scored {o.LateFileRelevance:F2} vs the {o.PreviousMinKeptRelevance:F2} bar applied last turn");
+            response +=
+                $"\n\n<!-- ⚠ retrieval-calibration: {string.Join("; ", misses)}" +
+                (check.ThresholdAdjusted
+                    ? $" — semantic threshold adjusted (now {check.NewThresholdAdjustment:+0.00;-0.00} from baseline) -->"
+                    : " -->");
+        }
+
+        // Surface warnings from the last pipeline run (stored on the cleaner)
+        PipelineSummary? lastSummary = _cleaner.LastSummary;
+        // Spaghetti: check manifest for any sources with many dropped blocks
+        IGrouping<string, ManifestEntry>? spaghettiEntries = lastSummary?.Manifest.Entries
+            .GroupBy(e => e.Source)
+            .FirstOrDefault(g => g.Count(e => e.WasDropped) >= 5);
+        if (spaghettiEntries != null)
+        {
+            response +=
+                $"\n\n⚠️ Spaghetti code detected in {spaghettiEntries.Key}: {spaghettiEntries.Count(e => e.WasDropped)} near-duplicate blocks found. Would you like a plan to refactor it?";
+        }
+
+        // Ask (once) whether .tokensaver/ should be gitignored, if the user hasn't answered yet.
+        if (GitignorePrompt.ShouldAsk(_behaviorConfig, root))
+        {
+            response += $"\n\n<!-- ℹ gitignore: {GitignorePrompt.PromptText} -->";
+        }
+
+        return response;
+    }
+
 }
