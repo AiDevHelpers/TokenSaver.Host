@@ -55,7 +55,7 @@ public sealed class InstructionOptimizerServiceTests : IDisposable
 
     private void EnableOptimizeInstructions()
     {
-        _behaviorConfig.Set(_workspaceRoot, ConfigScope.Local, c => c with
+        _behaviorConfig.Update(_workspaceRoot, ConfigScope.Local, c => c with
         {
             RepoHelper = (c.RepoHelper ?? new RepoHelperBehaviorConfig()) with { OptimizeInstructions = true },
         });
@@ -64,7 +64,7 @@ public sealed class InstructionOptimizerServiceTests : IDisposable
     [Fact]
     public void EnsureSynced_OptimizeInstructionsExplicitlyOff_DoesNothing()
     {
-        _behaviorConfig.Set(_workspaceRoot, ConfigScope.Local, c => c with
+        _behaviorConfig.Update(_workspaceRoot, ConfigScope.Local, c => c with
         {
             RepoHelper = (c.RepoHelper ?? new RepoHelperBehaviorConfig()) with { OptimizeInstructions = false },
         });
@@ -201,7 +201,7 @@ public sealed class InstructionOptimizerServiceTests : IDisposable
     [Fact]
     public void EnsureSynced_AutoSplitExplicitlyOff_LeavesOversizedDocUnsplitInSyncedTarget()
     {
-        _behaviorConfig.Set(_workspaceRoot, ConfigScope.Local, c => c with
+        _behaviorConfig.Update(_workspaceRoot, ConfigScope.Local, c => c with
         {
             RepoHelper = (c.RepoHelper ?? new RepoHelperBehaviorConfig()) with
             {
@@ -223,7 +223,7 @@ public sealed class InstructionOptimizerServiceTests : IDisposable
 
     private void EnableCombineClaudeMdForClaudeCode()
     {
-        _behaviorConfig.Set(_workspaceRoot, ConfigScope.Local, c => c with
+        _behaviorConfig.Update(_workspaceRoot, ConfigScope.Local, c => c with
         {
             RepoHelper = (c.RepoHelper ?? new RepoHelperBehaviorConfig()) with
             {

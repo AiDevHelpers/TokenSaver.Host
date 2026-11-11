@@ -104,7 +104,7 @@ public sealed class BehaviorConfigOverlayTests : IDisposable
     {
         // Go through BehaviorConfigService.Set (not a raw file write) so the cache/ConfigChanged
         // update happens synchronously instead of depending on FileSystemWatcher timing.
-        _service.Set(_workspaceRoot, ConfigScope.Local,
+        _service.Update(_workspaceRoot, ConfigScope.Local,
             c => c with { CodeHelper = (c.CodeHelper ?? new CodeHelperBehaviorConfig()) with { RequireAnchorMatch = false } });
 
         CodeHelperConfig codeHelper = new() { RequireAnchorMatch = true };
@@ -118,7 +118,7 @@ public sealed class BehaviorConfigOverlayTests : IDisposable
         overlay.Apply();
         Assert.False(codeHelper.RequireAnchorMatch);
 
-        _service.Set(_workspaceRoot, ConfigScope.Local,
+        _service.Update(_workspaceRoot, ConfigScope.Local,
             c => c with { CodeHelper = (c.CodeHelper ?? new CodeHelperBehaviorConfig()) with { RequireAnchorMatch = null } });
         overlay.Apply();
         Assert.True(codeHelper.RequireAnchorMatch);
@@ -148,7 +148,7 @@ public sealed class BehaviorConfigOverlayTests : IDisposable
 
         Assert.True(contextHelper.Debug);
 
-        _service.Set(_workspaceRoot, ConfigScope.Local,
+        _service.Update(_workspaceRoot, ConfigScope.Local,
             c => c with { Context = (c.Context ?? new ContextBehaviorConfig()) with { Debug = null } });
         overlay.Apply();
 

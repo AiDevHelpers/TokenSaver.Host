@@ -153,7 +153,7 @@ internal sealed class ManageConfigTools(
                        "(the workspace default cannot be cleared to null — only overridden true/false).";
             }
 
-            config.Set(workspaceRoot, configScope, current =>
+            config.Update(workspaceRoot, configScope, current =>
             {
                 LazyContextBehaviorConfig lazy = current.LazyContext ?? new LazyContextBehaviorConfig();
                 return current with { LazyContext = lazy with { DefaultWillAskForMissingContext = defaultValue } };
@@ -172,7 +172,7 @@ internal sealed class ManageConfigTools(
             return "set-lazy-context requires 'value' to be true, false, or 'null' to clear the override.";
         }
 
-        config.Set(workspaceRoot, configScope, current =>
+        config.Update(workspaceRoot, configScope, current =>
         {
             LazyContextBehaviorConfig lazy = current.LazyContext ?? new LazyContextBehaviorConfig();
             Dictionary<string, bool> overrides = lazy.Overrides is { } existing
@@ -238,7 +238,7 @@ internal sealed class ManageConfigTools(
             return "'kvCacheQuantization' expects 'f16', 'q8_0', 'q4_0', or 'null' to clear.";
         }
 
-        config.Set(workspaceRoot, configScope, current =>
+        config.Update(workspaceRoot, configScope, current =>
             ApplyAgentConfig(current, fam, a => a with { OpenSource = (a.OpenSource ?? new OpenSourceAgentConfig()) with { KvCacheQuantization = clear ? null : value } }));
         return clear
             ? $"Cleared override for 'openSource.kvCacheQuantization' ({configScope})."
@@ -285,7 +285,7 @@ internal sealed class ManageConfigTools(
             }
 
             bool? parsed = clear ? null : bool.Parse(value!);
-            config.Set(workspaceRoot, configScope, current => ApplyAgentConfig(current, fam, a => ApplyAgentBoolField(a, fam, field, parsed)));
+            config.Update(workspaceRoot, configScope, current => ApplyAgentConfig(current, fam, a => ApplyAgentBoolField(a, fam, field, parsed)));
         }
         else if (isInt)
         {
@@ -295,7 +295,7 @@ internal sealed class ManageConfigTools(
             }
 
             int? parsed = clear ? null : int.Parse(value!, System.Globalization.CultureInfo.InvariantCulture);
-            config.Set(workspaceRoot, configScope, current => ApplyAgentConfig(current, fam, a => ApplyAgentIntField(a, fam, field, parsed)));
+            config.Update(workspaceRoot, configScope, current => ApplyAgentConfig(current, fam, a => ApplyAgentIntField(a, fam, field, parsed)));
         }
         else
         {
@@ -443,7 +443,7 @@ internal sealed class ManageConfigTools(
             }
 
             bool? parsed = clear ? null : bool.Parse(value!);
-            config.Set(workspaceRoot, configScope, current => ApplyBoolField(current, field, parsed));
+            config.Update(workspaceRoot, configScope, current => ApplyBoolField(current, field, parsed));
         }
         else if (DoubleFields.Contains(field))
         {
@@ -453,7 +453,7 @@ internal sealed class ManageConfigTools(
             }
 
             double? parsed = clear ? null : double.Parse(value!, System.Globalization.CultureInfo.InvariantCulture);
-            config.Set(workspaceRoot, configScope, current => ApplyDoubleField(current, field, parsed));
+            config.Update(workspaceRoot, configScope, current => ApplyDoubleField(current, field, parsed));
         }
         else if (IntFields.Contains(field))
         {
@@ -463,7 +463,7 @@ internal sealed class ManageConfigTools(
             }
 
             int? parsed = clear ? null : int.Parse(value!, System.Globalization.CultureInfo.InvariantCulture);
-            config.Set(workspaceRoot, configScope, current => ApplyIntField(current, field, parsed));
+            config.Update(workspaceRoot, configScope, current => ApplyIntField(current, field, parsed));
         }
         else
         {
@@ -582,7 +582,7 @@ internal sealed class ManageConfigTools(
             return "set-gitignore-pref requires 'scope' to be 'local' or 'global'.";
         }
 
-        config.Set(workspaceRoot, configScope, current => current with
+        config.Update(workspaceRoot, configScope, current => current with
         {
             RepoHelper = (current.RepoHelper ?? new RepoHelperBehaviorConfig()) with { AddTokenSaverToGitignore = value },
         });
