@@ -226,6 +226,25 @@ internal sealed class ManageConfigTools(
         "numCtx",
     };
 
+    private string SetKvCacheQuantization(string workspaceRoot, TokenSaver.Config.Contracts.ConfigScope configScope, string fam, string? value, bool clear)
+    {
+        if (!string.Equals(fam, "openSource", StringComparison.OrdinalIgnoreCase))
+        {
+            return "'kvCacheQuantization' is only valid for family=openSource.";
+        }
+
+        if (!clear && value is not ("f16" or "q8_0" or "q4_0"))
+        {
+            return "'kvCacheQuantization' expects 'f16', 'q8_0', 'q4_0', or 'null' to clear.";
+        }
+
+        config.Set(workspaceRoot, configScope, current =>
+            ApplyAgentConfig(current, fam, a => a with { OpenSource = (a.OpenSource ?? new OpenSourceAgentConfig()) with { KvCacheQuantization = clear ? null : value } }));
+        return clear
+            ? $"Cleared override for 'openSource.kvCacheQuantization' ({configScope})."
+            : $"Set 'openSource.kvCacheQuantization' = {value} ({configScope}).";
+    }
+
     private string SetAgentField(string workspaceRoot, string? family, string? field, string? value, string? scope)
     {
         if (string.IsNullOrWhiteSpace(field))
@@ -248,21 +267,7 @@ internal sealed class ManageConfigTools(
 
         if (string.Equals(field, "kvCacheQuantization", StringComparison.OrdinalIgnoreCase))
         {
-            if (!string.Equals(fam, "openSource", StringComparison.OrdinalIgnoreCase))
-            {
-                return "'kvCacheQuantization' is only valid for family=openSource.";
-            }
-
-            if (!clear && value is not ("f16" or "q8_0" or "q4_0"))
-            {
-                return "'kvCacheQuantization' expects 'f16', 'q8_0', 'q4_0', or 'null' to clear.";
-            }
-
-            config.Set(workspaceRoot, configScope, current =>
-                ApplyAgentConfig(current, fam, a => a with { OpenSource = (a.OpenSource ?? new OpenSourceAgentConfig()) with { KvCacheQuantization = clear ? null : value } }));
-            return clear
-                ? $"Cleared override for 'openSource.kvCacheQuantization' ({configScope})."
-                : $"Set 'openSource.kvCacheQuantization' = {value} ({configScope}).";
+            return SetKvCacheQuantization(workspaceRoot, configScope, fam, value, clear);
         }
 
         bool isBool = AgentCommonBoolFields.Contains(field)

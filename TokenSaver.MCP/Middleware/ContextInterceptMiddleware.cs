@@ -77,6 +77,40 @@ internal sealed partial class ContextInterceptMiddleware
         _logger = logger;
     }
 
+    private static string[]? ParseHistory(JsonObject? args)
+    {
+        if (args?["history"] is not JsonArray historyNode)
+        {
+            return null;
+        }
+
+        return historyNode
+            .Select(n => n?.GetValue<string>())
+            .Where(s => s != null)
+            .ToArray()!;
+    }
+
+    private static async Task<string?> ReadBoundedBodyAsync(HttpRequest request)
+    {
+        request.EnableBuffering(bufferThreshold: (int)MaxInterceptedBodyBytes);
+        using StreamReader reader = new(request.Body, Encoding.UTF8, leaveOpen: true);
+        char[] buffer = new char[81_920];
+        StringBuilder bodyBuilder = new();
+        int charsRead;
+        while ((charsRead = await reader.ReadAsync(buffer)) > 0)
+        {
+            _ = bodyBuilder.Append(buffer, 0, charsRead);
+            if (bodyBuilder.Length > MaxInterceptedBodyBytes)
+            {
+                request.Body.Position = 0;
+                return null;
+            }
+        }
+
+        request.Body.Position = 0;
+        return bodyBuilder.ToString();
+    }
+
     public async Task InvokeAsync(
         HttpContext context,
         IOptions<CodeHelperConfig> codeHelperOpts,
@@ -109,28 +143,14 @@ internal sealed partial class ContextInterceptMiddleware
             return;
         }
 
-        // Buffer the request body so we can read and potentially replace it
-        context.Request.EnableBuffering(bufferThreshold: (int)MaxInterceptedBodyBytes);
-        using StreamReader reader = new(context.Request.Body, Encoding.UTF8, leaveOpen: true);
-        char[] buffer = new char[81_920];
-        StringBuilder bodyBuilder = new();
-        int charsRead;
-        while ((charsRead = await reader.ReadAsync(buffer)) > 0)
+        // Buffer the request body so we can read and potentially replace it. Bails out (null) when
+        // the body exceeds the cap mid-stream, rather than truncating a JSON-RPC payload.
+        string? body = await ReadBoundedBodyAsync(context.Request);
+        if (body is null)
         {
-            _ = bodyBuilder.Append(buffer, 0, charsRead);
-            if (bodyBuilder.Length > MaxInterceptedBodyBytes)
-            {
-                // Body exceeded the cap mid-stream (Content-Length was absent/understated).
-                // Bail out of interception entirely rather than truncating and risking a
-                // subtly-corrupted JSON-RPC payload being parsed downstream.
-                context.Request.Body.Position = 0;
-                await _next(context);
-                return;
-            }
+            await _next(context);
+            return;
         }
-
-        string body = bodyBuilder.ToString();
-        context.Request.Body.Position = 0;
 
         JsonNode? rpc;
         try
@@ -178,14 +198,7 @@ internal sealed partial class ContextInterceptMiddleware
             try
             {
                 // Extract optional history array
-                string[]? history = null;
-                if (args?["history"] is JsonArray historyNode)
-                {
-                    history = historyNode
-                        .Select(n => n?.GetValue<string>())
-                        .Where(s => s != null)
-                        .ToArray()!;
-                }
+                string[]? history = ParseHistory(args);
 
                 PipelineResult ctxResult = await cleaner.CleanContextAsync(prompt, history);
                 cleanedPrompt = ctxResult.ContextText;
