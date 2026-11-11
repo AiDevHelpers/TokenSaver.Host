@@ -1,7 +1,7 @@
 namespace TokenSaver.MCP.Services;
 
 /// <summary>One row of the folder/file index: metadata plus cross-links into the code and semantic indexes.</summary>
-public sealed record FolderFileRow(
+internal sealed record FolderFileRow(
     string Path,
     string Kind,
     string Title,
@@ -12,7 +12,7 @@ public sealed record FolderFileRow(
 /// <summary>
 ///     Builds the generated folder/file table (metadata only). Rendering is deterministic.
 /// </summary>
-public static class FolderFileTable
+internal static class FolderFileTable
 {
     private const string PendingSemantic = "sem:pending";
     private const string GeneratedPath = "docs/folder-index.md";

@@ -120,7 +120,15 @@ internal sealed class LocalModelHelperTools
             : pipelineResult.ContextText + "\n\n" + mcpBlock;
 
         // OllamaService now runs the prompt through IPromptAdapter (AgentHelpers) automatically.
-        string response = await _ollama.CallModelOnEndpointAsync(cleaned, endpointName, ct);
+        string response;
+        try
+        {
+            response = await _ollama.CallModelOnEndpointAsync(cleaned, endpointName, ct);
+        }
+        catch (HttpRequestException ex)
+        {
+            return $"Model call failed on endpoint '{endpointName}': {ex.Message}";
+        }
 
         // Surface pipeline warnings
         StringBuilder warnings = new();

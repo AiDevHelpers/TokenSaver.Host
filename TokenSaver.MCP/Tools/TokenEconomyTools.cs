@@ -71,13 +71,20 @@ internal sealed class TokenEconomyTools(
         CancellationToken ct = default)
     {
         string model = modelRoutes.Resolve(taskType);
-        if (string.Equals(taskType, "embed", StringComparison.OrdinalIgnoreCase))
+        try
         {
-            float[] vector = await ollama.EmbedAsync(model, prompt, ct: ct);
-            return JsonSerializer.Serialize(vector);
-        }
+            if (string.Equals(taskType, "embed", StringComparison.OrdinalIgnoreCase))
+            {
+                float[] vector = await ollama.EmbedAsync(model, prompt, ct: ct);
+                return JsonSerializer.Serialize(vector);
+            }
 
-        return await ollama.CallModelAsync(model, prompt, ct);
+            return await ollama.CallModelAsync(model, prompt, ct);
+        }
+        catch (HttpRequestException ex)
+        {
+            return $"Model call failed for route '{taskType}' (model '{model}'): {ex.Message}";
+        }
     }
 
     // ── TokenSavingsReport ───────────────────────────────────────────────────

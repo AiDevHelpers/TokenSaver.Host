@@ -1,12 +1,12 @@
 namespace TokenSaver.MCP.Services;
 
 /// <summary>Metadata-only view of a markdown document: never carries body text.</summary>
-public sealed record DocMetadata(string Title, string Summary);
+internal sealed record DocMetadata(string Title, string Summary);
 
 /// <summary>
 ///     Extracts a title and one-line summary from a markdown document. Deterministic; no model calls.
 /// </summary>
-public static class DocMetadataExtractor
+internal static class DocMetadataExtractor
 {
     /// <summary>Maximum summary length in characters.</summary>
     public const int MaxSummaryLength = 120;
@@ -47,7 +47,7 @@ public static class DocMetadataExtractor
                 continue;
             }
 
-            firstLine ??= line;
+            firstLine = line;
             break;
         }
 

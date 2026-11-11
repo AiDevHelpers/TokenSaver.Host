@@ -1,3 +1,4 @@
+#pragma warning disable CA2000, CA1506 // Test factories hand disposables to the tool under test; CreateTools wires many services by design.
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -422,13 +423,18 @@ public sealed class LocalModelHelperToolsTests : IDisposable
     }
 
     // ── CleanAndChat ──────────────────────────────────────────────────────────
-    // No test: every reachable statement in CleanAndChat calls ContextCleanerService then
-    // unconditionally calls OllamaService.CallModelOnEndpointAsync — there is no argument
-    // validation or early-return branch before the model call (empty prompt is passed straight
-    // through to the pipeline and then to Ollama). Testing it would either require a live model
-    // to assert on the returned response text, or would only prove that OllamaService surfaces
-    // an HttpRequestException from an unreachable endpoint, which is already OllamaService's own
-    // concern, not a distinct behavior of LocalModelHelperTools.CleanAndChat.
+
+    [Fact]
+    public async Task CleanAndChat_OllamaUnreachable_ReturnsGuardMessage()
+    {
+        // The HttpClient points at the unreachable loopback placeholder, so the call fails at connect
+        // time. The transport error is returned as a message, not thrown.
+        LocalModelHelperTools tools = CreateTools();
+
+        string result = await tools.CleanAndChat("summarize this");
+
+        Assert.StartsWith("Model call failed on endpoint", result, StringComparison.Ordinal);
+    }
 
     private sealed class FakeCallerDetectionService(CallerInfo toReturn) : ICallerDetectionService
     {

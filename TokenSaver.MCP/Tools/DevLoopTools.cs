@@ -333,7 +333,17 @@ internal sealed class DevLoopTools(
         await workspaceRootResolver.EnsureResolvedAsync(server, ct);
 
         (string command, string args) = SplitCommand(testCommand ?? "dotnet test");
-        (int exitCode, string stdout, string stderr) = await RunProcessAsync(command, args, ct, projectPath);
+        (int exitCode, string stdout, string stderr) run;
+        try
+        {
+            run = await RunProcessAsync(command, args, ct, projectPath);
+        }
+        catch (Exception ex) when (ex is Win32Exception or InvalidOperationException)
+        {
+            return $"Could not run '{command}': {ex.Message}";
+        }
+
+        (int exitCode, string stdout, string stderr) = run;
         string raw = string.IsNullOrWhiteSpace(stdout) ? stderr : stdout;
 
         if (exitCode == 0)
@@ -367,7 +377,17 @@ internal sealed class DevLoopTools(
         await workspaceRootResolver.EnsureResolvedAsync(server, ct);
 
         (string command, string args) = SplitCommand(lintCommand ?? "dotnet format --verify-no-changes");
-        (int exitCode, string stdout, string stderr) = await RunProcessAsync(command, args, ct, projectPath);
+        (int exitCode, string stdout, string stderr) run;
+        try
+        {
+            run = await RunProcessAsync(command, args, ct, projectPath);
+        }
+        catch (Exception ex) when (ex is Win32Exception or InvalidOperationException)
+        {
+            return $"Could not run '{command}': {ex.Message}";
+        }
+
+        (int exitCode, string stdout, string stderr) = run;
         string raw = string.IsNullOrWhiteSpace(stdout) ? stderr : stdout;
 
         if (exitCode == 0 && string.IsNullOrWhiteSpace(raw))

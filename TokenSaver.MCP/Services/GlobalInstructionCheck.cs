@@ -4,7 +4,7 @@ namespace TokenSaver.MCP.Services;
 ///     Read-only drift checks for the global instruction layers: source (<c>claude_rules</c>),
 ///     installed (<c>~/.claude</c>) and the instruction store. Never edits any of them.
 /// </summary>
-public static class GlobalInstructionCheck
+internal static class GlobalInstructionCheck
 {
     /// <summary>Returns human-readable problems; empty when all layers agree.</summary>
     public static IReadOnlyList<string> Check(string sourceRoot, string installedRoot, string storeRoot)
