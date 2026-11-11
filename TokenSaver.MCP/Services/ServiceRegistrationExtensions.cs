@@ -155,6 +155,7 @@ internal static class ServiceRegistrationExtensions
         services.AddTransient<EndpointRoutingHandler>();
         services.AddHostedService<EndpointHealthMonitor>();
         services.AddHostedService<GitignoreWatcherService>();
+        services.AddHostedService<GitRepoWatcherService>();
         services.AddHostedService<McpRegistrationCheckService>();
 
         // Ollama service client (5-minute timeout for long-running operations)
