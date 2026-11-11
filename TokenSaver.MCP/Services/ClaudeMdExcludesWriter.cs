@@ -14,7 +14,7 @@ namespace TokenSaver.MCP.Services;
 ///     an existing array entry (including ones this feature didn't add) and never touches any
 ///     other key already present in the file.
 /// </summary>
-public static partial class ClaudeMdExcludesWriter
+internal static partial class ClaudeMdExcludesWriter
 {
     private const string ExcludesKey = "claudeMdExcludes";
 

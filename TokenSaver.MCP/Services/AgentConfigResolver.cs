@@ -22,7 +22,7 @@ namespace TokenSaver.MCP.Services;
 ///     cache) — safe to call on every MCP request rather than needing a persisted session, since
 ///     this server has no MCP session store (see <c>ContextInterceptMiddleware</c>).
 /// </summary>
-public sealed class AgentConfigResolver
+internal sealed class AgentConfigResolver
 {
     private readonly ICallerDetectionService _detection;
     private readonly AgentAdapterRegistry _registry;
@@ -133,7 +133,7 @@ public sealed class AgentConfigResolver
 }
 
 /// <summary>Result of <see cref="AgentConfigResolver.Resolve(HttpContext?, string)" />.</summary>
-public sealed record AgentConfigResolution(CallerInfo Caller, string Family, EffectiveAgentSettings Settings);
+internal sealed record AgentConfigResolution(CallerInfo Caller, string Family, EffectiveAgentSettings Settings);
 
 /// <summary>
 ///     The agent-config knobs that apply to the currently detected caller, after merging the
@@ -141,7 +141,7 @@ public sealed record AgentConfigResolution(CallerInfo Caller, string Family, Eff
 ///     irrelevant to the resolved family are left <see langword="null" /> (e.g.
 ///     <see cref="KvCacheQuantization" /> stays unset for every family except OpenSource).
 /// </summary>
-public sealed record EffectiveAgentSettings
+internal sealed record EffectiveAgentSettings
 {
     public bool? EnablePromptCaching { get; init; }
     public int? CacheTtlSeconds { get; init; }

@@ -241,7 +241,7 @@ internal sealed class ExtensionRegistryService
 }
 
 /// <summary>Information about a registered extension.</summary>
-public sealed record ExtensionInfo(
+internal sealed record ExtensionInfo(
     string ExtensionId,
     string Name,
     bool DebuggerSupported,
@@ -250,7 +250,7 @@ public sealed record ExtensionInfo(
     List<string> Features);
 
 /// <summary>Capabilities of an extension for feature negotiation.</summary>
-public sealed record ExtensionCapabilities(
+internal sealed record ExtensionCapabilities(
     string ExtensionId,
     bool IsRegistered,
     bool DebuggerSupported,

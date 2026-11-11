@@ -6,7 +6,7 @@ namespace TokenSaver.MCP.Services;
 /// Public API for VS Code debugger extension to communicate with the MCP debugger service.
 /// HTTP endpoints at /api/debugger/* allow the VS Code extension to control debug sessions.
 /// </summary>
-public interface IDebuggerApiClient
+internal interface IDebuggerApiClient
 {
     /// <summary>Start a debug session via HTTP API.</summary>
     Task<DebuggerApiResponse<DebugSessionResult>> StartSessionAsync(
@@ -54,7 +54,7 @@ public interface IDebuggerApiClient
 }
 
 /// <summary>Generic response wrapper for debugger API calls.</summary>
-public sealed record DebuggerApiResponse(
+internal sealed record DebuggerApiResponse(
     bool Success,
     string Message,
     string? Error = null,
@@ -78,7 +78,7 @@ public sealed record DebuggerApiResponse(
 }
 
 /// <summary>Generic response wrapper with data payload.</summary>
-public sealed record DebuggerApiResponse<T>(
+internal sealed record DebuggerApiResponse<T>(
     bool Success,
     string Message,
     T? Data = default,
@@ -86,13 +86,13 @@ public sealed record DebuggerApiResponse<T>(
     int? StatusCode = null);
 
 /// <summary>Request to start a debug session.</summary>
-public sealed record DebuggerStartSessionRequest(
+internal sealed record DebuggerStartSessionRequest(
     string IdeType,
     string ConfigName,
     Dictionary<string, object>? Args = null);
 
 /// <summary>Request to set a breakpoint.</summary>
-public sealed record DebuggerSetBreakpointRequest(
+internal sealed record DebuggerSetBreakpointRequest(
     string IdeType,
     string FilePath,
     int LineNumber,
@@ -100,13 +100,13 @@ public sealed record DebuggerSetBreakpointRequest(
     int? HitCount = null);
 
 /// <summary>Request to execute a step command.</summary>
-public sealed record DebuggerExecuteStepRequest(
+internal sealed record DebuggerExecuteStepRequest(
     string IdeType,
     DebugCommand Command,
     string? ThreadId = null);
 
 /// <summary>Summary info about an active debug session.</summary>
-public sealed record DebugSessionInfo(
+internal sealed record DebugSessionInfo(
     string SessionId,
     string IdeType,
     string ConfigName,

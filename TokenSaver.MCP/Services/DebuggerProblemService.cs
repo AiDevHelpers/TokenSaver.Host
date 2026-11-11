@@ -184,7 +184,7 @@ internal sealed class DebuggerProblemService : IDebuggerProblemCapture
     DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
     PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase,
     WriteIndented = true)]
-public sealed record DebuggerProblemJson(
+internal sealed record DebuggerProblemJson(
     [property: JsonPropertyName("id")] string Id,
     [property: JsonPropertyName("timestamp")] DateTime Timestamp,
     [property: JsonPropertyName("type")] string ProblemType,
@@ -226,7 +226,7 @@ public sealed record DebuggerProblemJson(
     DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
     PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase,
     WriteIndented = true)]
-public sealed record DebuggerProblemsAnalysisJson(
+internal sealed record DebuggerProblemsAnalysisJson(
     [property: JsonPropertyName("totalProblems")] int TotalProblems,
     [property: JsonPropertyName("errorCount")] int ErrorCount,
     [property: JsonPropertyName("warningCount")] int WarningCount,

@@ -32,7 +32,7 @@ namespace TokenSaver.MCP.Services;
 ///        any unrecognized client name, default <see langword="false" /> (safe/eager).
 ///     </para>
 /// </summary>
-public sealed class LazyContextResolver
+internal sealed class LazyContextResolver
 {
     private static readonly HashSet<string> CursorClientNames = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -112,10 +112,10 @@ public sealed class LazyContextResolver
 }
 
 /// <summary>Result of <see cref="LazyContextResolver.Resolve(HttpContext?, string)" />.</summary>
-public sealed record LazyContextResolution(CallerInfo Caller, bool WillAskForMissingContext, LazyContextSource Source);
+internal sealed record LazyContextResolution(CallerInfo Caller, bool WillAskForMissingContext, LazyContextSource Source);
 
 /// <summary>Which resolution step actually decided <see cref="LazyContextResolution.WillAskForMissingContext" />.</summary>
-public enum LazyContextSource
+internal enum LazyContextSource
 {
     /// <summary>A hardcoded, non-overridable <c>OpenSource</c> client adapter (Cursor/Copilot/Continue) decided it.</summary>
     BuiltInAdapter,

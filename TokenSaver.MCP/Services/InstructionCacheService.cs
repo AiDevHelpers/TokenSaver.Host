@@ -32,7 +32,7 @@ namespace TokenSaver.MCP.Services;
 ///     picked up on the next <see cref="EnsureFresh" /> call (every session connect) regardless.
 ///     </para>
 /// </summary>
-public sealed partial class InstructionCacheService : IDisposable
+internal sealed partial class InstructionCacheService : IDisposable
 {
     [LoggerMessage(Level = LogLevel.Debug, Message = "Instruction cache regenerated for {WorkspaceRoot}: {Count} sub-doc(s)")]
     private static partial void LogRegenerated(ILogger logger, string workspaceRoot, int count);

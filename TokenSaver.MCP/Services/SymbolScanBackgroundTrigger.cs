@@ -11,7 +11,7 @@ namespace TokenSaver.MCP.Services;
 ///     which is what happened to a 352 s scan. The request returns at once; CodeIndex 'status' reports
 ///     progress. Mirrors SemanticIndexBackgroundTrigger.
 /// </summary>
-public sealed partial class SymbolScanBackgroundTrigger(
+internal sealed partial class SymbolScanBackgroundTrigger(
     WorkspaceIndexService index, ILogger<SymbolScanBackgroundTrigger> logger)
 {
     private readonly ConcurrentDictionary<string, byte> _running = new(StringComparer.OrdinalIgnoreCase);

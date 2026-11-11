@@ -404,7 +404,7 @@ internal sealed class DebuggerEventQueryService
 }
 
 /// <summary>Event record read from persisted log.</summary>
-public sealed record DebuggerEventLogRecord(
+internal sealed record DebuggerEventLogRecord(
     string Id,
     DateTime Timestamp,
     string Type,
@@ -414,7 +414,7 @@ public sealed record DebuggerEventLogRecord(
     double? Duration);
 
 /// <summary>Information about available log files.</summary>
-public sealed record DebuggerLogFileInfo(
+internal sealed record DebuggerLogFileInfo(
     List<string> Files,
     DateTime? OldestDate,
     DateTime? NewestDate,

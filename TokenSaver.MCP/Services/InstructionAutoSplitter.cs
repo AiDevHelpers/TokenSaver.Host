@@ -26,7 +26,7 @@ namespace TokenSaver.MCP.Services;
 ///     CLAUDE.md is left alone entirely.
 ///     </para>
 /// </summary>
-public static partial class InstructionAutoSplitter
+internal static partial class InstructionAutoSplitter
 {
     [LoggerMessage(Level = LogLevel.Debug,
         Message = "Auto-split {DocPath} for caching: extracted section \"{Heading}\" as sub-doc {Slug}")]

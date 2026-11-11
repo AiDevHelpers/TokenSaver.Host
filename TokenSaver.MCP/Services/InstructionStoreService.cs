@@ -10,7 +10,7 @@ namespace TokenSaver.MCP.Services;
 ///     <c>%USERPROFILE%\.tokensaver\instructions\skills</c>), which the installer populates from the
 ///     repo's shipped defaults and the user is free to edit.
 /// </summary>
-public sealed class InstructionStoreService
+internal sealed class InstructionStoreService
 {
     internal const string EnvVarName = "TOKENSAVER_INSTRUCTIONS_DIR";
     internal const string SkillFileName = "SKILL.md";
@@ -268,4 +268,4 @@ public sealed class InstructionStoreService
 }
 
 /// <summary>One entry in the instruction store.</summary>
-public sealed record InstructionInfo(string Name, string Description);
+internal sealed record InstructionInfo(string Name, string Description);
