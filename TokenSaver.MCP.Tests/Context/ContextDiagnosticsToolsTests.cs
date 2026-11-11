@@ -1,3 +1,4 @@
+#pragma warning disable CA2000 // Test factories hand disposables to the code under test; each test is short-lived.
 using TokenSaver.CodeHelper.Configuration;
 using TokenSaver.CodeHelper.Indexing;
 using TokenSaver.Config;
