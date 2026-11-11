@@ -134,6 +134,7 @@ internal static class ServiceRegistrationExtensions
         services.AddSingleton<IChunkExtractor, ChunkExtractor>();
         services.AddSingleton<IRepoIndexer, RepoIndexer>();
         services.AddSingleton<IndexSelfTest>();
+        services.AddSingleton<SemanticQualitySelfTest>();
         services.AddSingleton<ISemanticSearchService, SemanticSearchService>();
         services.AddSingleton<IRerankService, RerankService>();
         services.AddSingleton<IConditionalRetrievalService, ConditionalRetrievalService>();

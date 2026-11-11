@@ -48,7 +48,7 @@ internal sealed class SemanticIndexTools(
     [Description(
         "Start chunking the workspace into function/class/markdown-section pieces and summarizing+embedding " +
         "each new or changed one via the local model (incremental — unchanged chunks are skipped by content " +
-        "hash). Runs in the background and returns immediately; call IndexStatus to check progress. Run this " +
+        "hash; pass force=true to cancel the current run, wipe all stored chunks and rebuild from scratch). Runs in the background and returns immediately; call IndexStatus to check progress. Run this " +
         "before SemanticGrep the first time, and again after significant edits. Pass rootPath (the client's " +
         "workspace folder) when the client does not send MCP roots.")]
     public async Task<string> IndexRepo(
@@ -58,6 +58,8 @@ internal sealed class SemanticIndexTools(
         string[]? extensions = null,
         [Description("Max concurrent Ollama calls while indexing")]
         int concurrency = 4,
+        [Description("Force a clean rebuild: cancel any run in flight, delete every stored chunk, then re-index from scratch")]
+        bool force = false,
         McpServer server = null!,
         CancellationToken ct = default)
     {
@@ -67,10 +69,13 @@ internal sealed class SemanticIndexTools(
             return NoRootJson();
         }
 
-        SemanticIndexTriggerStatus status = indexTrigger.StartManual(root, extensions, concurrency);
+        SemanticIndexTriggerStatus status = force
+            ? await indexTrigger.ForceRestartAsync(root, extensions, concurrency, ct)
+            : indexTrigger.StartManual(root, extensions, concurrency);
         return JsonSerializer.Serialize(new
         {
             status = status == SemanticIndexTriggerStatus.Started ? "started" : "already_running",
+            reset = force && status == SemanticIndexTriggerStatus.Started,
             root,
             next = "Call IndexStatus to check progress."
         });

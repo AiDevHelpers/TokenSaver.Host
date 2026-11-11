@@ -155,7 +155,21 @@ public sealed class ContextDiagnosticsToolsTests : IDisposable
                 modelRoutes, tokenEconomyDb, tokenSaverOptions),
             tokenEconomyDb);
 
-        ContextDiagnosticsTools tools = new(cleaner, contextPipeline, folderTree, workspaceConfig, workspaceRootResolver, calibration, indexSelfTest);
+        // The semantic-quality step gets a fake model that answers like one that understands the code.
+        FakeOllamaHandler qualityHandler = new()
+        {
+            GenerateResponder = SemanticQualityFakes.GoodSummary,
+            EmbedResponder = SemanticQualityFakes.BagOfWordsEmbed
+        };
+        OllamaService qualityOllama = new(
+            new HttpClient(qualityHandler) { BaseAddress = new Uri("http://fake-ollama.local") },
+            tokenSaverOptions, NullLogger<OllamaService>.Instance);
+        SemanticQualitySelfTest semanticQualitySelfTest = new(
+            new RepoIndexer(new ChunkExtractor(), qualityOllama, modelRoutes, tokenEconomyDb, tokenSaverOptions),
+            new SemanticSearchService(qualityOllama, modelRoutes, tokenEconomyDb),
+            tokenEconomyDb);
+
+        ContextDiagnosticsTools tools = new(cleaner, contextPipeline, folderTree, workspaceConfig, workspaceRootResolver, calibration, indexSelfTest, semanticQualitySelfTest);
         return new Rig(tools, cleaner, accessor, root);
     }
 
@@ -268,6 +282,16 @@ public sealed class ContextDiagnosticsToolsTests : IDisposable
 
         Assert.Contains("✓ PASS — index: 3 of 3 known files scanned", result, StringComparison.Ordinal);
         Assert.Contains("failed 0", result, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task SelfTest_DebugEnabled_SemanticQualityStepReportsPass()
+    {
+        ContextDiagnosticsTools tools = CreateTools(debug: true);
+
+        string result = await tools.ContextDiag("self-test");
+
+        Assert.Contains("✓ PASS — semantic quality: 4 of 4", result, StringComparison.Ordinal);
     }
 
     [Fact]
