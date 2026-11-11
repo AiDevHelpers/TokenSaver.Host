@@ -119,4 +119,203 @@ internal static class TokenSaverHostRegistration
             ResponseWriter = healthWriter
         });
     }
+    /// <summary>Registers the TokenSaver services, health checks and MCP server.</summary>
+    internal static void RegisterTokenSaverServices(WebApplicationBuilder builder, TokenSaverConfig ollamaConfig, bool isStdio)
+    {
+        // ═══════════════════════════════════════════════════════════════════════════════
+        // ── REGISTER SERVICES (via extension methods) ──
+        // ═══════════════════════════════════════════════════════════════════════════════
+
+        // Compute User-Agent header with version for SimpleModelServer requests
+        string version = VersionDetector.GetVersionString();
+        string userAgent = $"TokenSaver/{version}";
+
+        // Stamp the User-Agent on EVERY HttpClient the factory produces — including the unnamed
+        // clients created via IHttpClientFactory.CreateClient() by the background probes
+        // (EndpointHealthMonitor's /api/tags poll, McpRegistrationCheckService's /health poll). Without
+        // this, those probes reach SimpleModelServer's router with no User-Agent and show up as an
+        // unidentified caller in its request log. Applying it here (rather than per-typed-client) keeps
+        // the identifier in one place and guarantees any future HttpClient is attributed too.
+        builder.Services.ConfigureHttpClientDefaults(http =>
+            http.ConfigureHttpClient(client =>
+                client.DefaultRequestHeaders.UserAgent.ParseAdd(userAgent)));
+
+        builder.Services
+            .AddConfigurationSections(builder.Configuration)
+            .AddContextPipeline()
+            .AddCodeHelperServices()
+            .AddIndexingServices()
+            .AddMcpCoreServices()
+            .AddTokenEconomyServices()
+            .AddOllamaHttpClients(ollamaConfig)
+            .AddPipelineHttpClients(ollamaConfig)
+            .AddAgentHelpersAdapters(ollamaConfig.OllamaModel)
+            .AddWorkspaceSessionServices()
+            .AddDebuggerServices()
+            .AddWslControlServices()
+            .AddLanguageHelperServices();
+
+        builder.Services.AddTokenSaverHealthChecks();
+
+        builder.Services.AddTokenSaverMcpServer(isStdio);
+    }
+
+}
+
+/// <summary>Host bootstrap: configuration files, logging, startup/shutdown logging and the server run loop.</summary>
+internal static class TokenSaverHostBootstrap
+{
+    /// <summary>Loads optional --server-config, Windows Service hosting, and logging/config binding.</summary>
+    internal static void ConfigureHostConfiguration(WebApplicationBuilder builder, string[] args, bool isWindowsService)
+    {
+        // ── Load optional external server config file ──
+        // --server-config <path> layers an additional JSON config file on top of the default
+        // appsettings.json. Must be an absolute path. See below for rationale.
+        string? serverConfigPath = GetArgValue(args, "--server-config");
+        if (!string.IsNullOrWhiteSpace(serverConfigPath))
+        {
+            if (!Path.IsPathRooted(serverConfigPath))
+            {
+                Console.Error.WriteLine(
+                    $"--server-config must be an absolute path (got '{serverConfigPath}'). " +
+                    "Relative paths resolve against the project's source directory under `dotnet run`, " +
+                    "not the shell's working directory — pass a full path instead.");
+                Program.PauseForConsoleIfInteractive(isWindowsService);
+
+                Program.WriteFatal("BadArgument", $"--server-config must be an absolute path (got '{serverConfigPath}').");
+                Environment.Exit(1);
+            }
+
+            builder.Configuration.AddJsonFile(serverConfigPath, optional: false, reloadOnChange: true);
+        }
+
+        // ── Windows Service support ──
+        // A no-op when launched normally (console, or spawned stdio by an MCP host) — only takes
+        // effect when the SCM launches this exe non-interactively.
+        if (isWindowsService)
+        {
+            builder.Host.UseWindowsService(o => o.ServiceName = "TokenSaverMCP");
+        }
+
+        // ── Configure logging ──
+        // Serilog-backed logging via TokenSaver.Common.Logging (shared with SimpleModelServer).
+        // Providers: Console (single-line) + File (%ProgramData%\TokenSaver\logs) + EventLog + VS Code JSON
+        if (isWindowsService && OperatingSystem.IsWindows())
+        {
+            EventLogRegistration.EnsureTokenSaverEventLogSourceExists();
+        }
+
+        LogEventLevel minimumLevel =
+            builder.Configuration.GetValue<bool>($"{TokenSaverConfig.SectionName}:VerboseLogging")
+                ? LogEventLevel.Debug
+                : LogEventLevel.Information;
+
+        builder.Logging.ClearProviders();
+        builder.Host.UseAppLogging(LogChannel.TokenSaver, minimumLevel, cfg =>
+        {
+            cfg.MinimumLevel.Override("System.Net.Http.HttpClient", LogEventLevel.Warning);
+            cfg.MinimumLevel.Override("Microsoft.Extensions.Diagnostics.HealthChecks", LogEventLevel.Warning);
+        });
+
+        // ── Configure TokenSaver ──
+        builder.Services.Configure<TokenSaverConfig>(
+            builder.Configuration.GetSection(TokenSaverConfig.SectionName));
+        builder.Configuration.AddEnvironmentVariables("LOCALHELPER_");
+        builder.Configuration.AddEnvironmentVariables("TOKENSAVER_");
+    }
+
+    /// <summary>Registers HTTP context access and resolves the effective Ollama/TokenSaver configuration.</summary>
+    internal static TokenSaverConfig ConfigureOllamaAndHttpServices(WebApplicationBuilder builder)
+    {
+        // ── HTTP context access ──
+        builder.Services.AddHttpContextAccessor();
+
+        // ── Resolve Ollama configuration ──
+        TokenSaverConfig ollamaConfig = builder.Configuration
+            .GetSection(TokenSaverConfig.SectionName)
+            .Get<TokenSaverConfig>() ?? new TokenSaverConfig();
+
+        // Propagate resolved configuration back into DI
+        string resolvedOllamaUrl = ollamaConfig.OllamaUrl;
+        builder.Services.PostConfigure<TokenSaverConfig>(cfg => cfg.OllamaUrl = resolvedOllamaUrl);
+
+        Collection<OllamaEndpointConfig> resolvedEndpoints = ollamaConfig.Endpoints;
+        builder.Services.PostConfigure<TokenSaverConfig>(cfg => cfg.Endpoints = resolvedEndpoints);
+
+        // WorkspaceRoot is resolved lazily by WorkspaceRootSessionResolver on first tool call
+        if (!string.IsNullOrWhiteSpace(ollamaConfig.WorkspaceRoot))
+        {
+            builder.Services.PostConfigure<TokenSaverConfig>(cfg => cfg.WorkspaceRoot = ollamaConfig.WorkspaceRoot);
+        }
+
+        // Behavior config path (defaults to {workspaceRoot}/.tokensaver/config.json)
+        if (!string.IsNullOrWhiteSpace(ollamaConfig.BehaviorConfigPath))
+        {
+            Environment.SetEnvironmentVariable("TOKENSAVER_LOCAL_CONFIG_PATH", ollamaConfig.BehaviorConfigPath);
+        }
+
+                return ollamaConfig;
+    }
+
+    /// <summary>Logs the server-starting line with the resolved port, Ollama URL and workspace.</summary>
+    internal static void LogServerStarting(WebApplication app, bool isStdio)
+    {
+        using (IServiceScope scope = app.Services.CreateScope())
+        {
+            ILogger<Program> logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+            TokenSaverConfig config = scope.ServiceProvider.GetRequiredService<IOptions<TokenSaverConfig>>().Value;
+
+            string transportMode = isStdio ? "stdio+http" : "http";
+            Program.LogServerStarting(logger, config.ServerPort, config.OllamaUrl, config.WorkspaceRoot ?? "(none)", transportMode);
+
+            // Warm up model/index asynchronously (non-blocking)
+            // The workspace index service is registered but warmup is deferred until first tool call
+            // when WorkspaceRoot is actually known (resolved by WorkspaceRootSessionResolver).
+        }
+    }
+
+    /// <summary>Runs the HTTP server, mapping port-in-use and fatal failures to clear exits.</summary>
+    internal static void RunServer(WebApplication app)
+    {
+        try
+        {
+            TokenSaverConfig config = app.Services.GetRequiredService<IOptions<TokenSaverConfig>>().Value;
+            app.Run($"http://*:{config.ServerPort}");
+        }
+        catch (IOException ex) when (ex.InnerException is AddressInUseException)
+        {
+            using (IServiceScope scope = app.Services.CreateScope())
+            {
+                ILogger<Program> logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+                TokenSaverConfig config = scope.ServiceProvider.GetRequiredService<IOptions<TokenSaverConfig>>().Value;
+                Program.LogPortInUse(logger, config.ServerPort);
+            }
+
+            Environment.Exit(1);
+        }
+        catch (Exception ex)
+        {
+            // Anything that stops the server after startup (host failure, fatal error in a hosted service)
+            // is recorded before the process exits; the exception then propagates as before.
+            Program.WriteFatal("ServerStopped", ex);
+            throw;
+        }
+    }
+
+    internal static string? GetArgValue(string[] args, string name)
+    {
+        int i = Array.IndexOf(args, name);
+        return i >= 0 && i + 1 < args.Length ? args[i + 1] : null;
+    }
+
+    /// <summary>Logs who requested shutdown, and when, once the host is stopping.</summary>
+    internal static void RegisterShutdownLogging(WebApplication app)
+    {
+            IHostApplicationLifetime lifetime = app.Services.GetRequiredService<IHostApplicationLifetime>();
+            ILogger<Program> stopLogger = app.Services.GetRequiredService<ILogger<Program>>();
+            DateTimeOffset startedAt = DateTimeOffset.UtcNow;
+            _ = lifetime.ApplicationStopping.Register(() =>
+                Program.LogShutdownRequested(stopLogger, (DateTimeOffset.UtcNow - startedAt).TotalSeconds, Program.ReadAndClearStopRequest()));
+    }
+
 }
