@@ -127,6 +127,52 @@ public sealed class FolderFileTableTests : IDisposable
     }
 
     [Fact]
+    public void CheckSync_TableMissing_ReportsMissing()
+    {
+        File.WriteAllText(Path.Combine(_root, "CLAUDE.md"), "# Repo\n\nSee docs/folder-index.md.\n");
+
+        IReadOnlyList<string> problems = FolderFileTable.CheckSync(_root);
+
+        Assert.Contains(problems, p => p.Contains("missing", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void CheckSync_TableStale_ReportsStale()
+    {
+        Directory.CreateDirectory(Path.Combine(_root, "docs"));
+        File.WriteAllText(Path.Combine(_root, "CLAUDE.md"), "# Repo\n\nSee docs/folder-index.md.\n");
+        File.WriteAllText(Path.Combine(_root, "docs", "guide.md"), "# Guide\n\nSummary.\n");
+        File.WriteAllText(Path.Combine(_root, "docs", "folder-index.md"), "| old |\n");
+
+        IReadOnlyList<string> problems = FolderFileTable.CheckSync(_root);
+
+        Assert.Contains(problems, p => p.Contains("stale", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void CheckSync_TableCurrentAndLinked_ReturnsNoProblems()
+    {
+        Directory.CreateDirectory(Path.Combine(_root, "docs"));
+        File.WriteAllText(Path.Combine(_root, "CLAUDE.md"), "# Repo\n\nSee docs/folder-index.md.\n");
+        File.WriteAllText(Path.Combine(_root, "docs", "guide.md"), "# Guide\n\nSummary.\n");
+        FolderFileTable.Generate(_root);
+
+        Assert.Empty(FolderFileTable.CheckSync(_root));
+    }
+
+    [Fact]
+    public void CheckSync_ClaudeMdNotLinkedToTable_ReportsUnlinked()
+    {
+        Directory.CreateDirectory(Path.Combine(_root, "docs"));
+        File.WriteAllText(Path.Combine(_root, "CLAUDE.md"), "# Repo\n\nNo pointer here.\n");
+        FolderFileTable.Generate(_root);
+
+        IReadOnlyList<string> problems = FolderFileTable.CheckSync(_root);
+
+        Assert.Contains(problems, p => p.Contains("CLAUDE.md", StringComparison.Ordinal) && p.Contains("link", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
     public void Collect_Rows_CarryCodeLinkAndNoBody()
     {
         Directory.CreateDirectory(Path.Combine(_root, "docs"));

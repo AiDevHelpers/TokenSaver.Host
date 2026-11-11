@@ -235,7 +235,8 @@ builder.Services
 builder.Services.AddHealthChecks()
     .AddCheck<SimpleModelServerHealthCheck>("simplemodelserver", tags: ["ready"])
     .AddCheck<UnhandledFaultHealthCheck>("unhandled-fault")
-    .AddCheck<SelfTestHealthCheck>("self-test");
+    .AddCheck<SelfTestHealthCheck>("self-test")
+    .AddCheck<FolderIndexHealthCheck>("folder-index");
 
 // ── MCP Server ──
 // Both SSE (GET) and streamable-http (POST) are supported on the same /mcp endpoint.

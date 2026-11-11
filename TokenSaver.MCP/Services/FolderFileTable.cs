@@ -90,6 +90,33 @@ public static class FolderFileTable
         return (path, WriteIfChanged(path, content));
     }
 
+    /// <summary>
+    ///     Drift problems for the generated table: missing, stale against a fresh scan, or not linked from CLAUDE.md.
+    ///     Empty when everything is in sync. Read-only.
+    /// </summary>
+    public static IReadOnlyList<string> CheckSync(string root)
+    {
+        var problems = new List<string>();
+        string tablePath = Path.Combine(root, "docs", "folder-index.md");
+
+        if (!File.Exists(tablePath))
+        {
+            problems.Add("docs/folder-index.md is missing; run code_index(action: 'table').");
+        }
+        else if (File.ReadAllText(tablePath) != Render(Collect(root)))
+        {
+            problems.Add("docs/folder-index.md is stale; run code_index(action: 'table').");
+        }
+
+        string claudePath = Path.Combine(root, "CLAUDE.md");
+        if (File.Exists(claudePath) && !File.ReadAllText(claudePath).Contains(GeneratedPath, StringComparison.Ordinal))
+        {
+            problems.Add("CLAUDE.md does not link to docs/folder-index.md; add the link.");
+        }
+
+        return problems;
+    }
+
     /// <summary>Writes <paramref name="content" /> to <paramref name="path" /> only when it differs. Returns true when written.</summary>
     public static bool WriteIfChanged(string path, string content)
     {
