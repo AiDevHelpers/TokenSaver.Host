@@ -249,6 +249,7 @@ IMcpServerBuilder mcpBuilder = builder.Services.AddMcpServer(options =>
     .WithTools<AccuracyTestTools>()
     .WithTools<ContextDiagnosticsTools>()
     .WithTools<CodeHelperTools>()
+    .WithTools<IndexChangeTools>()
     .WithTools<AutoWorkflowTools>()
     .WithTools<HelpTools>()
     .WithTools<TokenEconomyTools>()

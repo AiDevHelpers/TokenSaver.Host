@@ -101,6 +101,7 @@ internal static class ServiceRegistrationExtensions
         services.AddSingleton<AiSummarizationService>();
         services.AddSingleton<DependencyTrackingService>();
         services.AddSingleton<WorkspaceIndexService>();
+        services.AddSingleton<IndexChangeQueue>();
         services.AddSingleton<IWorkspaceIndexService>(sp => sp.GetRequiredService<WorkspaceIndexService>());
         services.AddSingleton<BuildArtifactDetector>();
         services.AddSingleton<ContextPipelineService>();

@@ -150,7 +150,7 @@ public sealed class LocalModelHelperToolsTests : IDisposable
             repoIndexer, tokenEconomyDb, NullLogger<SemanticIndexBackgroundTrigger>.Instance);
 
         ContextPipelineService contextPipeline = new(
-            accessor, cleaner, gitStaleness, workspaceConfig, orchestrator, semanticIndexTrigger,
+            accessor, cleaner, workspaceConfig, orchestrator, semanticIndexTrigger,
             savings, calibration, new BuildArtifactDetector(NullLogger<BuildArtifactDetector>.Instance),
             new BehaviorConfigService(NullLogger<BehaviorConfigService>.Instance), configOptions);
 
