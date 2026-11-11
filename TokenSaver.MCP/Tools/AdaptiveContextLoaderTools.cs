@@ -214,7 +214,10 @@ internal sealed class AdaptiveContextLoaderTools
         {
             var allSegments = await _segmentation.GetSegmentsAsync(ct);
             var forced = allSegments.Where(s => forceIncludeSegments.Contains(s.Id)).ToList();
-            plan.SegmentsToLoad.AddRange(forced.Where(f => !plan.SegmentsToLoad.Any(s => s.Id == f.Id)));
+            foreach (var candidate in forced.Where(f => !plan.SegmentsToLoad.Any(s => s.Id == f.Id)).ToList())
+            {
+                plan.SegmentsToLoad.Add(candidate);
+            }
         }
 
         var sb = new StringBuilder();
