@@ -145,10 +145,16 @@ internal sealed class CodeHelperTools
         DateTimeOffset? codeDate = _symbolScan.GetLastCompletedAt(root);
         (int semanticChunks, long? semanticUpdatedMs) = await _semanticIndex.ChunkSummaryAsync(root, ct);
 
+        (int fileRows, int folderRows) = await _symbolSearch.CountFilesAndFoldersAsync(root, ct);
+        string? folderIndex = FolderFileTable.StatusLine(root);
+
         // Both indexes always report the same four fields: type, chunks, status, date.
         return System.Text.Json.JsonSerializer.Serialize(new
         {
             root,
+            files = fileRows,
+            folders = folderRows,
+            folder_index = folderIndex,
             indexes = new object[]
             {
                 new
