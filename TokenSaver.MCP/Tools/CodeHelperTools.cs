@@ -174,6 +174,7 @@ internal sealed class CodeHelperTools
                     type = "semantic",
                     chunks = semanticChunks,
                     status = _semanticIndex.IsRunning(root) ? "running"
+                        : _semanticIndex.NeedsRebuild(root) ? "needs_rebuild"
                         : semanticChunks > 0 ? "built"
                         : semanticError is not null ? "failed"
                         : "not_started",
