@@ -133,6 +133,7 @@ internal static class ServiceRegistrationExtensions
         services.AddSingleton<IDistillationService, DistillationService>();
         services.AddSingleton<RawArtifactWriter>();
         services.AddSingleton<IChunkExtractor, ChunkExtractor>();
+        services.AddSingleton<IndexPauseGate>();
         services.AddSingleton<IRepoIndexer, RepoIndexer>();
         services.AddSingleton<IndexSelfTest>();
         services.AddSingleton<SemanticQualitySelfTest>();

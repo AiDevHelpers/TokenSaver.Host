@@ -129,4 +129,24 @@ public class SemanticIndexToolsTests
         Assert.Equal(root, result.GetProperty("root").GetString());
         Assert.Equal("not_started", result.GetProperty("status").GetString());
     }
+    [Fact]
+    public async Task IndexPause_PauseThenResume_ReportsPausedThenIdle()
+    {
+        string root = Path.Combine(Path.GetTempPath(), "pause-" + Guid.NewGuid().ToString("N"));
+        _ = Directory.CreateDirectory(root);
+        try
+        {
+            SemanticIndexTools tools = CreateTools(new FakeConditionalRetrievalService());
+
+            string paused = await tools.IndexPause(rootPath: root);
+            Assert.Contains("\"status\":\"paused\"", paused, StringComparison.Ordinal);
+
+            string resumed = await tools.IndexPause(rootPath: root, resume: true);
+            Assert.Contains("\"status\":\"idle\"", resumed, StringComparison.Ordinal);
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
 }
