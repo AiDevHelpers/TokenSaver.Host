@@ -229,6 +229,20 @@ internal sealed partial class WorkspaceRootSessionResolver
             {
                 LogInitialIndexSkipped(_logger, ex);
             }
+
+            // Folder/file index table (docs/folder-index.md), refreshed on connection like the code
+            // and semantic indexes. Only for workspaces that have a docs/ folder to index.
+            try
+            {
+                if (Directory.Exists(Path.Combine(root, "docs")))
+                {
+                    _ = FolderFileTable.Generate(root);
+                }
+            }
+            catch (Exception ex)
+            {
+                LogInitialIndexSkipped(_logger, ex);
+            }
         });
 
         // Chunk/embedding index for SemanticGrep. Runs on every new session root, independent of
