@@ -205,11 +205,13 @@ internal sealed class LocalModelHelperTools
         }
 
         var (caller, modelAdapter, clientAdapter, format) = ResolveCallerContext(root);
-        ContextBuildResult result = await _contextPipeline.BuildConciseContextAsync(
-            prompt, history, sessionId, resolvedFiles.ToArray(), root,
-            avoidChainOfThought: format.AvoidChainOfThought,
-            perFileTokenLimit: format.PerFileTokenLimit,
-            ct: ct);
+        var pipeline = await BuildPipelineAsync(prompt, history, sessionId, resolvedFiles.ToArray(), root, format, ct);
+        if (pipeline.RebuildJson is not null)
+        {
+            return pipeline.RebuildJson;
+        }
+
+        var result = pipeline.Result!;
 
         // Hard limit exceeded — ContextPipelineService already replaced ContextText
         // with the "CONTEXT STOPPED" message; return it as-is.
@@ -488,6 +490,25 @@ internal sealed class LocalModelHelperTools
 
         return sb.ToString().TrimEnd();
     }
+    /// <summary>Runs the context pipeline; a broken stored schema comes back as a rebuild prompt instead of an error.</summary>
+    private async Task<(ContextBuildResult? Result, string? RebuildJson)> BuildPipelineAsync(
+        string prompt, string[]? history, string? sessionId, string[] files, string root, ContextFormat format, CancellationToken ct)
+    {
+        try
+        {
+            ContextBuildResult result = await _contextPipeline.BuildConciseContextAsync(
+                prompt, history, sessionId, files, root,
+                avoidChainOfThought: format.AvoidChainOfThought,
+                perFileTokenLimit: format.PerFileTokenLimit,
+                ct: ct);
+            return (result, null);
+        }
+        catch (Exception ex) when (IndexSchemaGuard.IsSchemaMismatch(ex))
+        {
+            return (null, IndexSchemaGuard.NeedsRebuildJson(root, ex));
+        }
+    }
+
     /// <summary>Resolves explicitly requested files: direct paths, bare filename searches, and gitignore confirmation.</summary>
     private static void ResolveRequestedFiles(
         string[]? requestedFiles,
