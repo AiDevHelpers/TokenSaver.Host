@@ -100,7 +100,16 @@ internal sealed class SemanticIndexTools(
         bool running = indexTrigger.IsRunning(root);
         string? error = indexTrigger.GetLastError(root);
         // Read from the database, not process memory: a restarted server still has chunks on disk.
-        (int chunksStored, long? lastUpdatedMs) = await indexTrigger.ChunkSummaryAsync(root, ct);
+        int chunksStored = 0;
+        long? lastUpdatedMs = null;
+        try
+        {
+            (chunksStored, lastUpdatedMs) = await indexTrigger.ChunkSummaryAsync(root, ct);
+        }
+        catch (Exception ex) when (IndexSchemaGuard.IsSchemaMismatch(ex))
+        {
+            return IndexSchemaGuard.NeedsRebuildJson(root, ex);
+        }
         object? last = null;
         if (indexTrigger.TryGetLastStats(root, out RepoIndexStats? stats) && stats is not null)
         {
@@ -121,12 +130,14 @@ internal sealed class SemanticIndexTools(
             root,
             chunks = chunksStored,
             status = running ? "running"
+                : indexTrigger.NeedsRebuild(root) ? "needs_rebuild"
                 : chunksStored > 0 ? "built"
                 : error is not null ? "failed"
                 : "not_started",
             date = lastUpdatedMs is long ms ? DateTimeOffset.FromUnixTimeMilliseconds(ms).ToString("o") : null,
             last_completed = last,
-            last_error = error
+            last_error = error,
+            rebuild = indexTrigger.NeedsRebuild(root) ? IndexSchemaGuard.RebuildHint : null
         });
     }
 
@@ -158,13 +169,23 @@ internal sealed class SemanticIndexTools(
             return NoRootJson();
         }
 
-        string? waitResult = await WaitForIndexAsync(root, progress, ct);
-        if (waitResult is not null)
+        string? waitResult;
+        RetrievalOutcome outcome;
+        try
         {
-            return waitResult;
+            waitResult = await WaitForIndexAsync(root, progress, ct);
+            if (waitResult is not null)
+            {
+                return waitResult;
+            }
+
+            outcome = await retrieval.RetrieveAsync(root, query, pathFilter, topK, ct);
+        }
+        catch (Exception ex) when (IndexSchemaGuard.IsSchemaMismatch(ex))
+        {
+            return IndexSchemaGuard.NeedsRebuildJson(root, ex);
         }
 
-        RetrievalOutcome outcome = await retrieval.RetrieveAsync(root, query, pathFilter, topK, ct);
 
         if (outcome.Abstained)
         {
