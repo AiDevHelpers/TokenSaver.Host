@@ -87,7 +87,7 @@ internal static class WorkspaceRootSessionResolverTestFactory
             repoIndexer, tokenEconomyDb, NullLogger<SemanticIndexBackgroundTrigger>.Instance);
 
         ContextPipelineService contextPipeline = new(
-            accessor, cleaner, gitStaleness, workspaceConfig, indexService, semanticIndexTrigger,
+            accessor, cleaner, workspaceConfig, indexService, semanticIndexTrigger,
             savings, calibration, new BuildArtifactDetector(NullLogger<BuildArtifactDetector>.Instance),
             new BehaviorConfigService(NullLogger<BehaviorConfigService>.Instance), configOptions);
 

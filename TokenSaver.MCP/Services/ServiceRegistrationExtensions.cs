@@ -101,6 +101,7 @@ internal static class ServiceRegistrationExtensions
         services.AddSingleton<AiSummarizationService>();
         services.AddSingleton<DependencyTrackingService>();
         services.AddSingleton<WorkspaceIndexService>();
+        services.AddSingleton<IndexChangeBuffer>();
         services.AddSingleton<IWorkspaceIndexService>(sp => sp.GetRequiredService<WorkspaceIndexService>());
         services.AddSingleton<BuildArtifactDetector>();
         services.AddSingleton<ContextPipelineService>();
@@ -134,6 +135,7 @@ internal static class ServiceRegistrationExtensions
         services.AddSingleton<IChunkExtractor, ChunkExtractor>();
         services.AddSingleton<IRepoIndexer, RepoIndexer>();
         services.AddSingleton<IndexSelfTest>();
+        services.AddSingleton<SemanticQualitySelfTest>();
         services.AddSingleton<ISemanticSearchService, SemanticSearchService>();
         services.AddSingleton<IRerankService, RerankService>();
         services.AddSingleton<IConditionalRetrievalService, ConditionalRetrievalService>();
@@ -154,6 +156,7 @@ internal static class ServiceRegistrationExtensions
         services.AddTransient<EndpointRoutingHandler>();
         services.AddHostedService<EndpointHealthMonitor>();
         services.AddHostedService<GitignoreWatcherService>();
+        services.AddHostedService<GitRepoWatcherService>();
         services.AddHostedService<McpRegistrationCheckService>();
 
         // Ollama service client (5-minute timeout for long-running operations)

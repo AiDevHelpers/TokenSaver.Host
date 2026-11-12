@@ -25,7 +25,8 @@ internal sealed class ContextDiagnosticsTools(
     WorkspaceConfigManager workspaceConfig,
     WorkspaceRootSessionResolver workspaceRootResolver,
     RetrievalCalibrationService retrievalCalibration,
-    IndexSelfTest indexSelfTest)
+    IndexSelfTest indexSelfTest,
+    SemanticQualitySelfTest semanticQualitySelfTest)
 {
     // ── ContextDiag ───────────────────────────────────────────────────────────
 
@@ -248,12 +249,21 @@ internal sealed class ContextDiagnosticsTools(
             ? string.Format(CultureInfo.InvariantCulture, "✓ PASS — index: {0} of {1} known files scanned, {2} chunks stored.", index.FilesScanned, index.FilesExpected, index.ChunksStored)
             : string.Format(CultureInfo.InvariantCulture, "✗ FAIL — index: {0} of {1} known files scanned, {2} indexed, {3} stored, {4} failed.", index.FilesScanned, index.FilesExpected, index.ChunksIndexed, index.ChunksStored, index.ChunksFailed);
 
+        SemanticQualityResult quality = await semanticQualitySelfTest.RunAsync(ct);
+        int qualityOk = quality.Cases.Count(c => c.SummaryOk && c.RetrievalOk);
+        string qualityVerdict = quality.Passed
+            ? string.Format(CultureInfo.InvariantCulture, "✓ PASS — semantic quality: {0} of {1} known functions summarized correctly and found by a plain-English query.", qualityOk, quality.Cases.Count)
+            : string.Format(CultureInfo.InvariantCulture, "✗ FAIL — semantic quality: {0} of {1} known functions summarized correctly and found by a plain-English query.", qualityOk, quality.Cases.Count);
+
         StringBuilder sb = new();
         _ = sb.AppendLine(verdict);
         _ = sb.AppendLine(result.Narrative);
         _ = sb.AppendLine();
         _ = sb.AppendLine(indexVerdict);
         _ = sb.AppendLine(index.Narrative);
+        _ = sb.AppendLine();
+        _ = sb.AppendLine(qualityVerdict);
+        _ = sb.AppendLine(quality.Narrative);
 
         return sb.ToString().TrimEnd();
     }
