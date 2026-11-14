@@ -263,6 +263,7 @@ IMcpServerBuilder mcpBuilder = builder.Services.AddMcpServer(options =>
     .WithTools<DebuggerAnalysisTools>()
     .WithTools<TestExecutionTools>()
     .WithTools<WslControlTools>()
+    .WithTools<IdeTools>()
     .WithTools<LanguageHelperTools>()
     .WithTools<InstructionTools>()
     .WithResources<DocResourceService>()
