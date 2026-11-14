@@ -105,6 +105,35 @@ internal sealed class IdeTools
         IdeInstanceRouter.CallAsync("health", new { }, solutionPath, ct);
 
     [McpServerTool]
+    [Description("List the solution build configurations (e.g. Debug, Release) of an IDE instance and the active one.")]
+    public Task<string> IdeListConfigurations(
+        [Description("Optional: full path of the solution to target")] string? solutionPath = null,
+        CancellationToken ct = default) =>
+        IdeInstanceRouter.CallAsync("listConfigurations", new { }, solutionPath, ct);
+
+    [McpServerTool]
+    [Description("Set the active build configuration (e.g. Debug or Release) of an IDE instance's solution.")]
+    public Task<string> IdeSetConfiguration(
+        [Description("Configuration name, e.g. 'Debug' or 'Release'")] string configuration,
+        [Description("Optional: full path of the solution to target")] string? solutionPath = null,
+        CancellationToken ct = default) =>
+        IdeInstanceRouter.CallAsync("setConfiguration", new { configuration }, solutionPath, ct);
+
+    [McpServerTool]
+    [Description("Clean the solution in an IDE instance using the active configuration.")]
+    public Task<string> IdeClean(
+        [Description("Optional: full path of the solution to target")] string? solutionPath = null,
+        CancellationToken ct = default) =>
+        IdeInstanceRouter.CallAsync("clean", new { }, solutionPath, ct);
+
+    [McpServerTool]
+    [Description("Publish the startup project of an IDE instance with the IDE's publish command, using the active configuration.")]
+    public Task<string> IdePublish(
+        [Description("Optional: full path of the solution to target")] string? solutionPath = null,
+        CancellationToken ct = default) =>
+        IdeInstanceRouter.CallAsync("publish", new { }, solutionPath, ct);
+
+    [McpServerTool]
     [Description("Set a breakpoint at a file and line in an IDE instance.")]
     public Task<string> IdeSetBreakpoint(
         [Description("Full path of the source file")] string file,
