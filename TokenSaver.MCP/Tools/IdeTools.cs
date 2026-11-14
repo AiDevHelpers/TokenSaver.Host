@@ -134,4 +134,35 @@ internal sealed class IdeTools
         [Description("Optional: full path of the solution to target")] string? solutionPath = null,
         CancellationToken ct = default) =>
         IdeInstanceRouter.CallAsync("debugState", new { }, solutionPath, ct);
+
+    [McpServerTool]
+    [Description("Evaluate an expression in the current stack frame of an IDE instance. The debugger must be stopped at a breakpoint.")]
+    public Task<string> IdeEvaluate(
+        [Description("C# expression to evaluate, e.g. 'items.Count'")] string expression,
+        [Description("Optional: full path of the solution to target")] string? solutionPath = null,
+        CancellationToken ct = default) =>
+        IdeInstanceRouter.CallAsync("evaluate", new { expression }, solutionPath, ct);
+
+    [McpServerTool]
+    [Description("Add a watch expression to an IDE instance's watch list. Watches are kept by the extension, not the Watch window.")]
+    public Task<string> IdeAddWatch(
+        [Description("Expression to watch")] string expression,
+        [Description("Optional: full path of the solution to target")] string? solutionPath = null,
+        CancellationToken ct = default) =>
+        IdeInstanceRouter.CallAsync("addWatch", new { expression }, solutionPath, ct);
+
+    [McpServerTool]
+    [Description("Remove a watch expression from an IDE instance's watch list.")]
+    public Task<string> IdeRemoveWatch(
+        [Description("Expression to remove")] string expression,
+        [Description("Optional: full path of the solution to target")] string? solutionPath = null,
+        CancellationToken ct = default) =>
+        IdeInstanceRouter.CallAsync("removeWatch", new { expression }, solutionPath, ct);
+
+    [McpServerTool]
+    [Description("List an IDE instance's watch expressions with their current values (when stopped at a breakpoint).")]
+    public Task<string> IdeListWatches(
+        [Description("Optional: full path of the solution to target")] string? solutionPath = null,
+        CancellationToken ct = default) =>
+        IdeInstanceRouter.CallAsync("listWatches", new { }, solutionPath, ct);
 }

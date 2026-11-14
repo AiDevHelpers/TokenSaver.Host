@@ -102,7 +102,28 @@ if (!isWindowsService && !Console.IsInputRedirected)
 // ── BUILD & CONFIGURE SERVICES ──
 // ═══════════════════════════════════════════════════════════════════════════════
 
-WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
+// ── Settings live in %ProgramData%\TokenSaver ──
+// The content root is the ProgramData folder, so WebApplication loads its appsettings.json from there
+// and nothing is layered from the install folder. On first run the install's shipped appsettings.json is
+// copied in as the starting point; after that only the ProgramData file is read.
+string dataDirectory = Path.Combine(
+    Environment.GetEnvironmentVariable("ProgramData") ?? @"C:\ProgramData", "TokenSaver");
+string settingsPath = Path.Combine(dataDirectory, "appsettings.json");
+Directory.CreateDirectory(dataDirectory);
+if (!File.Exists(settingsPath))
+{
+    string shipped = Path.Combine(AppContext.BaseDirectory, "appsettings.json");
+    if (File.Exists(shipped))
+    {
+        File.Copy(shipped, settingsPath);
+    }
+}
+
+WebApplicationBuilder builder = WebApplication.CreateBuilder(new WebApplicationOptions
+{
+    Args = args,
+    ContentRootPath = dataDirectory,
+});
 
 // ── Load optional external server config file ──
 // --server-config <path> layers an additional JSON config file on top of the default
