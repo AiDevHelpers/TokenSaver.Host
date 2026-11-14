@@ -96,6 +96,15 @@ internal sealed class IdeTools
         IdeInstanceRouter.CallAsync("getLocals", new { maxItems }, solutionPath, ct);
 
     [McpServerTool]
+    [Description("Check the bridge health of an IDE instance: whether its listener is running, when it started, " +
+                 "when it last handled a request, how many requests it has handled, and its solution. " +
+                 "Answered even while the IDE is busy.")]
+    public Task<string> IdeBridgeHealth(
+        [Description("Optional: full path of the solution to target")] string? solutionPath = null,
+        CancellationToken ct = default) =>
+        IdeInstanceRouter.CallAsync("health", new { }, solutionPath, ct);
+
+    [McpServerTool]
     [Description("Set a breakpoint at a file and line in an IDE instance.")]
     public Task<string> IdeSetBreakpoint(
         [Description("Full path of the source file")] string file,
