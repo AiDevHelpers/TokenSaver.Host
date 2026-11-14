@@ -10,7 +10,7 @@ using Serilog.Events;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 
-using TokenSaver.Common.Logging;
+using SperryDev.Logger.Configuration;
 using TokenSaver.Common.Core.Configuration;
 using TokenSaver.Common.Installation;
 using TokenSaver.Common.Models;
@@ -145,7 +145,7 @@ if (isWindowsService)
 }
 
 // ── Configure logging ──
-// Serilog-backed logging via TokenSaver.Common.Logging (shared with SimpleModelServer).
+// Serilog-backed logging via SperryDev.Logger (shared with SimpleModelServer).
 // Providers: Console (single-line) + File (%ProgramData%\TokenSaver\logs) + EventLog + VS Code JSON
 if (isWindowsService && OperatingSystem.IsWindows())
 {
@@ -158,7 +158,7 @@ LogEventLevel minimumLevel =
         : LogEventLevel.Information;
 
 builder.Logging.ClearProviders();
-builder.Host.UseAppLogging(LogChannel.TokenSaver, minimumLevel, cfg =>
+builder.Host.UseAppLogging("TokenSaver", minimumLevel, cfg =>
 {
     cfg.MinimumLevel.Override("System.Net.Http.HttpClient", LogEventLevel.Warning);
     cfg.MinimumLevel.Override("Microsoft.Extensions.Diagnostics.HealthChecks", LogEventLevel.Warning);

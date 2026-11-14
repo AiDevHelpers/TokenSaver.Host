@@ -31,7 +31,7 @@
     <ProjectReference Include="..\..\AgentHelpers\TokenSaver.AgentHelpers.Qwen\TokenSaver.AgentHelpers.Qwen.csproj" />
     <ProjectReference Include="..\..\AgentHelpers\TokenSaver.AgentHelpers.DeepSeek\TokenSaver.AgentHelpers.DeepSeek.csproj" />
     <ProjectReference Include="..\..\AgentHelpers\TokenSaver.AgentHelpers.OpenSource\TokenSaver.AgentHelpers.OpenSource.csproj" />
-    <PackageReference Include="TokenSaver.Common.Logging" Version="1.0.*-*" />
+    <PackageReference Include="SperryDev.Logger" Version="0.2.0-local1" />
     <ProjectReference Include="..\..\Common\TokenSaver.Common.Installation\TokenSaver.Common.Installation.csproj" />
     <ProjectReference Include="..\..\Common\TokenSaver.Common.Models\TokenSaver.Common.Models.csproj" />
   </ItemGroup>
