@@ -1,7 +1,9 @@
 using System.ComponentModel;
+using System.Text.Json;
 
 using ModelContextProtocol.Server;
 
+using TokenSaver.Common.Core.Configuration;
 using TokenSaver.MCP.Services;
 
 namespace TokenSaver.MCP.Tools;
@@ -11,8 +13,20 @@ namespace TokenSaver.MCP.Tools;
 ///     (<c>ide</c>, <c>instance_pid</c>, <c>solution_path</c>), so the caller always knows what it acted on.
 /// </summary>
 [McpServerToolType]
-internal sealed class IdeTools
+internal sealed class IdeTools(TokenSaverConfig config)
 {
+    // Resolves the solution a test-result call refers to: the given path, or the only open instance's solution.
+    private static string? ResolveSolution(string? solutionPath)
+    {
+        if (!string.IsNullOrWhiteSpace(solutionPath))
+        {
+            return solutionPath;
+        }
+
+        var instances = VsInstanceRegistry.ListRunning();
+        return instances.Count == 1 ? instances[0].SolutionPath : null;
+    }
+
     [McpServerTool]
     [Description("List running IDE instances (currently Visual Studio) with their process id and the solution each has open.")]
     public string IdeListInstances() => IdeInstanceRouter.ListInstances();
@@ -41,12 +55,52 @@ internal sealed class IdeTools
         IdeInstanceRouter.CallAsync("stopDebugging", new { }, solutionPath, ct);
 
     [McpServerTool]
-    [Description("Run all tests in the solution of an IDE instance through Test Explorer. " +
-                 "Pass solutionPath when several instances are open.")]
+    [Description("Run all tests in the solution. The server setting IdeTestRunMode picks the method: 'TestExplorer' " +
+                 "(default) triggers Test Explorer in the IDE; 'DotnetTest' runs dotnet test with a TRX file. " +
+                 "Pass solutionPath when several instances are open. Use IdeGetTestResults for the outcome.")]
     public Task<string> IdeRunTests(
         [Description("Optional: full path of the solution to target")] string? solutionPath = null,
+        CancellationToken ct = default)
+    {
+        if (IdeTestRunService.NormalizeMode(config.IdeTestRunMode) == IdeTestRunService.DotnetTestMode)
+        {
+            var solution = ResolveSolution(solutionPath);
+            return solution is null
+                ? Task.FromResult(JsonSerializer.Serialize(new { ok = false, error = "Pass solutionPath: no single open instance to infer it from." }))
+                : IdeTestRunService.RunDotnetTestAsync(solution, ct);
+        }
+
+        return IdeInstanceRouter.CallAsync("runTests", new { }, solutionPath, ct);
+    }
+
+    [McpServerTool]
+    [Description("Get the outcome of the newest test run for the solution: counts and failure messages from its TRX file. " +
+                 "Covers runs from IdeRunTests in either mode, and TRX files written by other test runs in the solution's TestResults folder.")]
+    public string IdeGetTestResults(
+        [Description("Optional: full path of the solution to read results for")] string? solutionPath = null)
+    {
+        var solution = ResolveSolution(solutionPath);
+        return solution is null
+            ? JsonSerializer.Serialize(new { ok = false, error = "Pass solutionPath: no single open instance to infer it from." })
+            : IdeTestRunService.GetLatestResult(solution);
+    }
+
+    [McpServerTool]
+    [Description("Search the lines of an IDE output pane for a regex pattern. Returns the matching lines.")]
+    public Task<string> IdeSearchOutput(
+        [Description("Regex pattern to match against each output line")] string pattern,
+        [Description("Output pane name, e.g. 'Build' or 'Debug'")] string pane = "Build",
+        [Description("Optional: full path of the solution to target")] string? solutionPath = null,
         CancellationToken ct = default) =>
-        IdeInstanceRouter.CallAsync("runTests", new { }, solutionPath, ct);
+        IdeInstanceRouter.CallAsync("searchOutput", new { pattern, pane }, solutionPath, ct);
+
+    [McpServerTool]
+    [Description("Clear an output pane in an IDE instance.")]
+    public Task<string> IdeClearOutput(
+        [Description("Output pane name, e.g. 'Build' or 'Debug'")] string pane = "Build",
+        [Description("Optional: full path of the solution to target")] string? solutionPath = null,
+        CancellationToken ct = default) =>
+        IdeInstanceRouter.CallAsync("clearOutput", new { pane }, solutionPath, ct);
 
     [McpServerTool]
     [Description("Format the active document in an IDE instance. Pass solutionPath when several instances are open.")]
