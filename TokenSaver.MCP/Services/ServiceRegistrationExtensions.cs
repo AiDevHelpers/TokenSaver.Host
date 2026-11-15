@@ -27,6 +27,7 @@ using TokenSaver.LogHelper.Contracts;
 using TokenSaver.LogHelper.Models;
 using TokenSaver.LogHelper.Services;
 using TokenSaver.LogHelper.Sources;
+using TokenSaver.MCP.Services.LogSources;
 using TokenSaver.LanguageHelpers.CSharp.Extensions;
 using TokenSaver.LanguageHelpers.PowerShell.Extensions;
 using TokenSaver.LanguageHelpers.Python.Extensions;
@@ -353,6 +354,9 @@ internal static class ServiceRegistrationExtensions
             };
         });
         services.AddSingleton<ILogSourceProvider>(sp => new FileLogSourceProvider(sp.GetRequiredService<LogHelperOptions>()));
+        services.AddSingleton<IIdeLogBridge, IdeLogBridge>();
+        services.AddSingleton<ILogSourceProvider>(_ => new VsCodeLogSourceProvider(() => VsInstanceRegistry.ListRunning()));
+        services.AddSingleton<ILogSourceProvider>(sp => new DebugSessionLogSourceProvider(sp.GetRequiredService<IIdeLogBridge>()));
         services.AddSingleton<ILogService>(sp =>
             new LogService(sp.GetServices<ILogSourceProvider>(), sp.GetRequiredService<LogHelperOptions>()));
         return services;
