@@ -186,6 +186,7 @@ internal sealed class DevLoopTools(
 
         using Process process = new() { StartInfo = startInfo };
         _ = process.Start();
+        ManagedProcessRegistry.Track(process, "dev command");
         Task<string> stdoutTask = process.StandardOutput.ReadToEndAsync(ct);
         Task<string> stderrTask = process.StandardError.ReadToEndAsync(ct);
 
@@ -470,6 +471,7 @@ internal sealed class DevLoopTools(
         using Process process = new() { StartInfo = startInfo };
 
         _ = process.Start();
+        ManagedProcessRegistry.Track(process, "dev command");
         string stdout = await process.StandardOutput.ReadToEndAsync(ct);
         string stderr = await process.StandardError.ReadToEndAsync(ct);
         await process.WaitForExitAsync(ct);

@@ -134,6 +134,21 @@ internal sealed class IdeTools
         IdeInstanceRouter.CallAsync("publish", new { }, solutionPath, ct);
 
     [McpServerTool]
+    [Description("Launch a Visual Studio instance with a solution open. Reuses an instance that already has it open. " +
+                 "Waits for the instance's bridge to come up.")]
+    public Task<string> IdeLaunchInstance(
+        [Description("Full path of the .sln file to open")] string solutionPath,
+        CancellationToken ct = default) =>
+        IdeInstanceLifecycle.LaunchAsync(solutionPath, ct);
+
+    [McpServerTool]
+    [Description("Save all documents and then kill a Visual Studio instance. Refuses, killing nothing, if any document is still unsaved.")]
+    public Task<string> IdeKillInstance(
+        [Description("Optional: full path of the solution to target")] string? solutionPath = null,
+        CancellationToken ct = default) =>
+        IdeInstanceLifecycle.KillAsync(solutionPath, ct);
+
+    [McpServerTool]
     [Description("Set a breakpoint at a file and line in an IDE instance.")]
     public Task<string> IdeSetBreakpoint(
         [Description("Full path of the source file")] string file,

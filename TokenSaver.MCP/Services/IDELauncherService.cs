@@ -184,6 +184,7 @@ internal sealed class IDELauncherService : IIDELauncher
         };
 
         process.Start();
+        ManagedProcessRegistry.Track(process, "IDE launch");
         return (process, null);
     }
 
@@ -214,6 +215,7 @@ internal sealed class IDELauncherService : IIDELauncher
         };
 
         process.Start();
+        ManagedProcessRegistry.Track(process, "IDE launch");
         return (process, null);
     }
 
@@ -249,7 +251,7 @@ internal sealed class IDELauncherService : IIDELauncher
         }
     }
 
-    private string? FindVisualStudioPath()
+    internal static string? FindVisualStudioPath()
     {
         // Common VS 2022/2026 paths on Windows
         var possiblePaths = new[]

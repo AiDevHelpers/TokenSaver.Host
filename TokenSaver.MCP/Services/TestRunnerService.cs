@@ -156,6 +156,7 @@ internal sealed class TestRunnerService : ITestRunner
         {
             var sw = Stopwatch.StartNew();
             var process = Process.Start(startInfo);
+            ManagedProcessRegistry.Track(process, "test run");
 
             if (process == null)
             {
