@@ -60,11 +60,7 @@ internal sealed class DebugSessionLogSource : ILogSource
 
     public async Task<LogReadBatch> ReadAsync(string? cursor, int maxEntries, CancellationToken ct)
     {
-        long fromSeq = 1;
-        if (LogCursor.TryDecode(cursor, out string payload))
-        {
-            fromSeq = JsonSerializer.Deserialize<DebugCursor>(payload)?.Seq ?? 1;
-        }
+        long fromSeq = DecodeSeq(cursor);
 
         int maxLines = Math.Clamp(maxEntries, 1, MaxPage);
         string reply = await _bridge.CallAsync(
@@ -83,6 +79,24 @@ internal sealed class DebugSessionLogSource : ILogSource
         var entries = new LogParser(new LogHelperOptions()).Parse(lines);
         string nextCursor = LogCursor.Encode(JsonSerializer.Serialize(new DebugCursor(nextSeq)));
         return new LogReadBatch(entries, nextCursor, Reset: false, Dropped: dropped);
+    }
+
+    // A cursor that does not decode is treated as no cursor, so the read starts from the first line.
+    private static long DecodeSeq(string? cursor)
+    {
+        if (!LogCursor.TryDecode(cursor, out string payload))
+        {
+            return 1;
+        }
+
+        try
+        {
+            return JsonSerializer.Deserialize<DebugCursor>(payload)?.Seq ?? 1;
+        }
+        catch (JsonException)
+        {
+            return 1;
+        }
     }
 
     private sealed record DebugCursor(long Seq);

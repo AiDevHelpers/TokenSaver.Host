@@ -357,6 +357,7 @@ internal static class ServiceRegistrationExtensions
         services.AddSingleton<IIdeLogBridge, IdeLogBridge>();
         services.AddSingleton<ILogSourceProvider>(_ => new VsCodeLogSourceProvider(() => VsInstanceRegistry.ListRunning()));
         services.AddSingleton<ILogSourceProvider>(sp => new DebugSessionLogSourceProvider(sp.GetRequiredService<IIdeLogBridge>()));
+        services.AddSingleton<ILogSourceProvider>(sp => new VsOutputLogSourceProvider(sp.GetRequiredService<IIdeLogBridge>()));
         services.AddSingleton<ILogService>(sp =>
             new LogService(sp.GetServices<ILogSourceProvider>(), sp.GetRequiredService<LogHelperOptions>()));
         return services;

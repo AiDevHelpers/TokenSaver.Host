@@ -88,6 +88,21 @@ public sealed class IdeLogSourceTests : IDisposable
     }
 
     [Fact]
+    public async Task Debug_GarbageCursor_StartsFromBeginning()
+    {
+        var bridge = new FakeIdeLogBridge
+        {
+            Reply = _ => Reply(new { lines = new[] { "[INF] a" }, nextSeq = 2, dropped = 0 }),
+        };
+        var source = new DebugSessionLogSourceProvider(bridge).Open(ChannelId.Parse("debug:s1"));
+
+        var batch = await source.ReadAsync("stale-cursor", 100, CancellationToken.None);
+
+        Assert.Equal(new[] { "a" }, batch.Entries.Select(e => e.Message));
+        Assert.Contains("\"fromSeq\":1", bridge.LastArgsJson, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task Debug_Dropped_SurfacedInResult()
     {
         var bridge = new FakeIdeLogBridge
