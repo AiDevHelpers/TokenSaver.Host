@@ -75,6 +75,18 @@ public sealed class LogToolsTests
     }
 
     [Fact]
+    public async Task LogQuery_PassesViewAndWaitSeconds()
+    {
+        var service = new FakeLogService { Result = Ok("summary text") };
+
+        await CreateTools(service).LogQuery(@"file:C:\x.log", view: "traces", waitSeconds: 12);
+
+        Assert.NotNull(service.LastRequest);
+        Assert.Equal("traces", service.LastRequest!.View);
+        Assert.Equal(12, service.LastRequest.WaitSeconds);
+    }
+
+    [Fact]
     public async Task LogMarkRun_ReturnsRunId()
     {
         var service = new FakeLogService();

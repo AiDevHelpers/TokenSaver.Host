@@ -55,11 +55,13 @@ internal sealed class LogTools
 
     [McpServerTool]
     [Description(
-        "Read one log channel as a filtered summary: repeated messages collapse to counts, most severe first, " +
-        "within maxTokens. Filters: match/exclude are regexes (non-backtracking; no lookaround or backreferences); " +
+        "Read one log channel. view: summary (default; repeated messages collapse to counts, most severe first), " +
+        "traces (stack traces flagged high, medium or low confidence, with reasons), or ignored (what the filter dropped). " +
+        "Filters: match/exclude are regexes (non-backtracking; no lookaround or backreferences); " +
         "minLevel is Trace|Debug|Information|Warning|Error|Critical; category is a prefix. " +
         "Pass the returned cursor as 'since' to read only new entries next time. Use since='lastRun' (after LogMarkRun) " +
-        "to read only messages that are new or changed since the last mark.")]
+        "to read only messages that are new or changed since the last mark. waitSeconds (max 25) holds the call open " +
+        "until something new appears, then returns it with a cursor.")]
     public async Task<string> LogQuery(
         string channel,
         string? match = null,
@@ -69,6 +71,7 @@ internal sealed class LogTools
         string view = "summary",
         string? since = null,
         int maxTokens = 1500,
+        int waitSeconds = 0,
         CancellationToken ct = default)
     {
         if (!ChannelId.TryParse(channel, out ChannelId? channelId) || channelId is null)
@@ -98,7 +101,7 @@ internal sealed class LogTools
             },
             view,
             since,
-            WaitSeconds: 0,
+            WaitSeconds: Math.Clamp(waitSeconds, 0, 25),
             MaxTokens: Math.Clamp(maxTokens, 50, 8000));
 
         var stopwatch = Stopwatch.StartNew();
