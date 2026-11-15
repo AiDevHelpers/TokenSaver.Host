@@ -23,6 +23,10 @@ using TokenSaver.TokenEconomy.Services;
 using TokenSaver.Utilities.Services;
 using TokenSaver.WslControl;
 using TokenSaver.WslControl.Contracts;
+using TokenSaver.LogHelper.Contracts;
+using TokenSaver.LogHelper.Models;
+using TokenSaver.LogHelper.Services;
+using TokenSaver.LogHelper.Sources;
 using TokenSaver.LanguageHelpers.CSharp.Extensions;
 using TokenSaver.LanguageHelpers.PowerShell.Extensions;
 using TokenSaver.LanguageHelpers.Python.Extensions;
@@ -332,6 +336,28 @@ internal static class ServiceRegistrationExtensions
     ///     binds its <see cref="IWslCommandModel" /> seam to the local model (OllamaService), so the
     ///     natural-language planner can route command synthesis through the SimpleModelServer/Ollama router.
     /// </summary>
+    /// <summary>
+    ///     Registers the log helper facade. Allowed roots and the state directory follow the configured
+    ///     workspace root. Options and providers are resolved on first use.
+    /// </summary>
+    public static IServiceCollection AddLogHelperServices(this IServiceCollection services)
+    {
+        services.AddSingleton<LogHelperOptions>(sp =>
+        {
+            string root = sp.GetRequiredService<IOptions<TokenSaverConfig>>().Value.WorkspaceRoot;
+            bool hasRoot = !string.IsNullOrWhiteSpace(root);
+            return new LogHelperOptions
+            {
+                AllowedRoots = hasRoot ? new[] { root } : Array.Empty<string>(),
+                StateDirectory = hasRoot ? Path.Combine(root, ".tokensaver", "logs") : null,
+            };
+        });
+        services.AddSingleton<ILogSourceProvider>(sp => new FileLogSourceProvider(sp.GetRequiredService<LogHelperOptions>()));
+        services.AddSingleton<ILogService>(sp =>
+            new LogService(sp.GetServices<ILogSourceProvider>(), sp.GetRequiredService<LogHelperOptions>()));
+        return services;
+    }
+
     public static IServiceCollection AddWslControlServices(this IServiceCollection services)
     {
         // Bind the WslControl command-model seam to the local model before AddWslControl runs,

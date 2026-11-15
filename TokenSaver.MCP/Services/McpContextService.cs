@@ -51,6 +51,10 @@ internal sealed class McpContextService
             "Manage SimpleModelServer agent config and run accuracy tests. Actions: test | get | update | save."),
         new("Diagnostics", "Context Diag",
             "Inspect context pipeline state, collapsed blocks, and .gitignore health. Actions: describe | block | stats | gitignore | gitignore-add."),
+        new("Diagnostics", "Log Channels",
+            "List log channels the helper can read (files, VS Code, Visual Studio, debug sessions, system logs)."),
+        new("Diagnostics", "Log Query",
+            "Read a log channel as a filtered, deduplicated summary within maxTokens. Filters: match, exclude, minLevel, category; pass the returned cursor as since."),
 
         // Provider registration
         new("Setup", "Register Mcp Providers",
