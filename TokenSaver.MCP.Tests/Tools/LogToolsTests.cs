@@ -75,6 +75,24 @@ public sealed class LogToolsTests
     }
 
     [Fact]
+    public async Task LogMarkRun_ReturnsRunId()
+    {
+        var service = new FakeLogService();
+
+        string text = await CreateTools(service).LogMarkRun(@"file:C:\x.log");
+
+        Assert.Equal("run-000000000000 marked", text);
+    }
+
+    [Fact]
+    public async Task LogMarkRun_InvalidChannel_ReturnsError()
+    {
+        string text = await CreateTools().LogMarkRun("nope:x");
+
+        Assert.StartsWith("Error:", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task LogQuery_InvalidChannel_ReturnsError()
     {
         string text = await CreateTools().LogQuery("nope:x");
@@ -139,8 +157,10 @@ public sealed class LogToolsTests
             return Task.FromResult(Result);
         }
 
+        public LogQueryResult MarkResult { get; set; } = new(true, null, "run-000000000000 marked", 0, 0, null, false);
+
         public Task<LogQueryResult> MarkRunAsync(ChannelId channel, LogRequestContext context, CancellationToken ct) =>
-            throw new NotSupportedException();
+            Task.FromResult(MarkResult);
 
         public Task<LogQueryResult> SinkCompareAsync(ChannelId appChannel, ChannelId sinkChannel, int maxTokens, LogRequestContext context, CancellationToken ct) =>
             throw new NotSupportedException();

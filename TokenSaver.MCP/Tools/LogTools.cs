@@ -58,7 +58,8 @@ internal sealed class LogTools
         "Read one log channel as a filtered summary: repeated messages collapse to counts, most severe first, " +
         "within maxTokens. Filters: match/exclude are regexes (non-backtracking; no lookaround or backreferences); " +
         "minLevel is Trace|Debug|Information|Warning|Error|Critical; category is a prefix. " +
-        "Pass the returned cursor as 'since' to read only new entries next time.")]
+        "Pass the returned cursor as 'since' to read only new entries next time. Use since='lastRun' (after LogMarkRun) " +
+        "to read only messages that are new or changed since the last mark.")]
     public async Task<string> LogQuery(
         string channel,
         string? match = null,
@@ -131,5 +132,20 @@ internal sealed class LogTools
         }
 
         return sb.ToString();
+    }
+
+    [McpServerTool]
+    [Description(
+        "Record a baseline for one log channel. A later LogQuery with since='lastRun' (or since=<run id>) " +
+        "returns only messages that are new or whose counts changed. Returns the run id.")]
+    public async Task<string> LogMarkRun(string channel, CancellationToken ct = default)
+    {
+        if (!ChannelId.TryParse(channel, out ChannelId? channelId) || channelId is null)
+        {
+            return $"Error: invalid channel '{channel}'. Use LogChannels to list valid ids.";
+        }
+
+        LogQueryResult result = await _logs.MarkRunAsync(channelId, new LogRequestContext("mcp"), ct);
+        return result.Ok ? result.Text : $"Error: {result.Error}";
     }
 }
