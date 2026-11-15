@@ -87,6 +87,20 @@ public sealed class LogToolsTests
     }
 
     [Fact]
+    public async Task LogSinkCompare_CallsServiceWithBothChannels()
+    {
+        var service = new FakeLogService { Result = Ok("PRUNE app=0 sink=3 Information heartbeat") };
+
+        string text = await CreateTools(service).LogSinkCompare(@"file:C:\app.log", @"file:C:\sink.log", maxTokens: 900);
+
+        Assert.Equal("PRUNE app=0 sink=3 Information heartbeat", text);
+        Assert.NotNull(service.LastSinkCompare);
+        Assert.Equal(@"file:C:\app.log", service.LastSinkCompare!.Value.App.ToString());
+        Assert.Equal(@"file:C:\sink.log", service.LastSinkCompare.Value.Sink.ToString());
+        Assert.Equal(900, service.LastSinkCompare.Value.MaxTokens);
+    }
+
+    [Fact]
     public async Task LogMarkRun_ReturnsRunId()
     {
         var service = new FakeLogService();
@@ -174,8 +188,13 @@ public sealed class LogToolsTests
         public Task<LogQueryResult> MarkRunAsync(ChannelId channel, LogRequestContext context, CancellationToken ct) =>
             Task.FromResult(MarkResult);
 
-        public Task<LogQueryResult> SinkCompareAsync(ChannelId appChannel, ChannelId sinkChannel, int maxTokens, LogRequestContext context, CancellationToken ct) =>
-            throw new NotSupportedException();
+        public (ChannelId App, ChannelId Sink, int MaxTokens)? LastSinkCompare { get; private set; }
+
+        public Task<LogQueryResult> SinkCompareAsync(ChannelId appChannel, ChannelId sinkChannel, int maxTokens, LogRequestContext context, CancellationToken ct)
+        {
+            LastSinkCompare = (appChannel, sinkChannel, maxTokens);
+            return Task.FromResult(Result);
+        }
     }
 
     private sealed record SavingsCall(string WorkspaceRoot, string Tool, bool Terse, int RawTokens, int DistilledTokens);

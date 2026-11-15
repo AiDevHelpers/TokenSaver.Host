@@ -151,4 +151,25 @@ internal sealed class LogTools
         LogQueryResult result = await _logs.MarkRunAsync(channelId, new LogRequestContext("mcp"), ct);
         return result.Ok ? result.Text : $"Error: {result.Error}";
     }
+
+    [McpServerTool]
+    [Description(
+        "Compare an application log with a system sink (an Event Log or syslog channel). Flags PRUNE: information-level " +
+        "messages the sink holds, which are noise there or can be dropped at the source. Flags ELEVATE: errors the " +
+        "application logs that the sink never receives. Only candidates are reported; nothing is changed.")]
+    public async Task<string> LogSinkCompare(string appChannel, string sinkChannel, int maxTokens = 1500, CancellationToken ct = default)
+    {
+        if (!ChannelId.TryParse(appChannel, out ChannelId? app) || app is null)
+        {
+            return $"Error: invalid application channel '{appChannel}'. Use LogChannels to list valid ids.";
+        }
+
+        if (!ChannelId.TryParse(sinkChannel, out ChannelId? sink) || sink is null)
+        {
+            return $"Error: invalid sink channel '{sinkChannel}'. Use LogChannels to list valid ids.";
+        }
+
+        LogQueryResult result = await _logs.SinkCompareAsync(app, sink, Math.Clamp(maxTokens, 50, 8000), new LogRequestContext("mcp"), ct);
+        return result.Ok ? result.Text : $"Error: {result.Error}";
+    }
 }

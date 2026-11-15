@@ -358,6 +358,11 @@ internal static class ServiceRegistrationExtensions
         services.AddSingleton<ILogSourceProvider>(_ => new VsCodeLogSourceProvider(() => VsInstanceRegistry.ListRunning()));
         services.AddSingleton<ILogSourceProvider>(sp => new DebugSessionLogSourceProvider(sp.GetRequiredService<IIdeLogBridge>()));
         services.AddSingleton<ILogSourceProvider>(sp => new VsOutputLogSourceProvider(sp.GetRequiredService<IIdeLogBridge>()));
+        services.AddSingleton<ILogSourceProvider>(_ => new SyslogSourceProvider(new ProcessRunner(), () => DateTimeOffset.UtcNow));
+        if (OperatingSystem.IsWindows())
+        {
+            services.AddSingleton<ILogSourceProvider>(sp => new EventLogSourceProvider(new ProcessRunner(), sp.GetRequiredService<LogHelperOptions>()));
+        }
         services.AddSingleton<ILogService>(sp =>
             new LogService(sp.GetServices<ILogSourceProvider>(), sp.GetRequiredService<LogHelperOptions>()));
         return services;
