@@ -59,13 +59,13 @@ public sealed class IdeToolsCallTests
     [Fact]
     public async Task IdeSearchOutput_NoInstance_ReportsError()
     {
-        AssertNotOk(await Tools.IdeSearchOutput("error", null, MissingSolution));
+        AssertNotOk(await Tools.IdeSearchOutput("error", "Build", MissingSolution));
     }
 
     [Fact]
     public async Task IdeClearOutput_NoInstance_ReportsError()
     {
-        AssertNotOk(await Tools.IdeClearOutput(null, MissingSolution));
+        AssertNotOk(await Tools.IdeClearOutput("Build", MissingSolution));
     }
 
     [Fact]
@@ -95,7 +95,7 @@ public sealed class IdeToolsCallTests
     [Fact]
     public async Task IdeGetOutput_NoInstance_ReportsError()
     {
-        AssertNotOk(await Tools.IdeGetOutput(null, 200, MissingSolution));
+        AssertNotOk(await Tools.IdeGetOutput("Build", 200, MissingSolution));
     }
 
     [Fact]
