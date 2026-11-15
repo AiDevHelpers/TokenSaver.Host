@@ -1,5 +1,6 @@
 using System.Text.Json;
 
+using Microsoft.Extensions.Options;
 using TokenSaver.Common.Core.Configuration;
 using TokenSaver.MCP.Tools;
 
@@ -16,7 +17,7 @@ public sealed class IdeToolsCallTests
 {
     private const string MissingSolution = @"C:\__tokensaver_no_such_dir__\Missing.sln";
 
-    private static readonly IdeTools Tools = new(new TokenSaverConfig());
+    private static readonly IdeTools Tools = new(Options.Create(new TokenSaverConfig()));
     private static readonly ManagedProcessTools Processes = new();
 
     [Fact]

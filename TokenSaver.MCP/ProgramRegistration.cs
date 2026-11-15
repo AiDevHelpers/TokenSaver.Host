@@ -54,6 +54,8 @@ internal static class TokenSaverHostRegistration
             .WithTools<LanguageHelperTools>()
             .WithTools<InstructionTools>()
             .WithTools<LogTools>()
+            .WithTools<IdeTools>()
+            .WithTools<ManagedProcessTools>()
             .WithResources<DocResourceService>()
             .WithPrompts<BuildConciseContextPrompt>();
 

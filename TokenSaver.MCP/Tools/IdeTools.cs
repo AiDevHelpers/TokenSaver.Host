@@ -3,6 +3,7 @@ using System.Text.Json;
 
 using ModelContextProtocol.Server;
 
+using Microsoft.Extensions.Options;
 using TokenSaver.Common.Core.Configuration;
 using TokenSaver.MCP.Services;
 
@@ -13,7 +14,7 @@ namespace TokenSaver.MCP.Tools;
 ///     (<c>ide</c>, <c>instance_pid</c>, <c>solution_path</c>), so the caller always knows what it acted on.
 /// </summary>
 [McpServerToolType]
-internal sealed class IdeTools(TokenSaverConfig config)
+internal sealed class IdeTools(IOptions<TokenSaverConfig> options)
 {
     // Resolves the solution a test-result call refers to: the given path, or the only open instance's solution.
     private static string? ResolveSolution(string? solutionPath)
@@ -62,7 +63,7 @@ internal sealed class IdeTools(TokenSaverConfig config)
         [Description("Optional: full path of the solution to target")] string? solutionPath = null,
         CancellationToken ct = default)
     {
-        if (IdeTestRunService.NormalizeMode(config.IdeTestRunMode) == IdeTestRunService.DotnetTestMode)
+        if (IdeTestRunService.NormalizeMode(options.Value.IdeTestRunMode) == IdeTestRunService.DotnetTestMode)
         {
             var solution = ResolveSolution(solutionPath);
             return solution is null
