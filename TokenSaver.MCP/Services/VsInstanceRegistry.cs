@@ -14,7 +14,8 @@ internal static class VsInstanceRegistry
 {
     private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNameCaseInsensitive = true };
 
-    internal sealed record VsInstance(int Pid, string PipeName, string? SolutionPath, DateTime UpdatedUtc);
+    /// <summary>One running IDE window. <c>Ide</c> is "VisualStudio" or "VsCode"; SolutionPath is the .sln or, for VS Code, the workspace folder.</summary>
+    internal sealed record VsInstance(int Pid, string PipeName, string? SolutionPath, DateTime UpdatedUtc, string Ide = "VisualStudio");
 
     public static string Directory =>
         Path.Combine(Environment.GetEnvironmentVariable("ProgramData") ?? @"C:\ProgramData", "TokenSaver", "vs-instances");
@@ -54,7 +55,7 @@ internal static class VsInstanceRegistry
         {
             var json = File.ReadAllText(file);
             var record = JsonSerializer.Deserialize<VsInstanceManifest>(json, JsonOptions);
-            return record is null ? null : new VsInstance(record.Pid, record.PipeName, record.SolutionPath, record.UpdatedUtc);
+            return record is null ? null : new VsInstance(record.Pid, record.PipeName, record.SolutionPath, record.UpdatedUtc, record.Ide ?? "VisualStudio");
         }
         catch (Exception ex) when (ex is IOException or JsonException or UnauthorizedAccessException)
         {
@@ -87,5 +88,5 @@ internal static class VsInstanceRegistry
         }
     }
 
-    private sealed record VsInstanceManifest(int Pid, string PipeName, string? SolutionPath, DateTime UpdatedUtc);
+    private sealed record VsInstanceManifest(int Pid, string PipeName, string? SolutionPath, DateTime UpdatedUtc, string? Ide);
 }

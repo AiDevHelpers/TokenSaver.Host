@@ -89,7 +89,7 @@ internal static class IdeInstanceRouter
 
             return JsonSerializer.Serialize(new
             {
-                ide = "VisualStudio",
+                ide = target.Ide,
                 instance_pid = target.Pid,
                 solution_path = target.SolutionPath,
                 ok,
@@ -101,7 +101,7 @@ internal static class IdeInstanceRouter
         {
             return JsonSerializer.Serialize(new
             {
-                ide = "VisualStudio",
+                ide = target.Ide,
                 instance_pid = target.Pid,
                 solution_path = target.SolutionPath,
                 ok = false,
@@ -120,7 +120,7 @@ internal static class IdeInstanceRouter
 
     private static object Describe(VsInstanceRegistry.VsInstance i) => new
     {
-        ide = "VisualStudio",
+        ide = i.Ide,
         pid = i.Pid,
         solution_path = i.SolutionPath,
         updated_utc = i.UpdatedUtc,

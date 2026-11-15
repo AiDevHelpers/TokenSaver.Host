@@ -26,10 +26,19 @@ internal static class IdeTestRunService
     public static string NormalizeMode(string? mode) =>
         string.Equals(mode, DotnetTestMode, StringComparison.OrdinalIgnoreCase) ? DotnetTestMode : TestExplorerMode;
 
+    // A .sln path gives its folder; a folder (a VS Code workspace) is used as is.
+    private static string SolutionDirectory(string solutionPath)
+    {
+        var full = Path.GetFullPath(solutionPath);
+        return Directory.Exists(full)
+            ? full
+            : Path.GetDirectoryName(full) ?? throw new InvalidOperationException("No solution directory.");
+    }
+
     /// <summary>Runs <c>dotnet test</c> on the solution, writing a TRX file into the solution's TestResults folder.</summary>
     public static async Task<string> RunDotnetTestAsync(string solutionPath, CancellationToken ct)
     {
-        var solutionDir = Path.GetDirectoryName(Path.GetFullPath(solutionPath)) ?? throw new InvalidOperationException("No solution directory.");
+        var solutionDir = SolutionDirectory(solutionPath);
         var resultsDir = Path.Combine(solutionDir, ResultsFolder);
         var trxName = $"tokensaver-{DateTime.UtcNow:yyyyMMdd-HHmmss-fff}.trx";
 
@@ -68,7 +77,7 @@ internal static class IdeTestRunService
     /// <summary>Reads the newest TRX file in the solution's TestResults folder.</summary>
     public static string GetLatestResult(string solutionPath)
     {
-        var solutionDir = Path.GetDirectoryName(Path.GetFullPath(solutionPath)) ?? throw new InvalidOperationException("No solution directory.");
+        var solutionDir = SolutionDirectory(solutionPath);
         var resultsDir = Path.Combine(solutionDir, ResultsFolder);
         if (!Directory.Exists(resultsDir))
         {
