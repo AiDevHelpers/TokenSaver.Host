@@ -15,7 +15,8 @@ internal static class VsInstanceRegistry
     private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNameCaseInsensitive = true };
 
     /// <summary>One running IDE window. <c>Ide</c> is "VisualStudio" or "VsCode"; SolutionPath is the .sln or, for VS Code, the workspace folder.</summary>
-    internal sealed record VsInstance(int Pid, string PipeName, string? SolutionPath, DateTime UpdatedUtc, string Ide = "VisualStudio");
+    /// <summary><c>LogRoots</c> lists the exthost folders a VS Code window reports; empty for Visual Studio or when none are reported.</summary>
+    internal sealed record VsInstance(int Pid, string PipeName, string? SolutionPath, DateTime UpdatedUtc, string Ide, IReadOnlyList<string> LogRoots);
 
     public static string Directory =>
         Path.Combine(Environment.GetEnvironmentVariable("ProgramData") ?? @"C:\ProgramData", "TokenSaver", "vs-instances");
@@ -53,11 +54,34 @@ internal static class VsInstanceRegistry
     {
         try
         {
-            var json = File.ReadAllText(file);
-            var record = JsonSerializer.Deserialize<VsInstanceManifest>(json, JsonOptions);
-            return record is null ? null : new VsInstance(record.Pid, record.PipeName, record.SolutionPath, record.UpdatedUtc, record.Ide ?? "VisualStudio");
+            return Parse(File.ReadAllText(file));
         }
-        catch (Exception ex) when (ex is IOException or JsonException or UnauthorizedAccessException)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>Parses one manifest. Returns null when the JSON is malformed or empty.</summary>
+    internal static VsInstance? Parse(string json)
+    {
+        try
+        {
+            var record = JsonSerializer.Deserialize<VsInstanceManifest>(json, JsonOptions);
+            if (record is null)
+            {
+                return null;
+            }
+
+            return new VsInstance(
+                record.Pid,
+                record.PipeName,
+                record.SolutionPath,
+                record.UpdatedUtc,
+                record.Ide ?? "VisualStudio",
+                record.LogRoots ?? Array.Empty<string>());
+        }
+        catch (JsonException)
         {
             return null;
         }
@@ -88,5 +112,5 @@ internal static class VsInstanceRegistry
         }
     }
 
-    private sealed record VsInstanceManifest(int Pid, string PipeName, string? SolutionPath, DateTime UpdatedUtc, string? Ide);
+    private sealed record VsInstanceManifest(int Pid, string PipeName, string? SolutionPath, DateTime UpdatedUtc, string? Ide, string[]? LogRoots);
 }
