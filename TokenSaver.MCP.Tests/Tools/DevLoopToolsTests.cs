@@ -166,6 +166,22 @@ public sealed class DevLoopToolsTests : IDisposable
     }
 
     [Fact]
+    public async Task BuildWatch_PreReducesBeforeDistill_RawTokensLower()
+    {
+        string logPath = Path.Combine(_root, "repeat.log");
+        string big = string.Concat(Enumerable.Repeat("warning something noisy here\n", 60));
+        await File.WriteAllTextAsync(logPath, "start\n" + big);
+        FakeDistillationService distill = new();
+        DevLoopTools tools = CreateTools(distill);
+
+        await tools.BuildWatch(logPath, sinceLine: 1);
+
+        Assert.NotNull(distill.LastRaw);
+        Assert.True(distill.LastRaw!.Length * 4 < big.Length, $"distilled input {distill.LastRaw.Length} chars of {big.Length}");
+        Assert.Contains("x60", distill.LastRaw, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task BuildWatch_LargeNewSection_ReturnsDistilledSummary()
     {
         string logPath = Path.Combine(_root, "large.log");
@@ -185,6 +201,7 @@ public sealed class DevLoopToolsTests : IDisposable
     {
         public string SummaryText { get; set; } = "summary";
         public int CallCount { get; private set; }
+        public string? LastRaw { get; private set; }
 
         public Task<DistillResult> DistillAsync(
             string workspaceRoot,
@@ -197,6 +214,7 @@ public sealed class DevLoopToolsTests : IDisposable
             CancellationToken ct = default)
         {
             CallCount++;
+            LastRaw = raw;
             return Task.FromResult(new DistillResult(SummaryText, RawTokens: 100, DistilledTokens: 10, Terse: false, Distilled: true));
         }
 
