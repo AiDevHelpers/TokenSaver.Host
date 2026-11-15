@@ -134,7 +134,7 @@ internal sealed class IdeTools(IOptions<TokenSaverConfig> options)
         IdeInstanceRouter.CallAsync("codeCleanup", new { }, solutionPath, ct);
 
     [McpServerTool]
-    [Description("Read the last lines of an IDE output pane, e.g. 'Build' or 'Debug'.")]
+    [Description("Read the last lines of an IDE output pane, e.g. 'Build' or 'Debug'. For a filtered, deduplicated summary, use LogQuery with a vsout: channel.")]
     public Task<string> IdeGetOutput(
         [Description("Output pane name, e.g. 'Build' or 'Debug'")] string pane = "Build",
         [Description("Maximum number of trailing lines to return")] int maxLines = 200,
