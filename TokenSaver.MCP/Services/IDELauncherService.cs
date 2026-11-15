@@ -123,45 +123,61 @@ internal sealed class IDELauncherService : IIDELauncher
     {
         ValidateIdeType(ideType);
 
+        // Look up under the lock, but wait for the process outside it so no thread blocks while holding _lock.
+        IDEProcess? ide = null;
         lock (_lock)
         {
-            if (!_runningIDEs.TryGetValue(ideType, out var ide) || ide.Process.HasExited)
+            if (_runningIDEs.TryGetValue(ideType, out var candidate) && !candidate.Process.HasExited)
             {
-                if (_logger.IsEnabled(LogLevel.Information))
-                {
-                    _logger.LogInformation("{IdeType} is not running", ideType);
-                }
-                return;
+                ide = candidate;
             }
+        }
 
-            try
+        if (ide is null)
+        {
+            if (_logger.IsEnabled(LogLevel.Information))
             {
-                if (graceful)
+                _logger.LogInformation("{IdeType} is not running", ideType);
+            }
+            return;
+        }
+
+        try
+        {
+            if (graceful)
+            {
+                ide.Process.CloseMainWindow();
+                using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                timeout.CancelAfter(TimeSpan.FromSeconds(5));
+                try
                 {
-                    ide.Process.CloseMainWindow();
-                    if (!ide.Process.WaitForExit(5000))
-                    {
-                        _logger.LogWarning("Graceful shutdown timeout for {IdeType}, force-killing", ideType);
-                        ide.Process.Kill();
-                    }
+                    await ide.Process.WaitForExitAsync(timeout.Token);
                 }
-                else
+                catch (OperationCanceledException) when (!ct.IsCancellationRequested)
                 {
+                    _logger.LogWarning("Graceful shutdown timeout for {IdeType}, force-killing", ideType);
                     ide.Process.Kill();
                 }
+            }
+            else
+            {
+                ide.Process.Kill();
+            }
 
-                if (_logger.IsEnabled(LogLevel.Information))
-                {
-                    _logger.LogInformation("Stopped {IdeType}", ideType);
-                }
-            }
-            catch (Exception ex)
+            if (_logger.IsEnabled(LogLevel.Information))
             {
-                _logger.LogError(ex, "Error stopping {IdeType}", ideType);
+                _logger.LogInformation("Stopped {IdeType}", ideType);
             }
-            finally
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error stopping {IdeType}", ideType);
+        }
+        finally
+        {
+            lock (_lock)
             {
-                _runningIDEs.Remove(ideType);
+                _ = _runningIDEs.Remove(ideType);
             }
         }
 

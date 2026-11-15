@@ -1,3 +1,4 @@
+#pragma warning disable CA2000 // Test factories hand disposables to the tool under test; each test is short-lived.
 using TokenSaver.Common.Core.Configuration;
 using TokenSaver.Database.Context;
 using TokenSaver.MCP.Services;
@@ -72,5 +73,76 @@ public class TokenEconomyToolsTests
         JsonElement result = JsonElement.Parse(json);
 
         Assert.Equal(0, result.GetProperty("pct_of_threshold").GetInt32());
+    }
+
+    [Fact]
+    public async Task ModelRoute_OllamaUnreachable_ReturnsGuardMessage()
+    {
+        // Points at the unreachable loopback placeholder, so the call fails at connect time without
+        // reaching a real model. The transport error is returned as a message, not thrown.
+        TokenEconomyTools tools = CreateTools();
+
+        string result = await tools.ModelRoute("code", "hello", maxTokens: 16);
+
+        Assert.StartsWith("Model call failed for route 'code'", result, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task TokenSavingsReport_EmptyWorkspace_ReturnsRankedEnvelope()
+    {
+        string root = Path.Combine(Path.GetTempPath(), "tokensaver-economy-report-" + Guid.NewGuid().ToString("N"));
+        _ = Directory.CreateDirectory(root);
+        try
+        {
+            TokenEconomyTools tools = CreateTools(new TokenSaverConfig { WorkspaceRoot = root });
+
+            string json = await tools.TokenSavingsReport(sinceDays: 3, groupBy: "role");
+            JsonElement result = JsonElement.Parse(json);
+
+            Assert.Equal(3, result.GetProperty("since_days").GetInt32());
+            Assert.Equal("saved_tokens", result.GetProperty("ranked_by").GetString());
+            Assert.Equal(JsonValueKind.Array, result.GetProperty("results").ValueKind);
+        }
+        finally
+        {
+            DeleteBestEffort(root);
+        }
+    }
+
+    [Fact]
+    public async Task WorthKeeping_UnknownTarget_ReportsNoDataWithNullVerdict()
+    {
+        string root = Path.Combine(Path.GetTempPath(), "tokensaver-economy-worth-" + Guid.NewGuid().ToString("N"));
+        _ = Directory.CreateDirectory(root);
+        try
+        {
+            TokenEconomyTools tools = CreateTools(new TokenSaverConfig { WorkspaceRoot = root });
+
+            string json = await tools.WorthKeeping("no-such-target-xyz");
+            JsonElement result = JsonElement.Parse(json);
+
+            Assert.Equal("no-such-target-xyz", result.GetProperty("target").GetString());
+            Assert.Equal(JsonValueKind.Null, result.GetProperty("worth_it").ValueKind);
+            Assert.Equal("no data for this target", result.GetProperty("reason").GetString());
+        }
+        finally
+        {
+            DeleteBestEffort(root);
+        }
+    }
+
+    /// <summary>The savings DB keeps index.db open in pooled SQLite connections, so the folder may stay locked until exit.</summary>
+    private static void DeleteBestEffort(string root)
+    {
+        try
+        {
+            if (Directory.Exists(root))
+            {
+                Directory.Delete(root, recursive: true);
+            }
+        }
+        catch (IOException)
+        {
+        }
     }
 }

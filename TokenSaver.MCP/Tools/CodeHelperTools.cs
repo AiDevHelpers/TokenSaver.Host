@@ -88,9 +88,10 @@ internal sealed class CodeHelperTools
         "  find         — find a symbol by name. name required; kind and filePath are optional filters.\n" +
         "  dependencies — show what a file imports and what imports it. filePath required; " +
         "direction: 'uses' | 'usedBy' | 'both' (default).\n" +
-        "  status       — read-only: symbols indexed and semantic chunks stored for the workspace. Does not scan.")]
+        "  status       — read-only: symbols indexed and semantic chunks stored for the workspace. Does not scan.\n" +
+        "  table        — regenerate docs/folder-index.md (metadata-only folder/file table). root optional.")]
     public async Task<string> CodeIndex(
-        [Description("Action: 'scan', 'find', 'dependencies', or 'status'")]
+        [Description("Action: 'scan', 'find', 'dependencies', 'status', or 'table'")]
         string action,
         [Description("Symbol name — required for 'find'")]
         string? name = null,
@@ -113,8 +114,15 @@ internal sealed class CodeHelperTools
             "FIND" => await DoFind(name, kind, filePath, r, ct),
             "DEPENDENCIES" => await DoDeps(filePath, direction, r, ct),
             "STATUS" => await DoStatus(r, ct),
-            _ => "Unknown action. Use 'scan', 'find', 'dependencies', or 'status'."
+            "TABLE" => DoTable(r),
+            _ => "Unknown action. Use 'scan', 'find', 'dependencies', 'status', or 'table'."
         };
+    }
+
+    private static string DoTable(string root)
+    {
+        (string path, bool changed) = FolderFileTable.Generate(root);
+        return changed ? $"Wrote {path}." : $"{path} is already up to date.";
     }
 
     private async Task<string> DoStatus(string root, CancellationToken ct)
@@ -135,9 +143,36 @@ internal sealed class CodeHelperTools
         string? codeError = _symbolScan.GetLastError(root);
         string? semanticError = _semanticIndex.GetLastError(root);
         DateTimeOffset? codeDate = _symbolScan.GetLastCompletedAt(root);
-        (int semanticChunks, long? semanticUpdatedMs) = await _semanticIndex.ChunkSummaryAsync(root, ct);
 
-        // Both indexes always report the same four fields: type, chunks, status, date.
+        // A broken stored schema shows up as a failed query here too: report it as needs_rebuild
+        // and ask for a rebuild instead of surfacing a raw SQL error.
+        int semanticChunks = 0;
+        long? semanticUpdatedMs = null;
+        string? schemaError = null;
+        try
+        {
+            (semanticChunks, semanticUpdatedMs) = await _semanticIndex.ChunkSummaryAsync(root, ct);
+        }
+        catch (Exception ex) when (ex.Message.Contains("no such column", StringComparison.OrdinalIgnoreCase))
+        {
+            schemaError = ex.Message;
+        }
+
+        bool needsRebuild = schemaError is not null || _semanticIndex.NeedsRebuild(root);
+        string? rebuildMessage = needsRebuild
+            ? "The stored semantic index schema is out of date. Ask the user whether to rebuild it, then call IndexRepo with force: true for this root."
+            : null;
+
+        (int fileRows, int folderRows) = await _symbolSearch.CountFilesAndFoldersAsync(root, ct);
+        string? folderIndex = FolderFileTable.StatusLine(root);
+
+        string folderStatus = folderIndex is null ? "not_applicable"
+            : folderIndex.Contains("in sync", StringComparison.Ordinal) ? "in_sync"
+            : folderIndex.Contains("missing", StringComparison.Ordinal) ? "missing"
+            : folderIndex.Contains("stale", StringComparison.Ordinal) ? "stale"
+            : "unlinked";
+
+        // Each index is its own row: code, semantic, and folder/file table.
         return System.Text.Json.JsonSerializer.Serialize(new
         {
             root,
@@ -159,12 +194,23 @@ internal sealed class CodeHelperTools
                 {
                     type = "semantic",
                     chunks = semanticChunks,
-                    status = _semanticIndex.IsRunning(root) ? "running"
+                    status = _semanticIndex.IsPaused(root) ? "paused"
+                        : _semanticIndex.IsRunning(root) ? "running"
+                        : needsRebuild ? "needs_rebuild"
                         : semanticChunks > 0 ? "built"
                         : semanticError is not null ? "failed"
                         : "not_started",
                     date = semanticUpdatedMs is long ms ? DateTimeOffset.FromUnixTimeMilliseconds(ms).ToString("o") : null,
-                    last_error = semanticError
+                    last_error = schemaError ?? semanticError,
+                    rebuild = rebuildMessage
+                },
+                new
+                {
+                    type = "folder",
+                    files = fileRows,
+                    folders = folderRows,
+                    status = folderStatus,
+                    detail = folderIndex
                 }
             }
         });

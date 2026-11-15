@@ -11,13 +11,13 @@ namespace TokenSaver.MCP.Services;
 ///     <c>PromptAssessor</c> classifies a request as that task type, independent of whether the
 ///     request touches a matching file path).
 /// </summary>
-public sealed record SubDocFrontMatter(IReadOnlyList<string> PathGlobs, IReadOnlyList<string> TaskTypes)
+internal sealed record SubDocFrontMatter(IReadOnlyList<string> PathGlobs, IReadOnlyList<string> TaskTypes)
 {
     public static readonly SubDocFrontMatter Empty = new([], []);
 }
 
 /// <summary>A sub-doc discovered by following backtick-wrapped <c>.md</c> references out of a main instructions doc.</summary>
-public sealed record DiscoveredSubDoc(
+internal sealed record DiscoveredSubDoc(
     string RelativeSourcePath,
     string Slug,
     string RawContent,
@@ -31,7 +31,7 @@ public sealed record DiscoveredSubDoc(
 ///     <c>.claude/rules/*.md</c>. No new link syntax is invented; any existing backtick reference
 ///     to an on-disk <c>.md</c> file is treated as a lazy-loaded sub-doc.
 /// </summary>
-public static partial class InstructionSubDocParser
+internal static partial class InstructionSubDocParser
 {
     [GeneratedRegex(@"`([^`\n]+\.md)`")]
     private static partial Regex MarkdownReferencePattern();

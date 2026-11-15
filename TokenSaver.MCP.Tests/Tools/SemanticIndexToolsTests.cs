@@ -1,3 +1,4 @@
+#pragma warning disable CA2000 // Test factories hand disposables to the tool under test; each test is short-lived.
 using TokenSaver.Common.Core.Configuration;
 using TokenSaver.Database.Context;
 using TokenSaver.TokenEconomy.Models.TokenEconomy;
@@ -50,7 +51,7 @@ public class SemanticIndexToolsTests
         NoOpRepoIndexer indexer = new();
         SemanticIndexBackgroundTrigger indexTrigger = new(
             indexer, new TokenEconomyDbAccessor(), NullLogger<SemanticIndexBackgroundTrigger>.Instance);
-        return new SemanticIndexTools(indexer, retrieval, Options.Create(config), workspaceRootResolver, indexTrigger);
+        return new SemanticIndexTools(retrieval, Options.Create(config), workspaceRootResolver, indexTrigger);
     }
 
     [Fact]
@@ -113,5 +114,39 @@ public class SemanticIndexToolsTests
 
         Assert.Equal(JsonValueKind.Array, result.ValueKind);
         Assert.Equal(0, result.GetArrayLength());
+    }
+
+    [Fact]
+    public async Task IndexStatus_NothingStartedForRoot_ReportsNotStartedWithEchoedRoot()
+    {
+        SemanticIndexTools tools = CreateTools(new FakeConditionalRetrievalService());
+        string root = Path.GetTempPath().TrimEnd(Path.DirectorySeparatorChar);
+
+        string json = await tools.IndexStatus(rootPath: Path.GetTempPath());
+        JsonElement result = JsonElement.Parse(json);
+
+        Assert.Equal("semantic", result.GetProperty("type").GetString());
+        Assert.Equal(root, result.GetProperty("root").GetString());
+        Assert.Equal("not_started", result.GetProperty("status").GetString());
+    }
+    [Fact]
+    public async Task IndexPause_PauseThenResume_ReportsPausedThenIdle()
+    {
+        string root = Path.Combine(Path.GetTempPath(), "pause-" + Guid.NewGuid().ToString("N"));
+        _ = Directory.CreateDirectory(root);
+        try
+        {
+            SemanticIndexTools tools = CreateTools(new FakeConditionalRetrievalService());
+
+            string paused = await tools.IndexPause(rootPath: root);
+            Assert.Contains("\"status\":\"paused\"", paused, StringComparison.Ordinal);
+
+            string resumed = await tools.IndexPause(rootPath: root, resume: true);
+            Assert.Contains("\"status\":\"idle\"", resumed, StringComparison.Ordinal);
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
     }
 }

@@ -24,7 +24,7 @@ namespace TokenSaver.MCP.Services;
 ///     <see cref="Resolve" />; see <see cref="IsClaudeCodeClient" />.
 ///     </para>
 /// </summary>
-public static class InstructionSyncResolver
+internal static class InstructionSyncResolver
 {
     private static readonly HashSet<string> ClaudeCodeClientNames = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -218,7 +218,7 @@ public static class InstructionSyncResolver
 ///     true, <see cref="RelativeFilePath" /> is workspace-root-relative and
 ///     <see cref="FrontMatter" /> (if any) is prepended before the synced content.
 /// </summary>
-public sealed record InstructionSyncTarget(bool ShouldSync, string? RelativeFilePath, string? FrontMatter, string Reason)
+internal sealed record InstructionSyncTarget(bool ShouldSync, string? RelativeFilePath, string? FrontMatter, string Reason)
 {
     /// <summary>Claude Code already auto-loads the real global CLAUDE.md itself — nothing to copy.</summary>
     public static readonly InstructionSyncTarget NativelyLoaded =

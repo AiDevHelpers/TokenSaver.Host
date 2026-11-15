@@ -1,3 +1,5 @@
+#pragma warning disable CA1506 // Test factories wire many services together by design; the coupling is intentional.
+#pragma warning disable CA2000 // Test factories hand disposables to the code under test; each test is short-lived.
 using TokenSaver.CodeHelper.Configuration;
 using TokenSaver.CodeHelper.Indexing;
 using TokenSaver.Config;

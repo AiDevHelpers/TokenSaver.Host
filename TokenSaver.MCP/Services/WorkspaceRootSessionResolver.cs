@@ -160,7 +160,7 @@ internal sealed partial class WorkspaceRootSessionResolver
         // handshake completes), so a minimal CallerInfo built directly from it is enough here —
         // no HttpContext-dependent header/user-agent signals to fall back to like
         // CallerDetectionService has, but ClientInfo.name is the primary signal anyway.
-        _instructionOptimizer.EnsureSynced(resolved, new CallerInfo { ClientName = server.ClientInfo?.Name ?? "" });
+        _instructionOptimizer.EnsureSynced(resolved, new CallerInfo { ClientName = server?.ClientInfo?.Name ?? "" });
 
         // BehaviorConfigOverlay.Apply() no-ops while WorkspaceRoot is empty (see its own doc
         // comment) — its startup call in Program.cs and any ConfigChanged-triggered call both ran
@@ -224,6 +224,20 @@ internal sealed partial class WorkspaceRootSessionResolver
             {
                 IndexStats stats = await _indexService.IndexWorkspaceAsync(root);
                 LogUnifiedIndexReady(_logger, stats.FilesIndexed, stats.SymbolsIndexed, stats.FilesSkipped, stats.Elapsed.TotalSeconds);
+            }
+            catch (Exception ex)
+            {
+                LogInitialIndexSkipped(_logger, ex);
+            }
+
+            // Folder/file index table (docs/folder-index.md), refreshed on connection like the code
+            // and semantic indexes. Only for workspaces that have a docs/ folder to index.
+            try
+            {
+                if (Directory.Exists(Path.Combine(root, "docs")))
+                {
+                    _ = FolderFileTable.Generate(root);
+                }
             }
             catch (Exception ex)
             {

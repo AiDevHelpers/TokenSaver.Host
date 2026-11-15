@@ -410,7 +410,7 @@ internal sealed class DebuggerProblemQueryService
 }
 
 /// <summary>Problem record read from persisted log.</summary>
-public sealed record DebuggerProblemLogRecord(
+internal sealed record DebuggerProblemLogRecord(
     string Id,
     DateTime Timestamp,
     string Type,

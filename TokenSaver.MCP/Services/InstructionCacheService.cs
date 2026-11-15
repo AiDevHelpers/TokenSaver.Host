@@ -32,7 +32,7 @@ namespace TokenSaver.MCP.Services;
 ///     picked up on the next <see cref="EnsureFresh" /> call (every session connect) regardless.
 ///     </para>
 /// </summary>
-public sealed partial class InstructionCacheService : IDisposable
+internal sealed partial class InstructionCacheService : IDisposable
 {
     [LoggerMessage(Level = LogLevel.Debug, Message = "Instruction cache regenerated for {WorkspaceRoot}: {Count} sub-doc(s)")]
     private static partial void LogRegenerated(ILogger logger, string workspaceRoot, int count);
@@ -438,10 +438,12 @@ public sealed partial class InstructionCacheService : IDisposable
 
         lock (_watcherSync)
         {
+            #pragma warning disable CA1508 // Double-checked locking: _watcher can be set on another thread between the two checks.
             if (_watcher is not null)
             {
                 return;
             }
+            #pragma warning restore CA1508
 
             string? globalDir = Path.GetDirectoryName(InstructionOptimizerService.GlobalClaudeInstructionsPath);
             if (string.IsNullOrEmpty(globalDir) || !Directory.Exists(globalDir))

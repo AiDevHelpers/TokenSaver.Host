@@ -22,7 +22,7 @@ namespace TokenSaver.MCP.Services;
 ///     cache) — safe to call on every MCP request rather than needing a persisted session, since
 ///     this server has no MCP session store (see <c>ContextInterceptMiddleware</c>).
 /// </summary>
-public sealed class AgentConfigResolver
+internal sealed class AgentConfigResolver
 {
     private readonly ICallerDetectionService _detection;
     private readonly AgentAdapterRegistry _registry;
@@ -76,64 +76,59 @@ public sealed class AgentConfigResolver
         int? ttl = agentConfig?.CacheTtlSeconds;
         int? minTokens = agentConfig?.MinCacheableTokens;
 
-        switch (family)
+        return family switch
         {
-            case "Anthropic":
-                AnthropicAgentConfig? a = agentConfig?.Anthropic;
-                return new EffectiveAgentSettings
-                {
-                    EnablePromptCaching = a?.EnablePromptCaching ?? enable,
-                    CacheTtlSeconds = a?.CacheTtlSeconds ?? ttl,
-                    MinCacheableTokens = a?.MinCacheableTokens ?? minTokens,
-                    EnableContextEditing = a?.EnableContextEditing,
-                    ContextEditingTriggerTokens = a?.ContextEditingTriggerTokens,
-                    ContextEditingKeepToolUses = a?.ContextEditingKeepToolUses,
-                };
-
-            case "DeepSeek":
-                DeepSeekAgentConfig? d = agentConfig?.DeepSeek;
-                return new EffectiveAgentSettings
-                {
-                    EnablePromptCaching = d?.EnablePromptCaching ?? enable,
-                    CacheTtlSeconds = ttl,
-                    MinCacheableTokens = minTokens,
-                };
-
-            case "Qwen":
-                QwenAgentConfig? q = agentConfig?.Qwen;
-                return new EffectiveAgentSettings
-                {
-                    EnablePromptCaching = q?.EnablePromptCaching ?? enable,
-                    CacheTtlSeconds = q?.CacheTtlSeconds ?? ttl,
-                    MinCacheableTokens = q?.MinCacheableTokens ?? minTokens,
-                };
-
-            case "OpenSource":
-                OpenSourceAgentConfig? o = agentConfig?.OpenSource;
-                return new EffectiveAgentSettings
-                {
-                    EnablePromptCaching = o?.EnablePromptCaching ?? enable,
-                    UseFlashAttention = o?.UseFlashAttention,
-                    KvCacheQuantization = o?.KvCacheQuantization,
-                    NumCtx = o?.NumCtx,
-                };
-
-            default:
+            "Anthropic" => ResolveAnthropic(agentConfig?.Anthropic, enable, ttl, minTokens),
+            "DeepSeek" => ResolveDeepSeek(agentConfig?.DeepSeek, enable, ttl, minTokens),
+            "Qwen" => ResolveQwen(agentConfig?.Qwen, enable, ttl, minTokens),
+            "OpenSource" => ResolveOpenSource(agentConfig?.OpenSource, enable),
+            _ => new EffectiveAgentSettings
+            {
                 // Default/unmatched adapter (Copilot, Continue, Cursor client adapters, or no
                 // model family detected at all) — expose only the global defaults; none of the
                 // per-family mechanisms apply to an unknown model.
-                return new EffectiveAgentSettings
-                {
-                    EnablePromptCaching = enable,
-                    CacheTtlSeconds = ttl,
-                    MinCacheableTokens = minTokens,
-                };
-        }
+                EnablePromptCaching = enable,
+                CacheTtlSeconds = ttl,
+                MinCacheableTokens = minTokens,
+            },
+        };
     }
+
+    private static EffectiveAgentSettings ResolveAnthropic(AnthropicAgentConfig? a, bool? enable, int? ttl, int? minTokens) => new()
+    {
+        EnablePromptCaching = a?.EnablePromptCaching ?? enable,
+        CacheTtlSeconds = a?.CacheTtlSeconds ?? ttl,
+        MinCacheableTokens = a?.MinCacheableTokens ?? minTokens,
+        EnableContextEditing = a?.EnableContextEditing,
+        ContextEditingTriggerTokens = a?.ContextEditingTriggerTokens,
+        ContextEditingKeepToolUses = a?.ContextEditingKeepToolUses,
+    };
+
+    private static EffectiveAgentSettings ResolveDeepSeek(DeepSeekAgentConfig? d, bool? enable, int? ttl, int? minTokens) => new()
+    {
+        EnablePromptCaching = d?.EnablePromptCaching ?? enable,
+        CacheTtlSeconds = ttl,
+        MinCacheableTokens = minTokens,
+    };
+
+    private static EffectiveAgentSettings ResolveQwen(QwenAgentConfig? q, bool? enable, int? ttl, int? minTokens) => new()
+    {
+        EnablePromptCaching = q?.EnablePromptCaching ?? enable,
+        CacheTtlSeconds = q?.CacheTtlSeconds ?? ttl,
+        MinCacheableTokens = q?.MinCacheableTokens ?? minTokens,
+    };
+
+    private static EffectiveAgentSettings ResolveOpenSource(OpenSourceAgentConfig? o, bool? enable) => new()
+    {
+        EnablePromptCaching = o?.EnablePromptCaching ?? enable,
+        UseFlashAttention = o?.UseFlashAttention,
+        KvCacheQuantization = o?.KvCacheQuantization,
+        NumCtx = o?.NumCtx,
+    };
 }
 
 /// <summary>Result of <see cref="AgentConfigResolver.Resolve(HttpContext?, string)" />.</summary>
-public sealed record AgentConfigResolution(CallerInfo Caller, string Family, EffectiveAgentSettings Settings);
+internal sealed record AgentConfigResolution(CallerInfo Caller, string Family, EffectiveAgentSettings Settings);
 
 /// <summary>
 ///     The agent-config knobs that apply to the currently detected caller, after merging the
@@ -141,7 +136,7 @@ public sealed record AgentConfigResolution(CallerInfo Caller, string Family, Eff
 ///     irrelevant to the resolved family are left <see langword="null" /> (e.g.
 ///     <see cref="KvCacheQuantization" /> stays unset for every family except OpenSource).
 /// </summary>
-public sealed record EffectiveAgentSettings
+internal sealed record EffectiveAgentSettings
 {
     public bool? EnablePromptCaching { get; init; }
     public int? CacheTtlSeconds { get; init; }

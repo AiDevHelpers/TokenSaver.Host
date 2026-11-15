@@ -5,8 +5,14 @@ using Xunit;
 
 namespace TokenSaver.MCP.Tests;
 
-public sealed class DebuggerIntegrationTests
+public sealed class DebuggerIntegrationTests : IAsyncLifetime, IAsyncDisposable
 {
+    public Task InitializeAsync() => Task.CompletedTask;
+
+    public async Task DisposeAsync() => await ((IAsyncDisposable)_clientService).DisposeAsync();
+
+    ValueTask IAsyncDisposable.DisposeAsync() => new(DisposeAsync());
+
     private readonly DebuggerEventService _eventService = new(NullLogger<DebuggerEventService>.Instance);
     private readonly DebuggerProblemService _problemService = new(NullLogger<DebuggerProblemService>.Instance);
     private readonly ClientDebugContextService _clientService = new(NullLogger<ClientDebugContextService>.Instance);

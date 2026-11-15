@@ -1,0 +1,54 @@
+using System.Reflection;
+using System.Text.RegularExpressions;
+
+using ModelContextProtocol.Server;
+
+using Xunit;
+
+namespace TokenSaver.MCP.Tests.Tools;
+
+/// <summary>
+///     Every chat-facing MCP tool method must be called by at least one test in this project.
+///     A method counts as covered when its name appears as a call (<c>.Name(</c>) in a test source file.
+/// </summary>
+public sealed class ToolCoverageTests
+{
+    [Fact]
+    public void Every_McpServerTool_HasATestThatCallsIt()
+    {
+        var toolNames = typeof(TokenSaver.MCP.Services.InstructionStoreService).Assembly.GetTypes()
+            .Where(t => t.GetCustomAttribute<McpServerToolTypeAttribute>() is not null)
+            .SelectMany(t => t.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly))
+            .Where(m => m.GetCustomAttribute<McpServerToolAttribute>() is not null)
+            .Select(m => m.Name)
+            .Distinct()
+            .OrderBy(n => n, StringComparer.Ordinal)
+            .ToList();
+
+        string testSource = ReadTestSources();
+
+        List<string> untested = toolNames
+            .Where(name => !Regex.IsMatch(testSource, @"\." + Regex.Escape(name) + @"\s*\("))
+            .ToList();
+
+        Assert.True(untested.Count == 0,
+            $"{untested.Count} MCP tool method(s) have no test: {string.Join(", ", untested)}");
+    }
+
+    private static string ReadTestSources([System.Runtime.CompilerServices.CallerFilePath] string self = "")
+    {
+        // Compile-time location of this file (Tools/) -> the test project directory one level up.
+        string dir = Path.GetFullPath(Path.Combine(Path.GetDirectoryName(self)!, ".."));
+        if (!File.Exists(Path.Combine(dir, "TokenSaver.MCP.Tests.csproj")))
+        {
+            throw new InvalidOperationException($"TokenSaver.MCP.Tests project directory not found at {dir}.");
+        }
+
+        IEnumerable<string> files = Directory.EnumerateFiles(dir, "*.cs", SearchOption.AllDirectories)
+            .Where(f => !f.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase)
+                     && !f.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase)
+                     && !f.EndsWith("ToolCoverageTests.cs", StringComparison.Ordinal));
+
+        return string.Join('\n', files.Select(File.ReadAllText));
+    }
+}

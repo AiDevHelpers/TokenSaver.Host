@@ -34,7 +34,7 @@ namespace TokenSaver.MCP.Services;
 ///     markers is replaced (or appended, if the file/markers don't exist yet).
 ///     </para>
 /// </summary>
-public sealed partial class InstructionOptimizerService
+internal sealed partial class InstructionOptimizerService
 {
     private const string BlockStartMarker =
         "<!-- tokensaver:global-instructions:start (auto-synced from %USERPROFILE%\\.claude\\CLAUDE.md — edit the source there, not here) -->";

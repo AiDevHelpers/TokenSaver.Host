@@ -429,7 +429,7 @@ public sealed class ManageConfigToolsTests : IDisposable
         // ApplyAgentIntField has no "deepSeek" branch at all (only global/anthropic/qwen/openSource),
         // so it falls through to `return a;` unchanged. DeepSeekAgentConfig doesn't even have a
         // CacheTtlSeconds/MinCacheableTokens property to set — the only field that exists on it is
-        // EnablePromptCaching, which BehaviorConfigService.Set() seeds from
+        // EnablePromptCaching, which BehaviorConfigService.Update() seeds from
         // TokenSaverBehaviorConfig.Defaults() (DeepSeekAgentConfig.Defaults() => EnablePromptCaching
         // = true) whenever it reads a not-yet-existing local file, independent of this call. So the
         // only verifiable evidence of the no-op is: no exception, no ttl-like field appears anywhere

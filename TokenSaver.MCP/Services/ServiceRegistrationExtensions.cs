@@ -101,7 +101,7 @@ internal static class ServiceRegistrationExtensions
         services.AddSingleton<AiSummarizationService>();
         services.AddSingleton<DependencyTrackingService>();
         services.AddSingleton<WorkspaceIndexService>();
-        services.AddSingleton<IndexChangeQueue>();
+        services.AddSingleton<IndexChangeBuffer>();
         services.AddSingleton<IWorkspaceIndexService>(sp => sp.GetRequiredService<WorkspaceIndexService>());
         services.AddSingleton<BuildArtifactDetector>();
         services.AddSingleton<ContextPipelineService>();
@@ -133,6 +133,7 @@ internal static class ServiceRegistrationExtensions
         services.AddSingleton<IDistillationService, DistillationService>();
         services.AddSingleton<RawArtifactWriter>();
         services.AddSingleton<IChunkExtractor, ChunkExtractor>();
+        services.AddSingleton<IndexPauseGate>();
         services.AddSingleton<IRepoIndexer, RepoIndexer>();
         services.AddSingleton<IndexSelfTest>();
         services.AddSingleton<SemanticQualitySelfTest>();

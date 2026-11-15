@@ -4,8 +4,14 @@ using Xunit;
 
 namespace TokenSaver.MCP.Tests;
 
-public sealed class ClientDebugContextServiceTests
+public sealed class ClientDebugContextServiceTests : IAsyncLifetime, IAsyncDisposable
 {
+    public Task InitializeAsync() => Task.CompletedTask;
+
+    public async Task DisposeAsync() => await ((IAsyncDisposable)_service).DisposeAsync();
+
+    ValueTask IAsyncDisposable.DisposeAsync() => new(DisposeAsync());
+
     private readonly ClientDebugContextService _service = new(
         NullLogger<ClientDebugContextService>.Instance,
         inactivityTimeoutMinutes: 30);

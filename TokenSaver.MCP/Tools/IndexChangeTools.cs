@@ -18,7 +18,7 @@ namespace TokenSaver.MCP.Tools;
 [McpServerToolType]
 internal sealed class IndexChangeTools(
     WorkspaceIndexService index,
-    IndexChangeQueue queue,
+    IndexChangeBuffer queue,
     WorkspaceRootSessionResolver workspaceRootResolver,
     IOptions<TokenSaverConfig> config)
 {

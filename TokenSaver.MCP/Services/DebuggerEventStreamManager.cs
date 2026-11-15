@@ -218,7 +218,7 @@ internal sealed record DebuggerStreamSubscription(
     int EventsCount);
 
 /// <summary>Statistics about active event streams.</summary>
-public sealed record DebuggerStreamStats(
+internal sealed record DebuggerStreamStats(
     int TotalSubscriptions,
     int ActiveSubscriptions,
     int IdleSubscriptions,
@@ -227,7 +227,7 @@ public sealed record DebuggerStreamStats(
     DateTime? MostRecentEvent);
 
 /// <summary>Information about a single stream subscription for monitoring.</summary>
-public sealed record DebuggerStreamSubscriptionInfo(
+internal sealed record DebuggerStreamSubscriptionInfo(
     string SubscriptionId,
     string SubscriptionName,
     DateTime CreatedAt,

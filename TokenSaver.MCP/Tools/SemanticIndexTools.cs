@@ -32,7 +32,6 @@ namespace TokenSaver.MCP.Tools;
 /// </summary>
 [McpServerToolType]
 internal sealed class SemanticIndexTools(
-    IRepoIndexer indexer,
     IConditionalRetrievalService retrieval,
     IOptions<TokenSaverConfig> config,
     WorkspaceRootSessionResolver workspaceRootResolver,
@@ -83,6 +82,44 @@ internal sealed class SemanticIndexTools(
 
     [McpServerTool]
     [Description(
+        "Pause or resume the background semantic index run for a workspace. A paused run stops at the next " +
+        "file boundary, keeps the chunks it already stored, and continues when resumed (resume: true). " +
+        "Pass rootPath when the client does not send MCP roots.")]
+    public async Task<string> IndexPause(
+        [Description("Workspace root; required unless the client sends MCP roots")]
+        string? rootPath = null,
+        [Description("true to resume a paused run; false (default) to pause it")]
+        bool resume = false,
+        McpServer server = null!,
+        CancellationToken ct = default)
+    {
+        string? root = await ResolveIndexRootAsync(rootPath, server, ct);
+        if (root is null)
+        {
+            return NoRootJson();
+        }
+
+        if (resume)
+        {
+            indexTrigger.Resume(root);
+        }
+        else
+        {
+            indexTrigger.Pause(root);
+        }
+
+        return JsonSerializer.Serialize(new
+        {
+            type = "semantic",
+            root,
+            status = indexTrigger.IsPaused(root) ? "paused"
+                : indexTrigger.IsRunning(root) ? "running"
+                : "idle"
+        });
+    }
+
+    [McpServerTool]
+    [Description(
         "Report the state of the background semantic index for a workspace: whether a run is in flight, " +
         "the stats of the last completed run, and the last error if it failed. Pass rootPath (the client's " +
         "workspace folder) when the client does not send MCP roots.")]
@@ -101,7 +138,16 @@ internal sealed class SemanticIndexTools(
         bool running = indexTrigger.IsRunning(root);
         string? error = indexTrigger.GetLastError(root);
         // Read from the database, not process memory: a restarted server still has chunks on disk.
-        (int chunksStored, long? lastUpdatedMs) = await indexTrigger.ChunkSummaryAsync(root, ct);
+        int chunksStored = 0;
+        long? lastUpdatedMs = null;
+        try
+        {
+            (chunksStored, lastUpdatedMs) = await indexTrigger.ChunkSummaryAsync(root, ct);
+        }
+        catch (Exception ex) when (IndexSchemaGuard.IsSchemaMismatch(ex))
+        {
+            return IndexSchemaGuard.NeedsRebuildJson(root, ex);
+        }
         object? last = null;
         if (indexTrigger.TryGetLastStats(root, out RepoIndexStats? stats) && stats is not null)
         {
@@ -121,13 +167,16 @@ internal sealed class SemanticIndexTools(
             type = "semantic",
             root,
             chunks = chunksStored,
-            status = running ? "running"
+            status = indexTrigger.IsPaused(root) ? "paused"
+                : running ? "running"
+                : indexTrigger.NeedsRebuild(root) ? "needs_rebuild"
                 : chunksStored > 0 ? "built"
                 : error is not null ? "failed"
                 : "not_started",
             date = lastUpdatedMs is long ms ? DateTimeOffset.FromUnixTimeMilliseconds(ms).ToString("o") : null,
             last_completed = last,
-            last_error = error
+            last_error = error,
+            rebuild = indexTrigger.NeedsRebuild(root) ? IndexSchemaGuard.RebuildHint : null
         });
     }
 
@@ -159,13 +208,23 @@ internal sealed class SemanticIndexTools(
             return NoRootJson();
         }
 
-        string? waitResult = await WaitForIndexAsync(root, progress, ct);
-        if (waitResult is not null)
+        string? waitResult;
+        RetrievalOutcome outcome;
+        try
         {
-            return waitResult;
+            waitResult = await WaitForIndexAsync(root, progress, ct);
+            if (waitResult is not null)
+            {
+                return waitResult;
+            }
+
+            outcome = await retrieval.RetrieveAsync(root, query, pathFilter, topK, ct);
+        }
+        catch (Exception ex) when (IndexSchemaGuard.IsSchemaMismatch(ex))
+        {
+            return IndexSchemaGuard.NeedsRebuildJson(root, ex);
         }
 
-        RetrievalOutcome outcome = await retrieval.RetrieveAsync(root, query, pathFilter, topK, ct);
 
         if (outcome.Abstained)
         {

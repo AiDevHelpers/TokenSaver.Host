@@ -1,3 +1,4 @@
+#pragma warning disable CA2000 // Test factories hand disposables to the code under test; each test is short-lived.
 using System.Text;
 
 using TokenSaver.AgentHelpers.Core.Contracts;
@@ -10,6 +11,7 @@ using TokenSaver.MCP.Services;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
@@ -47,9 +49,9 @@ public sealed class AgentDetectionMiddlewareTests
     {
         SpyCallerDetectionService spy = new();
 
-        IWebHostBuilder builder = new WebHostBuilder()
-            .UseTestServer()
-            .ConfigureServices(services =>
+        WebApplicationBuilder hostBuilder = WebApplication.CreateBuilder();
+        hostBuilder.WebHost.UseTestServer();
+        Action<IServiceCollection> configureServices = services =>
             {
                 services.AddLogging(l => l.ClearProviders());
                 services.AddSingleton<IOptions<TokenSaverConfig>>(
@@ -62,8 +64,8 @@ public sealed class AgentDetectionMiddlewareTests
                 services.AddSingleton<AgentConfigResolver>();
                 services.AddSingleton<InstructionCacheService>();
                 services.AddSingleton<InstructionOptimizerService>();
-            })
-            .Configure(app =>
+            };
+        Action<IApplicationBuilder> configure = app =>
             {
                 app.UseMiddleware<AgentDetectionMiddleware>();
 
@@ -76,9 +78,13 @@ public sealed class AgentDetectionMiddlewareTests
                     ctx.Response.StatusCode = 200;
                     await ctx.Response.WriteAsync(body);
                 });
-            });
+            };
 
-        TestServer server = new(builder);
+        configureServices(hostBuilder.Services);
+        WebApplication host = hostBuilder.Build();
+        configure(host);
+        host.StartAsync().GetAwaiter().GetResult();
+        TestServer server = (TestServer)host.Services.GetRequiredService<IServer>();
         return (server, spy);
     }
 
