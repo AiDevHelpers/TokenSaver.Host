@@ -188,6 +188,14 @@ internal sealed class IdeTools(TokenSaverConfig config)
         IdeInstanceRouter.CallAsync("publish", new { }, solutionPath, ct);
 
     [McpServerTool]
+    [Description("Kill a process that an IDE instance started for clean or publish. Refuses any other process id.")]
+    public Task<string> IdeKillProcess(
+        [Description("Process id returned by IdeClean or IdePublish")] int pid,
+        [Description("Optional: full path of the solution to target")] string? solutionPath = null,
+        CancellationToken ct = default) =>
+        IdeInstanceRouter.CallAsync("killProcess", new { pid }, solutionPath, ct);
+
+    [McpServerTool]
     [Description("Launch a Visual Studio instance with a solution open. Reuses an instance that already has it open. " +
                  "Waits for the instance's bridge to come up.")]
     public Task<string> IdeLaunchInstance(
