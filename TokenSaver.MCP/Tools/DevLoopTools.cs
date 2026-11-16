@@ -14,6 +14,9 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using TokenSaver.LogHelper.Models;
+using TokenSaver.LogHelper.Parsing;
+using TokenSaver.LogHelper.Services;
 
 namespace TokenSaver.MCP.Tools;
 
@@ -440,10 +443,20 @@ internal sealed class DevLoopTools(
 
         string raw = string.Join('\n', newLines);
         string summary = raw.Length > 800
-            ? (await distill.DistillAsync(_config.WorkspaceRoot, "buildWatch", DistillRole.LogErrors, raw, ct: ct)).Summary
+            ? (await distill.DistillAsync(_config.WorkspaceRoot, "buildWatch", DistillRole.LogErrors, ReduceForDistill(raw), ct: ct)).Summary
             : raw;
 
         return JsonSerializer.Serialize(new { summary, last_line = lines.Length });
+    }
+
+    // Collapses repeated lines into counted templates (errors first) before the distiller sees them.
+    // Same masking as the log helper's summary view; the distiller gets far fewer tokens for repetitive builds.
+    private static string ReduceForDistill(string raw)
+    {
+        var options = new LogHelperOptions();
+        var entries = new LogParser(options).Parse(raw.Split('\n'));
+        var rows = TemplateAggregator.Aggregate(entries, options);
+        return SummaryFormatter.Format(rows, maxTokens: 400).Text;
     }
 
     /// <summary>Splits "dotnet test --filter Foo" into ("dotnet", "test --filter Foo") for ProcessStartInfo.</summary>

@@ -19,6 +19,7 @@
     <ProjectReference Include="..\..\Core\TokenSaver.Config\TokenSaver.Config.csproj" />
     <ProjectReference Include="..\..\Core\TokenSaver.ContextHelper\TokenSaver.ContextHelper.csproj" />
     <ProjectReference Include="..\..\Core\TokenSaver.Docs\TokenSaver.Docs.csproj" />
+    <ProjectReference Include="..\..\Core\TokenSaver.LogHelper\TokenSaver.LogHelper.csproj" />
     <ProjectReference Include="..\..\Core\TokenSaver.OllamaIntegration\TokenSaver.OllamaIntegration.csproj" />
     <ProjectReference Include="..\..\Core\TokenSaver.TokenEconomy\TokenSaver.TokenEconomy.csproj" />
     <ProjectReference Include="..\..\Core\TokenSaver.Utilities\TokenSaver.Utilities.csproj" />
