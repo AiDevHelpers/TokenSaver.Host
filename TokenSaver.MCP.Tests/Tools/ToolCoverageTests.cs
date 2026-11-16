@@ -35,14 +35,20 @@ public sealed class ToolCoverageTests
             $"{untested.Count} MCP tool method(s) have no test: {string.Join(", ", untested)}");
     }
 
-    private static string ReadTestSources([System.Runtime.CompilerServices.CallerFilePath] string self = "")
+    private static string ReadTestSources()
     {
-        // Compile-time location of this file (Tools/) -> the test project directory one level up.
-        string dir = Path.GetFullPath(Path.Combine(Path.GetDirectoryName(self)!, ".."));
-        if (!File.Exists(Path.Combine(dir, "TokenSaver.MCP.Tests.csproj")))
+        // Walk up from the test binary to the source tree. CallerFilePath is not used: CI's deterministic
+        // path mapping rewrites it (D:\a\...\TokenSaver -> /_/), so it does not point at the checkout.
+        string? dir = AppContext.BaseDirectory;
+        while (dir is not null && !File.Exists(Path.Combine(dir, "src", "Host", "TokenSaver.MCP.Tests", "TokenSaver.MCP.Tests.csproj")))
         {
-            throw new InvalidOperationException($"TokenSaver.MCP.Tests project directory not found at {dir}.");
+            dir = Path.GetDirectoryName(dir);
         }
+        if (dir is null)
+        {
+            throw new InvalidOperationException("TokenSaver.MCP.Tests source tree not found above the test binary.");
+        }
+        dir = Path.Combine(dir, "src", "Host", "TokenSaver.MCP.Tests");
 
         IEnumerable<string> files = Directory.EnumerateFiles(dir, "*.cs", SearchOption.AllDirectories)
             .Where(f => !f.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase)
