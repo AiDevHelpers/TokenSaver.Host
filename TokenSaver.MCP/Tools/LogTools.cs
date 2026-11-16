@@ -6,6 +6,7 @@ using Microsoft.Extensions.Options;
 using ModelContextProtocol.Server;
 using TokenSaver.Common.Core.Configuration;
 using TokenSaver.LogHelper.Contracts;
+using TokenSaver.LogHelper.Filtering;
 using TokenSaver.LogHelper.Models;
 using TokenSaver.TokenEconomy.Contracts;
 
@@ -61,7 +62,12 @@ internal sealed class LogTools
         "minLevel is Trace|Debug|Information|Warning|Error|Critical; category is a prefix. " +
         "Pass the returned cursor as 'since' to read only new entries next time. Use since='lastRun' (after LogMarkRun) " +
         "to read only messages that are new or changed since the last mark. waitSeconds (max 25) holds the call open " +
-        "until something new appears, then returns it with a cursor.")]
+        "until something new appears, then returns it with a cursor. " +
+        "Structured logs: format is auto (default; sniffed once per channel from json, xml or logfmt, else plain), " +
+        "json, xml, logfmt, plain or regex. For regex, pass pattern with named groups; each group becomes a field. " +
+        "schema is an optional JSON object mapping timestamp, level, message, category or exception to field names. " +
+        "fields filters parsed fields: comma-separated key=value terms, case-insensitive (e.g. level=Error,service=api). " +
+        "XML is read one record per line.")]
     public async Task<string> LogQuery(
         string channel,
         string? match = null,
@@ -72,6 +78,10 @@ internal sealed class LogTools
         string? since = null,
         int maxTokens = 1500,
         int waitSeconds = 0,
+        string? format = null,
+        string? pattern = null,
+        string? schema = null,
+        string? fields = null,
         CancellationToken ct = default)
     {
         if (!ChannelId.TryParse(channel, out ChannelId? channelId) || channelId is null)
@@ -90,6 +100,15 @@ internal sealed class LogTools
             level = parsed;
         }
 
+        if (!LogFilter.TryParseFieldTerms(fields, out IReadOnlyList<FieldTerm> fieldTerms, out string? fieldError))
+        {
+            return $"Error: {fieldError}";
+        }
+
+        LogFormatSpec? formatSpec = format is null && pattern is null && schema is null
+            ? null
+            : new LogFormatSpec(format, pattern, schema);
+
         var request = new LogQueryRequest(
             channelId,
             new LogFilterSpec
@@ -98,11 +117,13 @@ internal sealed class LogTools
                 Exclude = exclude,
                 MinLevel = level,
                 Category = category,
+                FieldTerms = fieldTerms,
             },
             view,
             since,
             WaitSeconds: Math.Clamp(waitSeconds, 0, 25),
-            MaxTokens: Math.Clamp(maxTokens, 50, 8000));
+            MaxTokens: Math.Clamp(maxTokens, 50, 8000),
+            Format: formatSpec);
 
         var stopwatch = Stopwatch.StartNew();
         LogQueryResult result = await _logs.QueryAsync(request, new LogRequestContext("mcp"), ct);
