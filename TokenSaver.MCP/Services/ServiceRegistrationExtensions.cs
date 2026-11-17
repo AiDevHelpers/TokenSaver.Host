@@ -396,6 +396,20 @@ internal static class ServiceRegistrationExtensions
     }
 
     /// <summary>
+    ///     Registers the terminal session stack (TokenSaver.TerminalControl) used by the TerminalSession tool.
+    ///     The manager is initialized lazily by the tool, so server startup does not probe terminals.
+    /// </summary>
+    public static IServiceCollection AddTerminalControlServices(this IServiceCollection services)
+    {
+        services.AddSingleton<TokenSaver.TerminalControl.Contracts.ISessionRegistry, TokenSaver.TerminalControl.Core.SessionRegistry>();
+        services.AddSingleton<TokenSaver.TerminalControl.Contracts.ITerminalConfigurationDiscovery,
+            TokenSaver.TerminalControl.Discovery.TerminalConfigurationDiscovery>();
+        services.AddSingleton<TokenSaver.TerminalControl.Contracts.ITerminalSessionManager,
+            TokenSaver.TerminalControl.Core.TerminalSessionManager>();
+        return services;
+    }
+
+    /// <summary>
     ///     Registers the WSL provider stack (TokenSaver.WslControl) plus the host-side adapter that
     ///     binds its <see cref="IWslCommandModel" /> seam to the local model (OllamaService), so the
     ///     natural-language planner can route command synthesis through the SimpleModelServer/Ollama router.
