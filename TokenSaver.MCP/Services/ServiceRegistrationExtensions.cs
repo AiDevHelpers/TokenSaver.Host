@@ -340,13 +340,10 @@ internal static class ServiceRegistrationExtensions
     {
         services.AddSingleton<LogHelperOptions>(sp =>
         {
-            string root = sp.GetRequiredService<IOptions<TokenSaverConfig>>().Value.WorkspaceRoot;
-            bool hasRoot = !string.IsNullOrWhiteSpace(root);
-            return new LogHelperOptions
-            {
-                AllowedRoots = hasRoot ? new[] { root } : Array.Empty<string>(),
-                StateDirectory = hasRoot ? Path.Combine(root, ".tokensaver", "logs") : null,
-            };
+            // Resolved per use: the workspace root is often only learned after startup, from the client's
+            // first call, so freezing it here would leave file logs and run snapshots permanently empty.
+            TokenSaverConfig config = sp.GetRequiredService<IOptions<TokenSaverConfig>>().Value;
+            return new LogHelperOptions { WorkspaceRootProvider = () => config.WorkspaceRoot };
         });
         services.AddSingleton<ILogSourceProvider>(sp => new FileLogSourceProvider(sp.GetRequiredService<LogHelperOptions>()));
         services.AddSingleton<IIdeLogBridge, IdeLogBridge>();
