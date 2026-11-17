@@ -128,46 +128,52 @@ internal sealed class TestRunnerService : ITestRunner
                 Message: "No test projects found in workspace");
         }
 
-        var args = new List<string> { "test", testProject, "--logger", "json", "--no-build" };
-
-        if (!string.IsNullOrWhiteSpace(testName))
-        {
-            args.Add("--filter");
-            args.Add($"FullyQualifiedName~{testName}");
-        }
-        else if (!string.IsNullOrWhiteSpace(testNamespace))
-        {
-            args.Add("--filter");
-            args.Add($"FullyQualifiedName~{testNamespace}");
-        }
-
+        // ArgumentList quotes each argument, so project paths with spaces work. The default console
+        // summary ("Total tests: / Passed: / Failed:") is what ParseTestOutput reads.
         var startInfo = new ProcessStartInfo
         {
             FileName = "dotnet",
-            Arguments = string.Join(" ", args),
             WorkingDirectory = workspaceRoot,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             UseShellExecute = false,
             CreateNoWindow = true
         };
+        startInfo.ArgumentList.Add("test");
+        startInfo.ArgumentList.Add(testProject);
+        startInfo.ArgumentList.Add("--no-build");
 
+        if (!string.IsNullOrWhiteSpace(testName))
+        {
+            startInfo.ArgumentList.Add("--filter");
+            startInfo.ArgumentList.Add($"FullyQualifiedName~{testName}");
+        }
+        else if (!string.IsNullOrWhiteSpace(testNamespace))
+        {
+            startInfo.ArgumentList.Add("--filter");
+            startInfo.ArgumentList.Add($"FullyQualifiedName~{testNamespace}");
+        }
+
+        Process? process = null;
         try
         {
             var sw = Stopwatch.StartNew();
-            var process = Process.Start(startInfo);
-            ManagedProcessRegistry.Track(process, "test run");
+            process = Process.Start(startInfo);
 
             if (process == null)
             {
                 return CreateFailureResult("Failed to start dotnet test process");
             }
 
-            await process.WaitForExitAsync(ct);
-            sw.Stop();
+            ManagedProcessRegistry.Track(process, "test run");
 
-            var output = await process.StandardOutput.ReadToEndAsync(ct);
-            var errors = await process.StandardError.ReadToEndAsync(ct);
+            // Drain both pipes while the process runs; waiting for exit first deadlocks on a full pipe.
+            Task<string> outputTask = process.StandardOutput.ReadToEndAsync(ct);
+            Task<string> errorsTask = process.StandardError.ReadToEndAsync(ct);
+            await process.WaitForExitAsync(ct);
+            string output = await outputTask;
+            string errors = await errorsTask;
+            sw.Stop();
 
             if (_logger.IsEnabled(LogLevel.Information))
             {
@@ -179,11 +185,25 @@ internal sealed class TestRunnerService : ITestRunner
                 return CreateFailureResult($"Test execution failed with exit code {process.ExitCode}: {errors}");
             }
 
-            return ParseTestOutput(output, sw.ElapsedMilliseconds);
+            TestExecutionResult parsed = ParseTestOutput(output, sw.ElapsedMilliseconds);
+
+            // A non-zero exit (build failure, crash, failed tests the parser missed) is never a success.
+            return process.ExitCode != 0 && parsed.Success
+                ? parsed with { Success = false, Message = $"dotnet test exited with code {process.ExitCode}. {parsed.Message}\n{errors}".Trim() }
+                : parsed;
         }
         catch (OperationCanceledException)
         {
+            if (process is { HasExited: false })
+            {
+                process.Kill(entireProcessTree: true);
+            }
+
             return CreateFailureResult("Test execution was cancelled");
+        }
+        finally
+        {
+            process?.Dispose();
         }
     }
 

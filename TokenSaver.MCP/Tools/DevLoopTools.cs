@@ -505,10 +505,44 @@ internal sealed class DevLoopTools(
 
         _ = process.Start();
         ManagedProcessRegistry.Track(process, "dev command");
-        string stdout = await process.StandardOutput.ReadToEndAsync(ct);
-        string stderr = await process.StandardError.ReadToEndAsync(ct);
-        await process.WaitForExitAsync(ct);
 
-        return (process.ExitCode, stdout, stderr);
+        // Read both pipes concurrently (sequential reads deadlock once the unread pipe fills) and
+        // kill the whole tree on cancellation or timeout so no orphan child keeps running.
+        using CancellationTokenSource timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        timeout.CancelAfter(ProcessTimeout);
+        try
+        {
+            Task<string> stdoutTask = process.StandardOutput.ReadToEndAsync(timeout.Token);
+            Task<string> stderrTask = process.StandardError.ReadToEndAsync(timeout.Token);
+            await process.WaitForExitAsync(timeout.Token);
+            return (process.ExitCode, await stdoutTask, await stderrTask);
+        }
+        catch (OperationCanceledException)
+        {
+            KillTree(process);
+            if (ct.IsCancellationRequested)
+            {
+                throw;
+            }
+
+            throw new TimeoutException($"'{fileName}' did not finish within {ProcessTimeout.TotalMinutes:0} minutes and was killed.");
+        }
+    }
+
+    private static readonly TimeSpan ProcessTimeout = TimeSpan.FromMinutes(10);
+
+    private static void KillTree(Process process)
+    {
+        try
+        {
+            if (!process.HasExited)
+            {
+                process.Kill(entireProcessTree: true);
+            }
+        }
+        catch (InvalidOperationException)
+        {
+            // Already exited between the check and the kill.
+        }
     }
 }
