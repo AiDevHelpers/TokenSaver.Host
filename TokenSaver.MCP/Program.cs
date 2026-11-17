@@ -124,8 +124,8 @@ TokenSaverHostBootstrap.LogServerStarting(app, isStdio);
 TokenSaverHostBootstrap.RegisterShutdownLogging(app);
 
 // ── Start the server ──
-// Listen on * to bind both IPv4 (0.0.0.0) and IPv6 (::) so that clients
-// resolving "localhost" to ::1 can connect alongside IPv4-only callers.
+// Bind loopback only (127.0.0.1 and ::1) so clients resolving "localhost" to either
+// family connect, while nothing off-machine can reach the unauthenticated server.
 TokenSaverHostBootstrap.RunServer(app);
 
 // ═══════════════════════════════════════════════════════════════════════════════

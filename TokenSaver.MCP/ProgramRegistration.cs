@@ -281,7 +281,11 @@ internal static class TokenSaverHostBootstrap
         try
         {
             TokenSaverConfig config = app.Services.GetRequiredService<IOptions<TokenSaverConfig>>().Value;
-            app.Run($"http://*:{config.ServerPort}");
+            // Loopback only: the server exposes command-execution tools and has no auth.
+            app.Urls.Clear();
+            app.Urls.Add($"http://127.0.0.1:{config.ServerPort}");
+            app.Urls.Add($"http://[::1]:{config.ServerPort}");
+            app.Run();
         }
         catch (IOException ex) when (ex.InnerException is AddressInUseException)
         {
