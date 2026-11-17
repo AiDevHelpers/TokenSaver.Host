@@ -302,6 +302,7 @@ internal static class ServiceRegistrationExtensions
     /// <summary>Register debugger control service for VS Code and Visual Studio.</summary>
     public static IServiceCollection AddDebuggerServices(this IServiceCollection services)
     {
+        services.AddSingleton<IIdeBridge, IdeInstanceBridge>();
         services.AddSingleton<IDebuggerControl, DebuggerControlService>();
         services.AddSingleton<IDebuggerApiClient, DebuggerApiImplementation>();
         services.AddSingleton<IDebugOutputCapture, DebugOutputCaptureService>();
