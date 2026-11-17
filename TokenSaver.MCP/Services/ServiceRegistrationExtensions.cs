@@ -27,6 +27,7 @@ using TokenSaver.LogHelper.Contracts;
 using TokenSaver.LogHelper.Models;
 using TokenSaver.LogHelper.Services;
 using TokenSaver.LogHelper.Sources;
+using TokenSaver.MCP.Security;
 using TokenSaver.MCP.Services.LogSources;
 using TokenSaver.LanguageHelpers.CSharp.Extensions;
 using TokenSaver.LanguageHelpers.PowerShell.Extensions;
@@ -286,6 +287,12 @@ internal static class ServiceRegistrationExtensions
     /// <summary>Configure workspace resolution and session management.</summary>
     public static IServiceCollection AddWorkspaceSessionServices(this IServiceCollection services)
     {
+        services.AddSingleton<ILocalUserGroup>(sp => OperatingSystem.IsWindows()
+            ? new WindowsLocalUserGroup(
+                sp.GetRequiredService<IOptions<TokenSaverConfig>>().Value.AuthGroupName,
+                sp.GetRequiredService<ILogger<WindowsLocalUserGroup>>())
+            : throw new PlatformNotSupportedException("The TokenSaver user group is Windows only."));
+        services.AddSingleton<AuthTokenStore>();
         services.AddSingleton<WorkspaceSessionRoots>();
         services.AddSingleton<WorkspaceRootSessionResolver>();
         services.AddSingleton<UnhandledFaultTracker>();

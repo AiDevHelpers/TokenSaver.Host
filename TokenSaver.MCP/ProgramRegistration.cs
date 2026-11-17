@@ -83,6 +83,8 @@ internal static class TokenSaverHostRegistration
 
         app.MapDebuggerEndpoints();
 
+        app.MapAuthEndpoints();
+
         app.MapDebuggerStreamingEndpoints();
 
         app.MapGet("/api/register-providers", async (

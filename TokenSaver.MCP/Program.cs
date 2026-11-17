@@ -100,11 +100,13 @@ WebApplication app = builder.Build();
 
 // ── Middleware pipeline ──
 // Ordered for correct exception/context handling:
+// 0. EndpointAuth (Host/Origin/bearer-token check for /mcp and /api)
 // 1. DebuggerContext (captures extension info and timing)
 // 2. FaultTracking (wraps everything)
 // 3. WorkspaceScope (per-session workspace root for everything below)
 // 4. AgentDetection (peeks handshake for model family)
 // 5. ContextIntercept (intercepts/modifies context)
+app.UseMiddleware<EndpointAuthMiddleware>();
 app.UseDebuggerContextInterceptor();
 app.UseMiddleware<FaultTrackingMiddleware>();
 app.UseMiddleware<WorkspaceScopeMiddleware>();
