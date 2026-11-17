@@ -286,6 +286,7 @@ internal static class ServiceRegistrationExtensions
     /// <summary>Configure workspace resolution and session management.</summary>
     public static IServiceCollection AddWorkspaceSessionServices(this IServiceCollection services)
     {
+        services.AddSingleton<WorkspaceSessionRoots>();
         services.AddSingleton<WorkspaceRootSessionResolver>();
         services.AddSingleton<UnhandledFaultTracker>();
         return services;

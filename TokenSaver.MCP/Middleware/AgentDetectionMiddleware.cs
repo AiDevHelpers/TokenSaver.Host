@@ -16,8 +16,8 @@ namespace TokenSaver.MCP.Middleware;
 ///     detected and which <c>agentConfig</c> settings now apply, so "the server picked
 ///     Anthropic/1h caching" is visible in logs without needing to call <c>ManageConfig</c>.
 ///     This is intentionally the closest thing to "session start" this server has: the MCP
-///     transport here is stateless HTTP with no session store (see
-///     <c>ContextInterceptMiddleware</c>'s doc comment), so <c>initialize</c> is a per-connection
+///     transport is stateful HTTP (see
+///     <c>WorkspaceScopeMiddleware</c>), so <c>initialize</c> is a per-connection
 ///     signal, not a per-process one — detection re-runs on every connection's handshake rather
 ///     than being cached process-wide, since a long-lived server can field requests from more than
 ///     one client/model over its lifetime.

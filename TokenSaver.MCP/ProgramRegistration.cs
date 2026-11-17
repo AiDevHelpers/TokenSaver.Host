@@ -31,12 +31,13 @@ internal static class TokenSaverHostRegistration
     internal static void AddTokenSaverMcpServer(this IServiceCollection services, bool isStdio)
     {
         // Both SSE (GET) and streamable-http (POST) are supported on the same /mcp endpoint.
-        // Stateless=true allows SSE clients while still handling streamable-http from others.
+        // Stateful sessions: each client gets an Mcp-Session-Id, so MCP roots (and the workspace root
+        // they resolve to) are tracked per session instead of in one process-wide value.
         IMcpServerBuilder mcpBuilder = services.AddMcpServer(options =>
             {
                 options.ServerInstructions = DocResourceService.GetAgent();
             })
-            .WithHttpTransport(o => { o.Stateless = true; })
+            .WithHttpTransport(o => { o.Stateless = false; })
             .WithTools<LocalModelHelperTools>()
             .WithTools<AccuracyTestTools>()
             .WithTools<ContextDiagnosticsTools>()

@@ -102,10 +102,12 @@ WebApplication app = builder.Build();
 // Ordered for correct exception/context handling:
 // 1. DebuggerContext (captures extension info and timing)
 // 2. FaultTracking (wraps everything)
-// 3. AgentDetection (peeks handshake for model family)
-// 4. ContextIntercept (intercepts/modifies context)
+// 3. WorkspaceScope (per-session workspace root for everything below)
+// 4. AgentDetection (peeks handshake for model family)
+// 5. ContextIntercept (intercepts/modifies context)
 app.UseDebuggerContextInterceptor();
 app.UseMiddleware<FaultTrackingMiddleware>();
+app.UseMiddleware<WorkspaceScopeMiddleware>();
 app.UseMiddleware<AgentDetectionMiddleware>();
 app.UseMiddleware<ContextInterceptMiddleware>();
 

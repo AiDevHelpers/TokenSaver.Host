@@ -72,6 +72,11 @@ internal sealed partial class WorkspaceRootSessionResolver
     private readonly InstructionOptimizerService _instructionOptimizer;
     private readonly SemanticIndexBackgroundTrigger _semanticIndexTrigger;
     private readonly ILogger<WorkspaceRootSessionResolver> _logger;
+    private readonly WorkspaceSessionRoots _sessionRoots;
+
+    /// <summary>How long to wait for a client to answer a roots request before giving up on it.</summary>
+    internal static readonly TimeSpan RootsRequestTimeout = TimeSpan.FromSeconds(5);
+
     private readonly System.Collections.Concurrent.ConcurrentDictionary<string, byte> _warmedRoots =
         new(StringComparer.OrdinalIgnoreCase);
 
@@ -93,6 +98,7 @@ internal sealed partial class WorkspaceRootSessionResolver
         BehaviorConfigOverlay behaviorConfigOverlay,
         InstructionOptimizerService instructionOptimizer,
         SemanticIndexBackgroundTrigger semanticIndexTrigger,
+        WorkspaceSessionRoots sessionRoots,
         ILogger<WorkspaceRootSessionResolver> logger)
     {
         _config = config.Value;
@@ -103,6 +109,7 @@ internal sealed partial class WorkspaceRootSessionResolver
         _behaviorConfigOverlay = behaviorConfigOverlay;
         _instructionOptimizer = instructionOptimizer;
         _semanticIndexTrigger = semanticIndexTrigger;
+        _sessionRoots = sessionRoots;
         _logger = logger;
     }
 
@@ -129,6 +136,13 @@ internal sealed partial class WorkspaceRootSessionResolver
             TriggerWarmupOnce(Path.TrimEndingDirectorySeparator(Path.GetFullPath(rootHint)));
         }
 
+        // This session already resolved its root (the request scope is seeded from the per-session
+        // store), so skip the client round-trip and the per-root setup below.
+        if (WorkspaceScope.Current is { Root: { Length: > 0 } })
+        {
+            return;
+        }
+
         // Only the client's MCP roots are trusted. The server's own working directory is never used:
         // it says nothing about which folder the session is in. A tool call that carries rootPath
         // resolves through the hint overload instead.
@@ -141,7 +155,16 @@ internal sealed partial class WorkspaceRootSessionResolver
             return;
         }
 
-        _config.WorkspaceRoot = resolved;
+        // Per-session, not process-wide: this request's scope and the session store carry the root;
+        // the config singleton only remembers it for callers that run outside any request.
+        if (WorkspaceScope.Current is { } scope)
+        {
+            scope.Root = resolved;
+        }
+
+        _sessionRoots.Set(server?.SessionId, resolved);
+
+        _config.RecordResolvedRoot(resolved);
         Environment.SetEnvironmentVariable("SIMPLEMODELSERVER_WORKSPACE", resolved);
         LogWorkspaceRootResolved(_logger, resolved);
 
@@ -182,7 +205,11 @@ internal sealed partial class WorkspaceRootSessionResolver
 
         try
         {
-            ListRootsResult result = await server.RequestRootsAsync(new ListRootsRequestParams(), ct);
+            // A client that never opens the session's event stream cannot answer a roots request;
+            // bound the wait so such a call degrades to "no root" instead of hanging.
+            using CancellationTokenSource timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            timeout.CancelAfter(RootsRequestTimeout);
+            ListRootsResult result = await server.RequestRootsAsync(new ListRootsRequestParams(), timeout.Token);
             Root? first = result.Roots?.FirstOrDefault();
             if (first is not null &&
                 Uri.TryCreate(first.Uri, UriKind.Absolute, out Uri? uri) &&

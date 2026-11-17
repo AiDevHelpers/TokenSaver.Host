@@ -102,7 +102,7 @@ internal static class WorkspaceRootSessionResolverTestFactory
 
         return new WorkspaceRootSessionResolver(
             configOptions, contextHelperOptions, indexService, contextPipeline, ollama,
-            behaviorConfigOverlay, instructionOptimizer, semanticIndexTrigger,
+            behaviorConfigOverlay, instructionOptimizer, semanticIndexTrigger, new WorkspaceSessionRoots(),
             NullLogger<WorkspaceRootSessionResolver>.Instance)
         {
             SkipBackgroundWarmupForTests = true

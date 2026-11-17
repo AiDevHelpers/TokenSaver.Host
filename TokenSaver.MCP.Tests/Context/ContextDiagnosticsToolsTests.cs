@@ -143,7 +143,7 @@ public sealed class ContextDiagnosticsToolsTests : IDisposable
             NullLogger<InstructionOptimizerService>.Instance);
         WorkspaceRootSessionResolver workspaceRootResolver = new(
             tokenSaverOptions, contextHelperOptions, orchestrator, contextPipeline, ollama,
-            behaviorConfigOverlay, instructionOptimizer, semanticIndexTrigger,
+            behaviorConfigOverlay, instructionOptimizer, semanticIndexTrigger, new WorkspaceSessionRoots(),
             NullLogger<WorkspaceRootSessionResolver>.Instance)
         {
             SkipBackgroundWarmupForTests = true
