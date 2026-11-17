@@ -163,22 +163,32 @@ internal sealed partial class ContextInterceptMiddleware
             return;
         }
 
-        // Only intercept tools/call
-        if (rpc?["method"]?.GetValue<string>() != "tools/call")
+        // Anything that is not a well-formed JSON-RPC object passes through untouched; the MCP
+        // transport reports the protocol error. Indexing a non-object or reading a non-string
+        // with GetValue<string> would otherwise throw out of the middleware.
+        if (rpc is not JsonObject rpcObject)
         {
             await _next(context);
             return;
         }
 
-        string? toolName = rpc["params"]?["name"]?.GetValue<string>();
+        // Only intercept tools/call
+        if (AsString(rpcObject["method"]) != "tools/call")
+        {
+            await _next(context);
+            return;
+        }
+
+        JsonObject? rpcParams = rpcObject["params"] as JsonObject;
+        string? toolName = AsString(rpcParams?["name"]);
         if (toolName == null || _skipTools.Contains(toolName))
         {
             await _next(context);
             return;
         }
 
-        JsonObject? args = rpc["params"]?["arguments"] as JsonObject;
-        string? prompt = args?["prompt"]?.GetValue<string>();
+        JsonObject? args = rpcParams?["arguments"] as JsonObject;
+        string? prompt = AsString(args?["prompt"]);
         if (string.IsNullOrWhiteSpace(prompt))
         {
             await _next(context);
@@ -237,7 +247,7 @@ internal sealed partial class ContextInterceptMiddleware
                 // Draft model implemented the task — return the result directly
                 LogSimpleModelServerHandled(_logger, toolName, interceptResult.Summary);
 
-                await WriteJsonRpcResultAsync(context, interceptResult);
+                await WriteJsonRpcResultAsync(context, interceptResult, rpc["id"]?.DeepClone());
                 return true;
             }
 
@@ -270,13 +280,20 @@ internal sealed partial class ContextInterceptMiddleware
         return false;
     }
 
-    private static async Task WriteJsonRpcResultAsync(HttpContext context, SimpleModelServerInterceptionResult result)
+    /// <summary>Returns the node's string value, or null when it is missing or not a JSON string.</summary>
+    internal static string? AsString(JsonNode? node)
     {
-        // Build a JSON-RPC success response
+        return node is JsonValue value && value.TryGetValue(out string? text) ? text : null;
+    }
+
+    private static async Task WriteJsonRpcResultAsync(HttpContext context, SimpleModelServerInterceptionResult result, JsonNode? requestId)
+    {
+        // Build a JSON-RPC success response. The id must echo the request's id or the client
+        // cannot correlate the response.
         JsonObject response = new()
         {
             ["jsonrpc"] = "2.0",
-            ["id"] = ExtractRequestId(context),
+            ["id"] = requestId,
             ["result"] = new JsonObject
             {
                 ["content"] = new JsonArray
@@ -300,14 +317,6 @@ internal sealed partial class ContextInterceptMiddleware
         await context.Response.Body.WriteAsync(bytes);
     }
 
-    private static JsonNode? ExtractRequestId(HttpContext context)
-    {
-        // The original request body is already consumed. We read what was buffered.
-        // A simpler approach: return a synthetic ID. Real MCP clients don't strictly
-        // validate the response ID against the request — they match on request/response
-        // ordering or content.
-        return "draft-model-intercepted";
-    }
     /// <summary>Runs the context-cleaning pipeline and draft-doc injection; returns the prompt to forward.</summary>
     private async Task<string> CleanPromptAsync(
         HttpContext context,
