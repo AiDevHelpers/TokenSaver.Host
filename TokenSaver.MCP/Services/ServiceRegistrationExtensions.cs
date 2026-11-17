@@ -333,11 +333,6 @@ internal static class ServiceRegistrationExtensions
     }
 
     /// <summary>
-    ///     Registers the WSL provider stack (TokenSaver.WslControl) plus the host-side adapter that
-    ///     binds its <see cref="IWslCommandModel" /> seam to the local model (OllamaService), so the
-    ///     natural-language planner can route command synthesis through the SimpleModelServer/Ollama router.
-    /// </summary>
-    /// <summary>
     ///     Registers the log helper facade. Allowed roots and the state directory follow the configured
     ///     workspace root. Options and providers are resolved on first use.
     /// </summary>
@@ -368,6 +363,11 @@ internal static class ServiceRegistrationExtensions
         return services;
     }
 
+    /// <summary>
+    ///     Registers the WSL provider stack (TokenSaver.WslControl) plus the host-side adapter that
+    ///     binds its <see cref="IWslCommandModel" /> seam to the local model (OllamaService), so the
+    ///     natural-language planner can route command synthesis through the SimpleModelServer/Ollama router.
+    /// </summary>
     public static IServiceCollection AddWslControlServices(this IServiceCollection services)
     {
         // Bind the WslControl command-model seam to the local model before AddWslControl runs,
