@@ -83,12 +83,12 @@ public sealed class WorkspaceConfigDefaultsTests : IDisposable
         Assert.Contains("// \"addTokenSaverToGitignore\": true,", content, StringComparison.Ordinal);
         Assert.Contains("// \"optimizeInstructions\": true", content, StringComparison.Ordinal);
         Assert.Contains("// \"autoSplitOversizedInstructions\": true", content, StringComparison.Ordinal);
-        Assert.Contains("// \"autoEnabled\": true,", content, StringComparison.Ordinal);
+        Assert.Contains("// \"autoEnabled\": false,", content, StringComparison.Ordinal);
         Assert.Contains("// \"enableDistill\": true,", content, StringComparison.Ordinal);
         Assert.Contains("// \"contextSizeLimit\": 120000,", content, StringComparison.Ordinal);
 
         // ...and each setting has a preceding description comment.
-        Assert.Contains("// Master switch for CodeHelper auto-workflow.", content, StringComparison.Ordinal);
+        Assert.Contains("// Advisory auto-workflow intercept", content, StringComparison.Ordinal);
 
         // File still parses as valid JSON-with-comments once loaded through the same reader
         // BehaviorConfigService uses (comments/commented-out lines are all ignored), yielding an
@@ -141,7 +141,7 @@ public sealed class WorkspaceConfigDefaultsTests : IDisposable
         // ...but settings are active (uncommented) rather than commented out...
         Assert.Contains("\"optimizeInstructions\": true", content, StringComparison.Ordinal);
         Assert.Contains("\"autoSplitOversizedInstructions\": true", content, StringComparison.Ordinal);
-        Assert.Contains("\"autoEnabled\": true,", content, StringComparison.Ordinal);
+        Assert.Contains("\"autoEnabled\": false,", content, StringComparison.Ordinal);
         Assert.Contains("\"enableDistill\": true,", content, StringComparison.Ordinal);
         Assert.Contains("\"contextSizeLimit\": 120000,", content, StringComparison.Ordinal);
         Assert.DoesNotContain("// \"optimizeInstructions\": true", content, StringComparison.Ordinal);
@@ -153,7 +153,7 @@ public sealed class WorkspaceConfigDefaultsTests : IDisposable
         Assert.Contains("// \"addTokenSaverToGitignore\": true,", content, StringComparison.Ordinal);
 
         // ...and each setting still has a preceding description comment.
-        Assert.Contains("// Master switch for CodeHelper auto-workflow.", content, StringComparison.Ordinal);
+        Assert.Contains("// Advisory auto-workflow intercept", content, StringComparison.Ordinal);
 
         // Parses to exactly TokenSaverBehaviorConfig.Defaults() (all real defaults populated,
         // only the gitignore-prompt sentinel left null).
@@ -164,7 +164,7 @@ public sealed class WorkspaceConfigDefaultsTests : IDisposable
         Assert.Null(parsed!.RepoHelper?.AddTokenSaverToGitignore);
         Assert.True(parsed.RepoHelper?.OptimizeInstructions);
         Assert.True(parsed.RepoHelper?.AutoSplitOversizedInstructions);
-        Assert.Equal(true, parsed.CodeHelper?.AutoEnabled);
+        Assert.Equal(false, parsed.CodeHelper?.AutoEnabled);
         Assert.Equal(120_000, parsed.Context?.ContextSizeLimit);
         Assert.Equal(true, parsed.LazyContext?.Overrides?["claude-code"]);
     }

@@ -1,3 +1,4 @@
+using TokenSaver.CodeHelper.Calibration;
 using TokenSaver.CodeHelper.AutoWorkflow;
 using TokenSaver.CodeHelper.Configuration;
 using TokenSaver.ContextHelper.Configuration;
@@ -9,31 +10,23 @@ using TokenSaver.MCP.Services;
 using Microsoft.Extensions.Options;
 
 using System.Text;
-using System.Text.Json;
 using System.Text.Json.Nodes;
 
 namespace TokenSaver.MCP.Middleware;
 
 /// <summary>
-///     Intercepts MCP tools/call requests and runs the prompt through:
-///     1. Context cleaning pipeline (existing)
-///     2. Draft model interceptor (new) — for code-writing prompts, tries the local
-///     draft model first; falls back to the calling AI for architecture/design.
-///     Works for every MCP client (Claude Code, Copilot, Cursor, Continue, etc.)
-///     because it sits at the HTTP level, not inside any single tool.
-///     Only fires when:
-///     - The request is a JSON-RPC tools/call
-///     - The tool arguments contain a "prompt" field
-///     - The tool is not one of the context tools themselves (avoid recursion)
-///     - CodeHelperConfig.AutoEnabled is true
+///     Intercepts MCP tools/call requests for an allowlist of tools whose "prompt" argument is
+///     natural language (<see cref="ShouldIntercept" />) and runs the prompt through:
+///     1. Context cleaning pipeline (<c>ContextHelperConfig.AutoIntercept</c>).
+///     2. Advisory draft-model classification (opt-in via <c>CodeHelperConfig.AutoEnabled</c> or
+///     Calibration toggle): architecture and uncertain requests get guidance prefixed to the prompt.
+///     This middleware never answers a request and never writes a file; implementing code is the
+///     explicit <c>code_work</c> tool. Every other tool, and every malformed body, passes through untouched.
 /// </summary>
 internal sealed partial class ContextInterceptMiddleware
 {
     [LoggerMessage(Level = LogLevel.Debug, Message = "Context cleaned for tool {Tool}: {Before} → {After} chars")]
     private static partial void LogContextCleaned(ILogger logger, string tool, int before, int after);
-
-    [LoggerMessage(Level = LogLevel.Information, Message = "Draft model handled request for tool {Tool}: {Summary}")]
-    private static partial void LogSimpleModelServerHandled(ILogger logger, string tool, string? summary);
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Context cleaning pipeline failed for tool {Tool} — passing through")]
     private static partial void LogContextCleaningFailed(ILogger logger, Exception ex, string tool);
@@ -47,15 +40,18 @@ internal sealed partial class ContextInterceptMiddleware
     [LoggerMessage(Level = LogLevel.Information, Message = "Injected task-type-matched instructions for tool {Tool} (taskType={TaskType})")]
     private static partial void LogInjectedInstructions(ILogger logger, string tool, TaskType taskType);
 
-    private static readonly HashSet<string> _skipTools = new(StringComparer.OrdinalIgnoreCase)
+    // Tools whose "prompt" argument is free text the middleware may clean and annotate. Opt-in:
+    // every other tool (model_route's embed text, manage_plan, the context tools themselves,
+    // code_work) is forwarded untouched. Add a tool here only when its prompt is natural language.
+    private static readonly HashSet<string> _interceptTools = new(StringComparer.OrdinalIgnoreCase)
     {
-        "clean_and_chat",
-        "build_concise_context",
-        "context_hygiene",
-        "context_diag",
-        "help",
-        "code_work"
+        "build_adaptive_context"
     };
+
+    internal static bool ShouldIntercept(string? toolName)
+    {
+        return toolName is not null && _interceptTools.Contains(toolName);
+    }
 
     // This middleware buffers the full request body into memory (EnableBuffering +
     // ReadToEndAsync) to peek at the JSON-RPC method/tool name before deciding whether to
@@ -117,16 +113,14 @@ internal sealed partial class ContextInterceptMiddleware
         IOptions<ContextHelperConfig> contextHelperOpts,
         ContextCleanerService cleaner,
         SimpleModelServerInterceptorService simpleModelServerInterceptor,
-        InstructionOptimizerService instructionOptimizer)
+        InstructionOptimizerService instructionOptimizer,
+        CalibrationService calibration)
     {
         bool autoIntercept = contextHelperOpts.Value.AutoIntercept;
-        bool autoEnabled = codeHelperOpts.Value.AutoEnabled;
 
-        // Each step below is independently gated (autoIntercept for context cleaning,
-        // autoEnabled for draft-model interception) — bail out only when neither is on, so we
-        // don't pay the buffering/parsing cost for a request nothing here will touch.
-        if ((!autoIntercept && !autoEnabled) ||
-            context.Request.Method != HttpMethods.Post ||
+        // The advisory step can be switched on per workspace through Calibration(toggle), so
+        // whether it is on is resolved only for an allowlisted tool, below.
+        if (context.Request.Method != HttpMethods.Post ||
             !context.Request.Path.StartsWithSegments("/mcp", StringComparison.OrdinalIgnoreCase))
         {
             await _next(context);
@@ -181,7 +175,7 @@ internal sealed partial class ContextInterceptMiddleware
 
         JsonObject? rpcParams = rpcObject["params"] as JsonObject;
         string? toolName = AsString(rpcParams?["name"]);
-        if (toolName == null || _skipTools.Contains(toolName))
+        if (!ShouldIntercept(toolName))
         {
             await _next(context);
             return;
@@ -202,7 +196,7 @@ internal sealed partial class ContextInterceptMiddleware
             : "";
 
         // Step 1: Run context cleaning pipeline (gated on autoIntercept, independent of Step 2)
-        string cleanedPrompt = await CleanPromptAsync(context, cleaner, instructionOptimizer, prompt, args, toolName, workspaceRoot, autoIntercept);
+        string cleanedPrompt = await CleanPromptAsync(context, cleaner, instructionOptimizer, prompt, args, toolName!, workspaceRoot, autoIntercept);
         if (cleanedPrompt != prompt)
         {
             string cleanedBody = rpc!.ToJsonString();
@@ -211,45 +205,32 @@ internal sealed partial class ContextInterceptMiddleware
             context.Request.ContentLength = cleanedBytes.Length;
         }
 
-        // Step 2: Draft model interception (gated on autoEnabled) — for code-writing prompts,
-        // try the local model first
-        if (!autoEnabled)
+        // Step 2: advisory draft-model classification (opt-in). It only annotates the prompt; it
+        // never answers the request or writes a file — writing is the explicit code_work tool.
+        bool autoEnabled = calibration.ResolveAutoEnabled(
+            codeHelperOpts.Value.AutoEnabled,
+            string.IsNullOrWhiteSpace(workspaceRoot) ? null : workspaceRoot);
+        if (autoEnabled)
         {
-            await _next(context);
-            return;
-        }
-
-        if (await TryDraftInterceptAsync(context, simpleModelServerInterceptor, cleanedPrompt, workspaceRoot, toolName, args!, rpc))
-        {
-            return;
+            await TryAdviseAsync(context, simpleModelServerInterceptor, cleanedPrompt, toolName!, args!, rpc);
         }
 
         await _next(context);
     }
 
-    /// <summary>Runs the draft-model interceptor. Returns true when it fully answered the request (response already written).</summary>
-    private async Task<bool> TryDraftInterceptAsync(
+    /// <summary>Classifies the prompt and, for architecture or uncertain requests, prefixes it with guidance in the forwarded body.</summary>
+    private async Task TryAdviseAsync(
         HttpContext context,
         SimpleModelServerInterceptorService simpleModelServerInterceptor,
         string cleanedPrompt,
-        string workspaceRoot,
         string toolName,
         JsonObject args,
         JsonNode rpc)
     {
         try
         {
-            SimpleModelServerInterceptionResult interceptResult = await simpleModelServerInterceptor.TryInterceptAsync(
-                cleanedPrompt, workspaceRoot, context.RequestAborted);
-
-            if (interceptResult.HandledBySimpleModelServer)
-            {
-                // Draft model implemented the task — return the result directly
-                LogSimpleModelServerHandled(_logger, toolName, interceptResult.Summary);
-
-                await WriteJsonRpcResultAsync(context, interceptResult, rpc["id"]?.DeepClone());
-                return true;
-            }
+            SimpleModelServerInterceptionResult interceptResult = await simpleModelServerInterceptor.TryAdviseAsync(
+                cleanedPrompt, context.RequestAborted);
 
             if (interceptResult.IsDeferred)
             {
@@ -276,45 +257,12 @@ internal sealed partial class ContextInterceptMiddleware
             // Interceptor failure — don't block the tool call
             LogSimpleModelServerInterceptorFailed(_logger, ex, toolName);
         }
-
-        return false;
     }
 
     /// <summary>Returns the node's string value, or null when it is missing or not a JSON string.</summary>
     internal static string? AsString(JsonNode? node)
     {
         return node is JsonValue value && value.TryGetValue(out string? text) ? text : null;
-    }
-
-    private static async Task WriteJsonRpcResultAsync(HttpContext context, SimpleModelServerInterceptionResult result, JsonNode? requestId)
-    {
-        // Build a JSON-RPC success response. The id must echo the request's id or the client
-        // cannot correlate the response.
-        JsonObject response = new()
-        {
-            ["jsonrpc"] = "2.0",
-            ["id"] = requestId,
-            ["result"] = new JsonObject
-            {
-                ["content"] = new JsonArray
-                {
-                    new JsonObject
-                    {
-                        ["type"] = "text",
-                        ["text"] = result.Summary ?? "Draft model processed the request."
-                    }
-                },
-                ["isError"] = false
-            }
-        };
-
-        string json = response.ToJsonString(new JsonSerializerOptions { WriteIndented = false });
-        byte[] bytes = Encoding.UTF8.GetBytes(json);
-
-        context.Response.StatusCode = 200;
-        context.Response.ContentType = "application/json";
-        context.Response.ContentLength = bytes.Length;
-        await context.Response.Body.WriteAsync(bytes);
     }
 
     /// <summary>Runs the context-cleaning pipeline and draft-doc injection; returns the prompt to forward.</summary>
