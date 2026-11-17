@@ -8,6 +8,7 @@ using TokenSaver.Common.Core.Configuration;
 using TokenSaver.LogHelper.Contracts;
 using TokenSaver.LogHelper.Filtering;
 using TokenSaver.LogHelper.Models;
+using TokenSaver.LogViewer;
 using TokenSaver.TokenEconomy.Contracts;
 
 namespace TokenSaver.MCP.Tools;
@@ -22,10 +23,12 @@ internal sealed class LogTools
     private readonly ILogService _logs;
     private readonly ISavingsTracker _savings;
     private readonly TokenSaverConfig _config;
+    private readonly LogViewerHost? _viewer;
 
-    public LogTools(ILogService logs, ISavingsTracker savings, IOptions<TokenSaverConfig> config)
+    public LogTools(ILogService logs, ISavingsTracker savings, IOptions<TokenSaverConfig> config, LogViewerHost? viewer = null)
     {
         _logs = logs;
+        _viewer = viewer;
         _savings = savings;
         _config = config.Value;
     }
@@ -144,6 +147,8 @@ internal sealed class LogTools
             durationMs: (int)stopwatch.ElapsedMilliseconds,
             ct: ct);
 
+        OpenViewer(channelId, request.Filter, match, exclude, level, category);
+
         var sb = new StringBuilder(result.Text);
         if (result.NextCursor is { Length: > 0 } cursor)
         {
@@ -156,6 +161,29 @@ internal sealed class LogTools
         }
 
         return sb.ToString();
+    }
+
+    // With LogViewer.AutoOpenOnQuery on, a query on a file channel also shows that file to the user. A failure here never fails the query.
+    private void OpenViewer(ChannelId channel, LogFilterSpec? filter, string? match, string? exclude, LogSeverity? level, string? category)
+    {
+        if (_viewer is null || !_config.LogViewer.AutoOpenOnQuery || !string.Equals(channel.Scheme, "file", StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        (LogFilterSpec? spec, string? text) = LogViewerTools.BuildFilter(match, exclude, level, category);
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                _ = await _viewer.StartAsync(channel, spec ?? filter, text, reopen: false, CancellationToken.None);
+            }
+#pragma warning disable CA1031 // The viewer is a convenience; it must not fail the query.
+            catch (Exception)
+#pragma warning restore CA1031
+            {
+            }
+        });
     }
 
     [McpServerTool]

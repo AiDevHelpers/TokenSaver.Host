@@ -28,6 +28,7 @@ using TokenSaver.LogHelper.Models;
 using TokenSaver.LogHelper.Services;
 using TokenSaver.LogHelper.Sources;
 using TokenSaver.MCP.Security;
+using TokenSaver.LogViewer;
 using TokenSaver.MCP.Services.LogSources;
 using TokenSaver.LanguageHelpers.CSharp.Extensions;
 using TokenSaver.LanguageHelpers.PowerShell.Extensions;
@@ -372,6 +373,25 @@ internal static class ServiceRegistrationExtensions
         }
         services.AddSingleton<ILogService>(sp =>
             new LogService(sp.GetServices<ILogSourceProvider>(), sp.GetRequiredService<LogHelperOptions>()));
+        return services;
+    }
+
+    /// <summary>Registers the log watcher and the log viewer host (a console tab that shows the log being watched).</summary>
+    public static IServiceCollection AddLogViewerServices(this IServiceCollection services)
+    {
+        services.AddSingleton(sp =>
+            new LogWatcher(sp.GetServices<ILogSourceProvider>(), sp.GetRequiredService<LogHelperOptions>()));
+        services.AddSingleton<IViewerLauncher>(sp =>
+        {
+            string configured = sp.GetRequiredService<IOptions<TokenSaverConfig>>().Value.LogViewer.ViewerPath;
+            return new WindowsTerminalViewerLauncher(
+                string.IsNullOrWhiteSpace(configured) ? Path.Combine(AppContext.BaseDirectory, "tokensaver-logview.exe") : configured);
+        });
+        services.AddSingleton(sp => new LogViewerHost(
+            sp.GetRequiredService<LogWatcher>(),
+            sp.GetRequiredService<LogHelperOptions>(),
+            sp.GetRequiredService<IViewerLauncher>(),
+            logger: sp.GetRequiredService<ILoggerFactory>().CreateLogger<LogViewerHost>()));
         return services;
     }
 
