@@ -54,6 +54,7 @@ internal static class TokenSaverHostRegistration
             .WithTools<LanguageHelperTools>()
             .WithTools<InstructionTools>()
             .WithTools<LogTools>()
+            .WithTools<LogViewerTools>()
             .WithTools<IdeTools>()
             .WithTools<ManagedProcessTools>()
             .WithResources<DocResourceService>()
@@ -154,7 +155,8 @@ internal static class TokenSaverHostRegistration
             .AddDebuggerServices()
             .AddWslControlServices()
             .AddLanguageHelperServices()
-            .AddLogHelperServices();
+            .AddLogHelperServices()
+            .AddLogViewerServices();
 
         builder.Services.AddTokenSaverHealthChecks();
 

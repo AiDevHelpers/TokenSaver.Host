@@ -2,6 +2,9 @@ using Microsoft.Extensions.Options;
 using TokenSaver.Common.Core.Configuration;
 using TokenSaver.LogHelper.Contracts;
 using TokenSaver.LogHelper.Models;
+using TokenSaver.LogHelper.Services;
+using TokenSaver.LogHelper.Sources;
+using TokenSaver.LogViewer;
 using TokenSaver.MCP.Tools;
 using TokenSaver.TokenEconomy.Contracts;
 using TokenSaver.TokenEconomy.Models.TokenEconomy;
@@ -163,6 +166,73 @@ public sealed class LogToolsTests
         Assert.Contains("truncated", text, StringComparison.Ordinal);
     }
 
+    [Theory]
+    [InlineData(false, "file", 0)]
+    [InlineData(true, "file", 1)]
+    [InlineData(true, "vscode", 0)]
+    public async Task LogQuery_AutoOpensTheViewer_OnlyWhenEnabled_AndOnlyForFiles(bool enabled, string scheme, int expectedOpens)
+    {
+        string dir = Path.Combine(Path.GetTempPath(), "lt-" + Guid.NewGuid().ToString("N"));
+        _ = Directory.CreateDirectory(dir);
+        string file = Path.Combine(dir, "a.log");
+        File.WriteAllText(file, "2026-01-01 10:00:00 INFO ready\n");
+        try
+        {
+            var options = new LogHelperOptions { AllowedRoots = new[] { dir } };
+            var launcher = new RecordingLauncher();
+            await using var viewer = new LogViewerHost(
+                new LogWatcher(new[] { new FileLogSourceProvider(options) }, options),
+                options,
+                launcher,
+                new LogViewerOptions { ConnectTimeout = TimeSpan.FromMilliseconds(100), MaxLaunchAttempts = 1 });
+            var tools = new LogTools(
+                new FakeLogService { Result = Ok("text") },
+                new FakeSavings(),
+                Options.Create(new TokenSaverConfig { LogViewer = new LogViewerConfig { AutoOpenOnQuery = enabled } }),
+                viewer);
+
+            _ = await tools.LogQuery(scheme == "file" ? $"file:{file}" : "vscode:Git", minLevel: "Error");
+
+            DateTime deadline = DateTime.UtcNow + TimeSpan.FromSeconds(3);
+            while (launcher.Opened < expectedOpens && DateTime.UtcNow < deadline)
+            {
+                await Task.Delay(20);
+            }
+
+            await Task.Delay(100);
+            Assert.Equal(expectedOpens, launcher.Opened);
+        }
+        finally
+        {
+            Directory.Delete(dir, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task LogQuery_WithoutAViewerHost_StillWorks()
+    {
+        var tools = new LogTools(
+            new FakeLogService { Result = Ok("text") },
+            new FakeSavings(),
+            Options.Create(new TokenSaverConfig { LogViewer = new LogViewerConfig { AutoOpenOnQuery = true } }));
+
+        Assert.StartsWith("text", await tools.LogQuery(@"file:C:\x.log"), StringComparison.Ordinal);
+    }
+
+    private sealed class RecordingLauncher : IViewerLauncher
+    {
+        private int _opened;
+
+        public int Opened => Volatile.Read(ref _opened);
+
+        public void OpenTab(string title, string pipeName) => Interlocked.Increment(ref _opened);
+
+        public bool IsRunning(int pid) => false;
+
+        public void Kill(int pid)
+        {
+        }
+    }
     private static LogQueryResult Ok(string text, int rawChars = 0, int returnedChars = 0) =>
         new(true, null, text, rawChars, returnedChars, null, false);
 
