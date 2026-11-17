@@ -56,6 +56,33 @@ public sealed class SessionToolsTests : IDisposable
     }
 
     [Fact]
+    public async Task SessionSnapshot_OutputPathWithoutJsonExtension_KeepsSnapshotAndBlobSeparateAndRestores()
+    {
+        SessionTools tools = CreateTools();
+        string dest = Path.Combine(_root, "custom", "snap");
+
+        _ = await tools.SessionSnapshot("s1", "short context", outputPath: dest);
+
+        Assert.NotEqual(dest, Path.ChangeExtension(dest, ".full.txt"));
+        Assert.Contains("\"summary\"", await File.ReadAllTextAsync(dest));
+        Assert.Equal("short context", await tools.SessionRestore(dest, full: true));
+    }
+
+    [Theory]
+    [InlineData("..\\evil")]
+    [InlineData("a/b")]
+    [InlineData("")]
+    public async Task SessionSnapshot_PathLikeSessionId_IsRejected(string sessionId)
+    {
+        SessionTools tools = CreateTools();
+
+        string result = await tools.SessionSnapshot(sessionId, "blob");
+
+        Assert.Contains("invalid_session_id", result);
+        Assert.False(Directory.Exists(Path.Combine(_root, ".tokensaver", "sessions")));
+    }
+
+    [Fact]
     public async Task SessionSnapshot_NoOutputPath_DefaultsToWorkspaceSessionsFolder()
     {
         SessionTools tools = CreateTools();

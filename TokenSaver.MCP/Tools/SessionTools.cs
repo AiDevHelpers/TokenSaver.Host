@@ -55,6 +55,17 @@ internal sealed class SessionTools(
             });
         }
 
+        // sessionId becomes a filename: reject path separators and other invalid characters so it
+        // cannot walk out of the sessions folder.
+        if (outputPath is null && (string.IsNullOrWhiteSpace(sessionId) || sessionId.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0))
+        {
+            return JsonSerializer.Serialize(new
+            {
+                status = "invalid_session_id",
+                message = "sessionId must be a plain name without path separators or invalid filename characters."
+            });
+        }
+
         string dest = outputPath ?? Path.Combine(_config.WorkspaceRoot, ".tokensaver", "sessions", $"{sessionId}.json");
         _ = Directory.CreateDirectory(Path.GetDirectoryName(dest)!);
 
@@ -70,7 +81,9 @@ internal sealed class SessionTools(
             summary = contextBlob;
         }
 
-        string fullBlobPath = dest.Replace(".json", ".full.txt", StringComparison.Ordinal);
+        // ChangeExtension always yields a different path; string Replace on ".json" was a no-op for an
+        // outputPath without that extension, so the full blob overwrote the snapshot itself.
+        string fullBlobPath = Path.ChangeExtension(dest, ".full.txt");
         await File.WriteAllTextAsync(dest, JsonSerializer.Serialize(new
         {
             session_id = sessionId,
