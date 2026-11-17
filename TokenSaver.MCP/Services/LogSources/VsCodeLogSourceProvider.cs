@@ -48,7 +48,7 @@ internal sealed class VsCodeLogSourceProvider : ILogSourceProvider
     public ILogSource Open(ChannelId id) =>
         new FileLogSource(id.Name, new LogHelperOptions { AllowedRoots = RootsOf(_instances()) });
 
-    private static IReadOnlyList<string> RootsOf(IReadOnlyList<VsInstanceRegistry.VsInstance> instances) =>
+    private static List<string> RootsOf(IReadOnlyList<VsInstanceRegistry.VsInstance> instances) =>
         instances
             .Where(i => string.Equals(i.Ide, "VsCode", StringComparison.Ordinal))
             .SelectMany(i => i.LogRoots)
