@@ -1,4 +1,5 @@
 using TokenSaver.Common.Core.Configuration;
+using TokenSaver.Common.Core.Processes;
 using TokenSaver.Common.Contracts;
 using TokenSaver.TokenEconomy.Models.TokenEconomy;
 using TokenSaver.TokenEconomy.Contracts;
@@ -173,47 +174,14 @@ internal sealed class DevLoopTools(
     private static async Task<(int ExitCode, string Stdout, string Stderr, bool TimedOut)> RunDockerExecAsync(
         string containerName, string command, TimeSpan timeout, CancellationToken ct)
     {
-        ProcessStartInfo startInfo = new()
+        CommandResult result = await CommandRunner.RunAsync(
+            Request("docker", ["exec", containerName, "/bin/sh", "-c", command], null, timeout), ct);
+        if (!result.Launched)
         {
-            FileName = "docker",
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-            CreateNoWindow = true
-        };
-        startInfo.ArgumentList.Add("exec");
-        startInfo.ArgumentList.Add(containerName);
-        startInfo.ArgumentList.Add("/bin/sh");
-        startInfo.ArgumentList.Add("-c");
-        startInfo.ArgumentList.Add(command);
-
-        using Process process = new() { StartInfo = startInfo };
-        _ = process.Start();
-        ManagedProcessRegistry.Track(process, "dev command");
-        Task<string> stdoutTask = process.StandardOutput.ReadToEndAsync(ct);
-        Task<string> stderrTask = process.StandardError.ReadToEndAsync(ct);
-
-        using CancellationTokenSource timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        timeoutCts.CancelAfter(timeout);
-        bool timedOut = false;
-        try
-        {
-            await process.WaitForExitAsync(timeoutCts.Token);
-        }
-        catch (OperationCanceledException)
-        {
-            timedOut = !ct.IsCancellationRequested;
-            process.Kill(entireProcessTree: true);
-            await process.WaitForExitAsync(CancellationToken.None);
-            if (!timedOut)
-            {
-                throw;
-            }
+            throw new Win32Exception(result.LaunchError);
         }
 
-        string stdout = await stdoutTask;
-        string stderr = await stderrTask;
-        return (timedOut ? -1 : process.ExitCode, stdout, stderr, timedOut);
+        return (result.TimedOut ? -1 : result.ExitCode, result.StdOut, result.StdErr, result.TimedOut);
     }
 
     /// <summary>Runs a docker lifecycle verb on a container after the same preflight as container_logs.</summary>
@@ -512,66 +480,41 @@ internal sealed class DevLoopTools(
         return stdout;
     }
 
-    /// <summary>Runs an external process to completion, returning its exit code and captured stdout/stderr separately.</summary>
+    /// <summary>
+    ///     Runs an external process to completion through the shared <see cref="CommandRunner" />: arguments are split
+    ///     (never shell-parsed), both pipes drain concurrently, the tree is killed on timeout or cancellation, and the
+    ///     process is tracked in the registry. Launch failures surface as <see cref="Win32Exception" /> (the callers'
+    ///     "could not run" path) and a timeout as <see cref="TimeoutException" />.
+    /// </summary>
     private static async Task<(int ExitCode, string Stdout, string Stderr)> RunProcessAsync(
         string fileName, string arguments, CancellationToken ct, string? workingDirectory = null)
     {
-        ProcessStartInfo startInfo = new()
+        CommandResult result = await CommandRunner.RunAsync(
+            Request(fileName, CommandLine.Split(arguments), workingDirectory, ProcessTimeout), ct);
+        if (!result.Launched)
+        {
+            throw new Win32Exception(result.LaunchError);
+        }
+
+        if (result.TimedOut)
+        {
+            throw new TimeoutException($"'{fileName}' did not finish within {ProcessTimeout.TotalMinutes:0} minutes and was killed.");
+        }
+
+        return (result.ExitCode, result.StdOut, result.StdErr);
+    }
+
+    private static CommandRequest Request(string fileName, IReadOnlyList<string> arguments, string? workingDirectory, TimeSpan timeout)
+    {
+        return new CommandRequest
         {
             FileName = fileName,
             Arguments = arguments,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-            CreateNoWindow = true
+            WorkingDirectory = workingDirectory,
+            Timeout = timeout,
+            OnStarted = process => ManagedProcessRegistry.Track(process, "dev command"),
         };
-        if (!string.IsNullOrWhiteSpace(workingDirectory))
-        {
-            startInfo.WorkingDirectory = workingDirectory;
-        }
-
-        using Process process = new() { StartInfo = startInfo };
-
-        _ = process.Start();
-        ManagedProcessRegistry.Track(process, "dev command");
-
-        // Read both pipes concurrently (sequential reads deadlock once the unread pipe fills) and
-        // kill the whole tree on cancellation or timeout so no orphan child keeps running.
-        using CancellationTokenSource timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        timeout.CancelAfter(ProcessTimeout);
-        try
-        {
-            Task<string> stdoutTask = process.StandardOutput.ReadToEndAsync(timeout.Token);
-            Task<string> stderrTask = process.StandardError.ReadToEndAsync(timeout.Token);
-            await process.WaitForExitAsync(timeout.Token);
-            return (process.ExitCode, await stdoutTask, await stderrTask);
-        }
-        catch (OperationCanceledException)
-        {
-            KillTree(process);
-            if (ct.IsCancellationRequested)
-            {
-                throw;
-            }
-
-            throw new TimeoutException($"'{fileName}' did not finish within {ProcessTimeout.TotalMinutes:0} minutes and was killed.");
-        }
     }
 
     private static readonly TimeSpan ProcessTimeout = TimeSpan.FromMinutes(10);
-
-    private static void KillTree(Process process)
-    {
-        try
-        {
-            if (!process.HasExited)
-            {
-                process.Kill(entireProcessTree: true);
-            }
-        }
-        catch (InvalidOperationException)
-        {
-            // Already exited between the check and the kill.
-        }
-    }
 }

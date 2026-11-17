@@ -1,4 +1,4 @@
-using System.Diagnostics;
+using TokenSaver.Common.Core.Processes;
 
 using TokenSaver.CodeHelper.Indexing;
 using TokenSaver.CodeHelper.Models.Index;
@@ -135,29 +135,16 @@ internal sealed partial class GitRepoWatcherService : BackgroundService
     /// <summary>Returns the absolute git dir for <paramref name="root" />, or null when it is not a repo.</summary>
     private static async Task<string?> ResolveGitDirAsync(string root, CancellationToken ct)
     {
-        try
-        {
-            ProcessStartInfo psi = new("git")
+        CommandResult result = await CommandRunner.RunAsync(
+            new CommandRequest
             {
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                UseShellExecute = false,
-                CreateNoWindow = true,
-            };
-            psi.ArgumentList.Add("-C");
-            psi.ArgumentList.Add(root);
-            psi.ArgumentList.Add("rev-parse");
-            psi.ArgumentList.Add("--absolute-git-dir");
+                FileName = "git",
+                Arguments = ["-C", root, "rev-parse", "--absolute-git-dir"],
+                Timeout = TimeSpan.FromSeconds(10),
+            },
+            ct);
 
-            using Process process = Process.Start(psi) ?? throw new InvalidOperationException("git did not start");
-            string output = await process.StandardOutput.ReadToEndAsync(ct);
-            _ = await process.StandardError.ReadToEndAsync(ct);
-            await process.WaitForExitAsync(ct);
-            return process.ExitCode == 0 ? output.Trim() : null;
-        }
-        catch (Exception ex) when (ex is not OperationCanceledException)
-        {
-            return null; // git missing or not runnable
-        }
+        // Missing git, a non-repo and a timeout all mean "no git dir".
+        return result.Success ? result.StdOut.Trim() : null;
     }
 }

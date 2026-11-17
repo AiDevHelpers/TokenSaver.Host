@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
+using TokenSaver.Common.Core.Processes;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
@@ -42,35 +42,31 @@ internal static class IdeTestRunService
         var resultsDir = Path.Combine(solutionDir, ResultsFolder);
         var trxName = $"tokensaver-{DateTime.UtcNow:yyyyMMdd-HHmmss-fff}.trx";
 
-        var startInfo = new ProcessStartInfo("dotnet")
+        CommandResult run = await CommandRunner.RunAsync(
+            new CommandRequest
+            {
+                FileName = "dotnet",
+                Arguments = ["test", solutionPath, "--logger", $"trx;LogFileName={trxName}", "--results-directory", resultsDir],
+                WorkingDirectory = solutionDir,
+                Timeout = TimeSpan.FromMinutes(30),
+                OnStarted = process => ManagedProcessRegistry.Track(process, "test run"),
+            },
+            ct);
+        if (!run.Launched)
         {
-            UseShellExecute = false,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            WorkingDirectory = solutionDir,
-        };
-        startInfo.ArgumentList.Add("test");
-        startInfo.ArgumentList.Add(solutionPath);
-        startInfo.ArgumentList.Add("--logger");
-        startInfo.ArgumentList.Add($"trx;LogFileName={trxName}");
-        startInfo.ArgumentList.Add("--results-directory");
-        startInfo.ArgumentList.Add(resultsDir);
-
-        using var process = Process.Start(startInfo) ?? throw new InvalidOperationException("dotnet test did not start.");
-        ManagedProcessRegistry.Track(process, "test run");
-        var stdout = process.StandardOutput.ReadToEndAsync(ct);
-        var stderr = process.StandardError.ReadToEndAsync(ct);
-        await process.WaitForExitAsync(ct);
+            throw new InvalidOperationException($"dotnet test did not start: {run.LaunchError}");
+        }
 
         var summary = ReadSummary(Path.Combine(resultsDir, trxName));
         return JsonSerializer.Serialize(new
         {
-            ok = process.ExitCode == 0,
-            exit_code = process.ExitCode,
+            ok = run.Success,
+            exit_code = run.ExitCode,
             mode = DotnetTestMode,
             trx = Path.Combine(resultsDir, trxName),
             summary,
-            output_tail = Tail(await stdout + await stderr, 4000),
+            timed_out = run.TimedOut,
+            output_tail = Tail(run.StdOut + run.StdErr, 4000),
         });
     }
 

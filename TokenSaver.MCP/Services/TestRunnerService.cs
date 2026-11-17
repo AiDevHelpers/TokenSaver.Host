@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 using System.Diagnostics;
+using TokenSaver.Common.Core.Processes;
 using System.Globalization;
 using System.Text.RegularExpressions;
 
@@ -130,80 +131,63 @@ internal sealed class TestRunnerService : ITestRunner
 
         // ArgumentList quotes each argument, so project paths with spaces work. The default console
         // summary ("Total tests: / Passed: / Failed:") is what ParseTestOutput reads.
-        var startInfo = new ProcessStartInfo
-        {
-            FileName = "dotnet",
-            WorkingDirectory = workspaceRoot,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-            CreateNoWindow = true
-        };
-        startInfo.ArgumentList.Add("test");
-        startInfo.ArgumentList.Add(testProject);
-        startInfo.ArgumentList.Add("--no-build");
-
+        List<string> arguments = ["test", testProject, "--no-build"];
         if (!string.IsNullOrWhiteSpace(testName))
         {
-            startInfo.ArgumentList.Add("--filter");
-            startInfo.ArgumentList.Add($"FullyQualifiedName~{testName}");
+            arguments.Add("--filter");
+            arguments.Add($"FullyQualifiedName~{testName}");
         }
         else if (!string.IsNullOrWhiteSpace(testNamespace))
         {
-            startInfo.ArgumentList.Add("--filter");
-            startInfo.ArgumentList.Add($"FullyQualifiedName~{testNamespace}");
+            arguments.Add("--filter");
+            arguments.Add($"FullyQualifiedName~{testNamespace}");
         }
 
-        Process? process = null;
         try
         {
             var sw = Stopwatch.StartNew();
-            process = Process.Start(startInfo);
+            CommandResult run = await CommandRunner.RunAsync(
+                new CommandRequest
+                {
+                    FileName = "dotnet",
+                    Arguments = arguments,
+                    WorkingDirectory = workspaceRoot,
+                    Timeout = TimeSpan.FromMinutes(30),
+                    OnStarted = process => ManagedProcessRegistry.Track(process, "test run"),
+                },
+                ct);
+            sw.Stop();
 
-            if (process == null)
+            if (!run.Launched)
             {
-                return CreateFailureResult("Failed to start dotnet test process");
+                return CreateFailureResult($"Failed to start dotnet test process: {run.LaunchError}");
             }
 
-            ManagedProcessRegistry.Track(process, "test run");
-
-            // Drain both pipes while the process runs; waiting for exit first deadlocks on a full pipe.
-            Task<string> outputTask = process.StandardOutput.ReadToEndAsync(ct);
-            Task<string> errorsTask = process.StandardError.ReadToEndAsync(ct);
-            await process.WaitForExitAsync(ct);
-            string output = await outputTask;
-            string errors = await errorsTask;
-            sw.Stop();
+            if (run.TimedOut)
+            {
+                return CreateFailureResult("Test execution timed out after 30 minutes and was killed");
+            }
 
             if (_logger.IsEnabled(LogLevel.Information))
             {
-                _logger.LogInformation("Test run completed in {Elapsed}ms with exit code {ExitCode}", sw.ElapsedMilliseconds, process.ExitCode);
+                _logger.LogInformation("Test run completed in {Elapsed}ms with exit code {ExitCode}", sw.ElapsedMilliseconds, run.ExitCode);
             }
 
-            if (process.ExitCode != 0 && string.IsNullOrWhiteSpace(output))
+            if (run.ExitCode != 0 && string.IsNullOrWhiteSpace(run.StdOut))
             {
-                return CreateFailureResult($"Test execution failed with exit code {process.ExitCode}: {errors}");
+                return CreateFailureResult($"Test execution failed with exit code {run.ExitCode}: {run.StdErr}");
             }
 
-            TestExecutionResult parsed = ParseTestOutput(output, sw.ElapsedMilliseconds);
+            TestExecutionResult parsed = ParseTestOutput(run.StdOut, sw.ElapsedMilliseconds);
 
             // A non-zero exit (build failure, crash, failed tests the parser missed) is never a success.
-            return process.ExitCode != 0 && parsed.Success
-                ? parsed with { Success = false, Message = $"dotnet test exited with code {process.ExitCode}. {parsed.Message}\n{errors}".Trim() }
+            return run.ExitCode != 0 && parsed.Success
+                ? parsed with { Success = false, Message = $"dotnet test exited with code {run.ExitCode}. {parsed.Message}\n{run.StdErr}".Trim() }
                 : parsed;
         }
         catch (OperationCanceledException)
         {
-            if (process is { HasExited: false })
-            {
-                process.Kill(entireProcessTree: true);
-            }
-
             return CreateFailureResult("Test execution was cancelled");
-        }
-        finally
-        {
-            process?.Dispose();
         }
     }
 
