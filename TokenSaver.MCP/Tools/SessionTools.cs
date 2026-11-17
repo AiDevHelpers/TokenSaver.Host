@@ -3,6 +3,7 @@ using TokenSaver.Common.Contracts;
 using TokenSaver.TokenEconomy.Models.TokenEconomy;
 using TokenSaver.TokenEconomy.Contracts;
 using TokenSaver.MCP.Services;
+using TokenSaver.Utilities.Services;
 
 using Microsoft.Extensions.Options;
 
@@ -44,14 +45,14 @@ internal sealed class SessionTools(
     {
         await workspaceRootResolver.EnsureResolvedAsync(server, ct);
 
-        // No working-directory fallback: without a client-supplied root or an explicit outputPath,
-        // there is nowhere correct to write the snapshot.
-        if (outputPath is null && string.IsNullOrWhiteSpace(_config.WorkspaceRoot))
+        // No working-directory fallback: snapshots are only written inside the workspace, so a root is
+        // required even when an explicit outputPath is given.
+        if (string.IsNullOrWhiteSpace(_config.WorkspaceRoot))
         {
             return JsonSerializer.Serialize(new
             {
                 status = "no_root",
-                message = "The client did not send a workspace folder and no outputPath was given."
+                message = "The client did not send a workspace folder; pass the workspace root or connect a client that provides MCP roots."
             });
         }
 
@@ -66,7 +67,15 @@ internal sealed class SessionTools(
             });
         }
 
-        string dest = outputPath ?? Path.Combine(_config.WorkspaceRoot, ".tokensaver", "sessions", $"{sessionId}.json");
+        PathCheck destCheck = WorkspacePathGuard.Resolve(
+            outputPath ?? Path.Combine(_config.WorkspaceRoot, ".tokensaver", "sessions", $"{sessionId}.json"),
+            _config.WorkspaceRoot);
+        if (!destCheck.Ok)
+        {
+            return JsonSerializer.Serialize(new { status = "path_outside_workspace", message = destCheck.Error });
+        }
+
+        string dest = destCheck.FullPath;
         _ = Directory.CreateDirectory(Path.GetDirectoryName(dest)!);
 
         string summary;
@@ -105,9 +114,18 @@ internal sealed class SessionTools(
         string snapshotPath,
         [Description("Return the full original blob instead of the distilled summary")]
         bool full = false,
+        McpServer server = null!,
         CancellationToken ct = default)
     {
-        string json = await File.ReadAllTextAsync(snapshotPath, ct);
+        await workspaceRootResolver.EnsureResolvedAsync(server, ct);
+
+        PathCheck snapshot = WorkspacePathGuard.Resolve(snapshotPath, _config.WorkspaceRoot);
+        if (!snapshot.Ok)
+        {
+            return $"Cannot restore: {snapshot.Error}";
+        }
+
+        string json = await File.ReadAllTextAsync(snapshot.FullPath, ct);
         using JsonDocument doc = JsonDocument.Parse(json);
 
         if (!full)
@@ -117,6 +135,10 @@ internal sealed class SessionTools(
 
         string fullBlobPath = doc.RootElement.GetProperty("full_blob_path").GetString()
             ?? throw new InvalidOperationException($"Snapshot at '{snapshotPath}' has no full_blob_path.");
-        return await File.ReadAllTextAsync(fullBlobPath, ct);
+        // The path comes from the snapshot file, which a client could have written: confine it too.
+        PathCheck blob = WorkspacePathGuard.Resolve(fullBlobPath, _config.WorkspaceRoot);
+        return blob.Ok
+            ? await File.ReadAllTextAsync(blob.FullPath, ct)
+            : $"Cannot restore the full blob: {blob.Error}";
     }
 }

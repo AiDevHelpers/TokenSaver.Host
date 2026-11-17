@@ -299,11 +299,17 @@ internal sealed class DevLoopTools(
     {
         await workspaceRootResolver.EnsureResolvedAsync(server, ct);
 
+        PathCheck repo = WorkspacePathGuard.Resolve(repoPath, _config.WorkspaceRoot);
+        if (!repo.Ok)
+        {
+            return repo.Error!;
+        }
+
         string args = stagedOnly ? "diff --staged" : "diff";
         string diff;
         try
         {
-            diff = await RunProcessInAsync(repoPath, "git", args, ct);
+            diff = await RunProcessInAsync(repo.FullPath, "git", args, ct);
         }
         catch (Exception ex) when (ex is Win32Exception or InvalidOperationException)
         {
@@ -336,11 +342,17 @@ internal sealed class DevLoopTools(
     {
         await workspaceRootResolver.EnsureResolvedAsync(server, ct);
 
-        (string command, string args) = SplitCommand(testCommand ?? "dotnet test");
+        (CommandCheck cmd, string workDir) = CheckCommand(testCommand ?? "dotnet test", projectPath);
+        if (!cmd.Ok)
+        {
+            return cmd.Error!;
+        }
+
+        (string command, string args) = (cmd.Command, cmd.Arguments);
         (int exitCode, string stdout, string stderr) run;
         try
         {
-            run = await RunProcessAsync(command, args, ct, projectPath);
+            run = await RunProcessAsync(command, args, ct, workDir);
         }
         catch (Exception ex) when (ex is Win32Exception or InvalidOperationException)
         {
@@ -380,11 +392,17 @@ internal sealed class DevLoopTools(
     {
         await workspaceRootResolver.EnsureResolvedAsync(server, ct);
 
-        (string command, string args) = SplitCommand(lintCommand ?? "dotnet format --verify-no-changes");
+        (CommandCheck cmd, string workDir) = CheckCommand(lintCommand ?? "dotnet format --verify-no-changes", projectPath);
+        if (!cmd.Ok)
+        {
+            return cmd.Error!;
+        }
+
+        (string command, string args) = (cmd.Command, cmd.Arguments);
         (int exitCode, string stdout, string stderr) run;
         try
         {
-            run = await RunProcessAsync(command, args, ct, projectPath);
+            run = await RunProcessAsync(command, args, ct, workDir);
         }
         catch (Exception ex) when (ex is Win32Exception or InvalidOperationException)
         {
@@ -432,7 +450,13 @@ internal sealed class DevLoopTools(
     {
         await workspaceRootResolver.EnsureResolvedAsync(server, ct);
 
-        string content = await File.ReadAllTextAsync(logPath, ct);
+        PathCheck log = WorkspacePathGuard.Resolve(logPath, _config.WorkspaceRoot);
+        if (!log.Ok)
+        {
+            return log.Error!;
+        }
+
+        string content = await File.ReadAllTextAsync(log.FullPath, ct);
         string[] lines = content.Split('\n');
         string[] newLines = sinceLine < lines.Length ? lines[sinceLine..] : [];
 
@@ -459,11 +483,16 @@ internal sealed class DevLoopTools(
         return SummaryFormatter.Format(rows, maxTokens: 400).Text;
     }
 
-    /// <summary>Splits "dotnet test --filter Foo" into ("dotnet", "test --filter Foo") for ProcessStartInfo.</summary>
-    private static (string Command, string Arguments) SplitCommand(string commandLine)
+    /// <summary>
+    ///     Confines the working directory to the workspace and the executable to the configured allowlist before
+    ///     anything is launched.
+    /// </summary>
+    private (CommandCheck Check, string WorkDir) CheckCommand(string commandLine, string projectPath)
     {
-        int space = commandLine.IndexOf(' ', StringComparison.Ordinal);
-        return space < 0 ? (commandLine, "") : (commandLine[..space], commandLine[(space + 1)..]);
+        PathCheck dir = WorkspacePathGuard.Resolve(projectPath, _config.WorkspaceRoot);
+        return dir.Ok
+            ? (CommandAllowlist.Check(commandLine, _config.AllowedCommands), dir.FullPath)
+            : (new CommandCheck(false, "", "", dir.Error), "");
     }
 
     private static Task<string> RunProcessInAsync(string workingDirectory, string fileName, string arguments, CancellationToken ct)

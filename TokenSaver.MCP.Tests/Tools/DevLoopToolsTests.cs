@@ -37,9 +37,11 @@ public sealed class DevLoopToolsTests : IDisposable
         }
     }
 
-    private DevLoopTools CreateTools(FakeDistillationService? distill = null)
+    private DevLoopTools CreateTools(
+        FakeDistillationService? distill = null,
+        string allowedCommands = "dotnet,tokensaver-no-such-test-runner,tokensaver-no-such-linter")
     {
-        TokenSaverConfig cfg = new() { WorkspaceRoot = _root };
+        TokenSaverConfig cfg = new() { WorkspaceRoot = _root, AllowedCommands = allowedCommands };
         IOptions<TokenSaverConfig> options = Options.Create(cfg);
         RawArtifactWriter rawWriter = new(options);
         return new DevLoopTools(
@@ -134,6 +136,67 @@ public sealed class DevLoopToolsTests : IDisposable
         string result = await tools.LintFix(_root, lintCommand: "tokensaver-no-such-linter --check");
 
         Assert.StartsWith("Could not run 'tokensaver-no-such-linter'", result, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("cmd /c echo pwned")]
+    [InlineData("powershell -c Get-Date")]
+    [InlineData("sh -c id")]
+    [InlineData(@"C:\Windows\System32\cmd.exe /c dir")]
+    [InlineData("tokensaver-not-on-the-list --all")]
+    public async Task RunTestsAndLintFix_RefuseCommandsOutsideTheAllowlist(string command)
+    {
+        DevLoopTools tools = CreateTools();
+
+        string tests = await tools.RunTests(_root, testCommand: command);
+        string lint = await tools.LintFix(_root, lintCommand: command);
+
+        Assert.Contains("allowed", tests, StringComparison.Ordinal);
+        Assert.Contains("allowed", lint, StringComparison.Ordinal);
+        Assert.DoesNotContain("Could not run", tests + lint, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task RunTestsAndLintFix_RefuseAWorkingDirectoryOutsideTheWorkspace()
+    {
+        DevLoopTools tools = CreateTools();
+        string outside = Path.GetTempPath();
+
+        string tests = await tools.RunTests(outside);
+        string lint = await tools.LintFix(outside);
+
+        Assert.Contains("outside the workspace root", tests, StringComparison.Ordinal);
+        Assert.Contains("outside the workspace root", lint, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task DiffSummarize_RefusesARepoOutsideTheWorkspace()
+    {
+        DevLoopTools tools = CreateTools();
+
+        string result = await tools.DiffSummarize(Path.GetTempPath());
+
+        Assert.Contains("outside the workspace root", result, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task BuildWatch_RefusesALogOutsideTheWorkspace()
+    {
+        string outside = Path.Combine(Path.GetTempPath(), "bw-out-" + Guid.NewGuid().ToString("N") + ".log");
+        await File.WriteAllTextAsync(outside, "secret line");
+        try
+        {
+            DevLoopTools tools = CreateTools();
+
+            string result = await tools.BuildWatch(outside);
+
+            Assert.Contains("outside the workspace root", result, StringComparison.Ordinal);
+            Assert.DoesNotContain("secret line", result, StringComparison.Ordinal);
+        }
+        finally
+        {
+            File.Delete(outside);
+        }
     }
 
     [Fact]

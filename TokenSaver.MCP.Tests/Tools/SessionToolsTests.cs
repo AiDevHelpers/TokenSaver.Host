@@ -118,6 +118,60 @@ public sealed class SessionToolsTests : IDisposable
         Assert.Equal("original blob text", restored);
     }
 
+    [Fact]
+    public async Task SessionSnapshot_RefusesAnOutputPathOutsideTheWorkspace()
+    {
+        SessionTools tools = CreateTools();
+        string outside = Path.Combine(Path.GetTempPath(), "snap-out-" + Guid.NewGuid().ToString("N") + ".json");
+
+        string result = await tools.SessionSnapshot("s1", "ctx", outputPath: outside);
+
+        Assert.Contains("path_outside_workspace", result, StringComparison.Ordinal);
+        Assert.False(File.Exists(outside));
+    }
+
+    [Fact]
+    public async Task SessionRestore_RefusesASnapshotPathOutsideTheWorkspace()
+    {
+        SessionTools tools = CreateTools();
+        string outside = Path.Combine(Path.GetTempPath(), "restore-out-" + Guid.NewGuid().ToString("N") + ".json");
+        await File.WriteAllTextAsync(outside, "{\"summary\":\"secret\"}");
+        try
+        {
+            string result = await tools.SessionRestore(outside);
+
+            Assert.Contains("outside the workspace root", result, StringComparison.Ordinal);
+            Assert.DoesNotContain("secret", result, StringComparison.Ordinal);
+        }
+        finally
+        {
+            File.Delete(outside);
+        }
+    }
+
+    [Fact]
+    public async Task SessionRestore_FullBlobPathFromACraftedSnapshot_CannotReadOutsideTheWorkspace()
+    {
+        SessionTools tools = CreateTools();
+        string target = Path.Combine(Path.GetTempPath(), "blob-out-" + Guid.NewGuid().ToString("N") + ".txt");
+        await File.WriteAllTextAsync(target, "outside secret");
+        string snapshot = Path.Combine(_root, "crafted.json");
+        await File.WriteAllTextAsync(
+            snapshot,
+            System.Text.Json.JsonSerializer.Serialize(new { summary = "s", full_blob_path = target }));
+        try
+        {
+            string result = await tools.SessionRestore(snapshot, full: true);
+
+            Assert.DoesNotContain("outside secret", result, StringComparison.Ordinal);
+            Assert.Contains("outside the workspace root", result, StringComparison.Ordinal);
+        }
+        finally
+        {
+            File.Delete(target);
+        }
+    }
+
     private sealed class NeverDistill : IDistillationService
     {
         public Task<DistillResult> DistillAsync(

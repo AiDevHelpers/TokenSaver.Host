@@ -6,6 +6,7 @@ using Microsoft.Extensions.Options;
 
 using ModelContextProtocol.Server;
 
+using TokenSaver.Utilities.Services;
 using TokenSaver.Common.Core.Configuration;
 using TokenSaver.LanguageHelpers.Core.Contracts;
 using TokenSaver.LanguageHelpers.Core.Models;
@@ -156,7 +157,15 @@ internal sealed class LanguageHelperTools
             return false;
         }
 
-        string absPath = Path.IsPathRooted(path) ? path : Path.GetFullPath(Path.Combine(root, path));
+        // The analyzers and formatters run on (and may rewrite) this path, so it must stay inside the workspace.
+        PathCheck target = WorkspacePathGuard.Resolve(path, root);
+        if (!target.Ok)
+        {
+            error = target.Error!;
+            return false;
+        }
+
+        string absPath = target.FullPath;
 
         if (language is not null)
         {

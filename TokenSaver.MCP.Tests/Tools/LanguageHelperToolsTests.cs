@@ -37,6 +37,18 @@ public sealed class LanguageHelperToolsTests
         Assert.Equal("A 'path' (file or directory) is required.", result);
     }
 
+    [Theory]
+    [InlineData("../elsewhere/x.cs")]
+    [InlineData("..")]
+    public async Task CheckCode_PathOutsideTheWorkspace_IsRefused(string path)
+    {
+        LanguageHelperTools tools = CreateTools(new FakeRegistry());
+
+        string result = await tools.CheckCode("lint", path, language: "csharp");
+
+        Assert.Contains("outside the workspace root", result, StringComparison.Ordinal);
+    }
+
     [Fact]
     public async Task CheckCode_UnknownForcedLanguage_ReturnsUnknownLanguage()
     {
