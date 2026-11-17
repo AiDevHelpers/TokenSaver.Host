@@ -122,7 +122,13 @@ internal static class ServiceRegistrationExtensions
         services.AddSingleton<McpContextService>();
         services.AddSingleton<DeferredNotificationService>();
         services.AddSingleton<ICodeSummarizer, OllamaCodeSummarizer>();
-        services.AddSingleton<AiProviderConfigService>();
+        // Writes the client config entries on request only (tool / POST endpoint). The token goes into each entry's
+        // Authorization header when endpoint auth is on.
+        services.AddSingleton(sp => new AiProviderConfigService(
+            ProviderPaths.Default(),
+            () => sp.GetRequiredService<IOptions<TokenSaverConfig>>().Value.RequireAuth
+                ? sp.GetRequiredService<AuthTokenStore>().Token
+                : null));
         services.AddSingleton<WorkspaceCodeScanner>();
         services.AddSingleton<AccuracyTestService>();
         services.AddSingleton<ITestRunner, TestRunnerService>();

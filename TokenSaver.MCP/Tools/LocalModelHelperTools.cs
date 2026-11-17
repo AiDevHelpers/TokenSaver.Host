@@ -403,11 +403,12 @@ internal sealed class LocalModelHelperTools
 
     [McpServerTool]
     [Description(
-        "Deprecated / no-op: this MCP server no longer auto-writes its entry into AI provider " +
-        "config files (VS Code Copilot, Claude Code, Continue, Cursor, Cline, Sixth) — that " +
-        "proved unreliable across the different config formats. Use the \"TokenSaver: Open " +
-        "Install Prompt\" VS Code command, or read INSTALL_PROMPT.md directly, for copy-paste " +
-        "instructions to configure a provider manually.")]
+        "Add this MCP server to the config of every installed AI client (VS Code Copilot, Claude Code, Cursor, " +
+        "Continue, Cline, Sixth). Only installed clients are touched; each file is backed up first, replaced " +
+        "atomically and read back, and a file that cannot be rewritten faithfully (comments, invalid JSON) is " +
+        "left alone and reported with a reason. The endpoint token is written into each entry. Restart the " +
+        "client afterwards. Claude Desktop is not supported (add a custom connector). See " +
+        "docs/Host-MCP/provider-config-reliability.md.")]
     public async Task<string> RegisterMcpProviders(
         [Description("Override the MCP server port. Defaults to the configured server port.")]
         int? port = null,
@@ -418,8 +419,8 @@ internal sealed class LocalModelHelperTools
 
         if (results.Count == 0)
         {
-            return "Auto-registration is disabled. Use the \"TokenSaver: Open Install Prompt\" " +
-                   "VS Code command (or INSTALL_PROMPT.md) to configure a provider manually.";
+            return "No supported AI client is installed on this machine, so nothing was written. " +
+                   "Use the \"TokenSaver: Open Install Prompt\" VS Code command (or INSTALL_PROMPT.md) to configure one by hand.";
         }
 
         StringBuilder sb = new();

@@ -77,13 +77,17 @@ loads and validates without needing to risk a real mutation as part of verificat
 
 ## 10. Raw HTTP endpoint: `/api/register-providers`
 
+Needs the endpoint token (`Authorization: Bearer <token>`, see `INSTALL_PROMPT.md`). It writes, so it is a POST:
+
 ```bash
-curl -s "http://localhost:11436/api/register-providers"
+curl -s -X POST "http://localhost:11436/api/register-providers" -H "Authorization: Bearer $TOKEN"
 ```
 
-This endpoint is intentionally disabled (auto-registration was removed in favor of the manual
-`INSTALL_PROMPT.md` flow) and is expected to return an empty array — that is a pass, not a
-failure. Only flag this if it errors outright (5xx) rather than returning `[]`.
+It adds the entry to every installed AI client's config and returns one result per client (`success`,
+`wasAlreadyConfigured`, `configPath`, `message`, `failureReason`). Run it on a throwaway profile or expect
+your real client configs to change (a timestamped `.bak-*` copy is kept). A client whose file cannot be rewritten
+faithfully is reported with a `failureReason` instead of being modified; see
+`docs/Host-MCP/provider-config-reliability.md`.
 
 ## What "fully working" means
 

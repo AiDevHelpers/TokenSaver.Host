@@ -155,7 +155,9 @@ public sealed class LocalModelHelperToolsTests : IDisposable
             savings, calibration, new BuildArtifactDetector(NullLogger<BuildArtifactDetector>.Instance),
             new BehaviorConfigService(NullLogger<BehaviorConfigService>.Instance), configOptions);
 
-        AiProviderConfigService aiProviders = new();
+        // An empty temp profile: no client is installed there, and no real client config can be touched.
+        string emptyProfile = Path.Combine(Path.GetTempPath(), "lmh-empty-profile-" + Guid.NewGuid().ToString("N"));
+        AiProviderConfigService aiProviders = new(new ProviderPaths(emptyProfile, emptyProfile), () => null);
 
         FakeCallerDetectionService detection = new(callerInfo ?? new CallerInfo { Source = DetectionSource.Default });
 
@@ -335,17 +337,14 @@ public sealed class LocalModelHelperToolsTests : IDisposable
     // ── RegisterMcpProviders ──────────────────────────────────────────────────
 
     [Fact]
-    public async Task RegisterMcpProviders_AutoRegistrationDisabled_ReturnsExplanatoryNoOpMessage()
+    public async Task RegisterMcpProviders_NoClientInstalled_ReturnsExplanatoryMessage()
     {
-        // AiProviderConfigService.UpdateAllProvidersAsync is a permanent no-op (see its doc
-        // comment) — auto-write to AI client config files was removed entirely, so this always
-        // takes the "results.Count == 0" branch regardless of config. No .mcp.json or other file
-        // is touched.
+        // The tools are built over an empty temp profile, so no client is installed and nothing is written.
         LocalModelHelperTools tools = CreateTools();
 
         string result = await tools.RegisterMcpProviders();
 
-        Assert.Contains("Auto-registration is disabled", result, StringComparison.Ordinal);
+        Assert.Contains("No supported AI client is installed", result, StringComparison.Ordinal);
         Assert.Contains("Open Install Prompt", result, StringComparison.Ordinal);
     }
 
@@ -356,7 +355,7 @@ public sealed class LocalModelHelperToolsTests : IDisposable
 
         string result = await tools.RegisterMcpProviders(port: 55555);
 
-        Assert.Contains("Auto-registration is disabled", result, StringComparison.Ordinal);
+        Assert.Contains("No supported AI client is installed", result, StringComparison.Ordinal);
     }
 
     // ── BuildConciseContext ───────────────────────────────────────────────────

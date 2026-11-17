@@ -87,7 +87,8 @@ internal static class TokenSaverHostRegistration
 
         app.MapDebuggerStreamingEndpoints();
 
-        app.MapGet("/api/register-providers", async (
+        // POST, not GET: it writes the config files of the installed AI clients.
+        app.MapPost("/api/register-providers", async (
             AiProviderConfigService aiProviders,
             IOptions<TokenSaverConfig> opts,
             HttpContext httpCtx) =>
