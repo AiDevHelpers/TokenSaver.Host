@@ -1,3 +1,4 @@
+using SperryDev.Ide.Bridge;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -99,7 +100,7 @@ internal static class IdeInstanceLifecycle
         return Ok(new { killed = true, instance_pid = pid });
     }
 
-    private static VsInstanceRegistry.VsInstance? Find(string solutionPath) =>
+    private static VsInstance? Find(string solutionPath) =>
         VsInstanceRegistry.ListRunning().FirstOrDefault(i =>
             !string.IsNullOrEmpty(i.SolutionPath) &&
             string.Equals(Path.GetFullPath(i.SolutionPath), Path.GetFullPath(solutionPath), StringComparison.OrdinalIgnoreCase));

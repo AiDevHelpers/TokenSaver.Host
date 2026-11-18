@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+<Project Sdk="Microsoft.NET.Sdk.Web">
   <PropertyGroup>
     <!-- net*-windows: this host is a Windows service (registry, named pipes) and references
          TokenSaver.WslControl, which must be net*-windows for Community.Wsl.Sdk. -->
@@ -36,6 +36,7 @@
     <ProjectReference Include="..\..\AgentHelpers\TokenSaver.AgentHelpers.DeepSeek\TokenSaver.AgentHelpers.DeepSeek.csproj" />
     <ProjectReference Include="..\..\AgentHelpers\TokenSaver.AgentHelpers.OpenSource\TokenSaver.AgentHelpers.OpenSource.csproj" />
     <PackageReference Include="SperryDev.Logger" Version="$(SperryLoggerVersion)" />
+    <PackageReference Include="SperryDev.Ide.Bridge" Version="0.1.0" />
     <ProjectReference Include="..\..\Common\TokenSaver.Common.Installation\TokenSaver.Common.Installation.csproj" />
     <ProjectReference Include="..\..\Common\TokenSaver.Common.Models\TokenSaver.Common.Models.csproj" />
   </ItemGroup>

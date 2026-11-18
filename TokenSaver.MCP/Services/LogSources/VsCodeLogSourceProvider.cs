@@ -1,3 +1,4 @@
+using SperryDev.Ide.Bridge;
 using TokenSaver.LogHelper.Contracts;
 using TokenSaver.LogHelper.Models;
 using TokenSaver.LogHelper.Sources;
@@ -11,9 +12,9 @@ namespace TokenSaver.MCP.Services.LogSources;
 /// </summary>
 internal sealed class VsCodeLogSourceProvider : ILogSourceProvider
 {
-    private readonly Func<IReadOnlyList<VsInstanceRegistry.VsInstance>> _instances;
+    private readonly Func<IReadOnlyList<VsInstance>> _instances;
 
-    public VsCodeLogSourceProvider(Func<IReadOnlyList<VsInstanceRegistry.VsInstance>> instances)
+    public VsCodeLogSourceProvider(Func<IReadOnlyList<VsInstance>> instances)
     {
         _instances = instances;
     }
@@ -48,7 +49,7 @@ internal sealed class VsCodeLogSourceProvider : ILogSourceProvider
     public ILogSource Open(ChannelId id) =>
         new FileLogSource(id.Name, new LogHelperOptions { AllowedRoots = RootsOf(_instances()) });
 
-    private static List<string> RootsOf(IReadOnlyList<VsInstanceRegistry.VsInstance> instances) =>
+    private static List<string> RootsOf(IReadOnlyList<VsInstance> instances) =>
         instances
             .Where(i => string.Equals(i.Ide, "VsCode", StringComparison.Ordinal))
             .SelectMany(i => i.LogRoots)

@@ -1,3 +1,5 @@
+using SperryDev.Ide.Bridge;
+
 namespace TokenSaver.MCP.Services.LogSources;
 
 /// <summary>Routes bridge actions to the running IDE instance through <see cref="IdeInstanceRouter"/>.</summary>

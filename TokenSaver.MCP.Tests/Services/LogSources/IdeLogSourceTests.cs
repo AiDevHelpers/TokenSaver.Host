@@ -1,3 +1,4 @@
+using SperryDev.Ide.Bridge;
 using System.Text;
 using System.Text.Json;
 using TokenSaver.LogHelper.Contracts;
@@ -5,7 +6,7 @@ using TokenSaver.LogHelper.Models;
 using TokenSaver.LogHelper.Services;
 using TokenSaver.MCP.Services;
 using TokenSaver.MCP.Services.LogSources;
-using VsInstance = TokenSaver.MCP.Services.VsInstanceRegistry.VsInstance;
+using VsInstance = SperryDev.Ide.Bridge.VsInstance;
 using Xunit;
 
 namespace TokenSaver.MCP.Tests.Services.LogSources;
