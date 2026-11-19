@@ -1,4 +1,3 @@
-using SperryDev.Ide.Bridge;
 using TokenSaver.ContextHelper.Calibration;
 using TokenSaver.ContextHelper.Configuration;
 using TokenSaver.ContextHelper.Pipeline;
@@ -24,13 +23,7 @@ using TokenSaver.TokenEconomy.Services;
 using TokenSaver.Utilities.Services;
 using TokenSaver.WslControl;
 using TokenSaver.WslControl.Contracts;
-using TokenSaver.LogHelper.Contracts;
-using TokenSaver.LogHelper.Models;
-using TokenSaver.LogHelper.Services;
-using TokenSaver.LogHelper.Sources;
 using TokenSaver.MCP.Security;
-using TokenSaver.LogViewer;
-using TokenSaver.MCP.Services.LogSources;
 using TokenSaver.LanguageHelpers.CSharp.Extensions;
 using TokenSaver.LanguageHelpers.PowerShell.Extensions;
 using TokenSaver.LanguageHelpers.Python.Extensions;
@@ -307,21 +300,14 @@ internal static class ServiceRegistrationExtensions
         return services;
     }
 
-    /// <summary>Register debugger control service for VS Code and Visual Studio.</summary>
+    /// <summary>Register TokenSaver debugger event and problem telemetry services.</summary>
     public static IServiceCollection AddDebuggerServices(this IServiceCollection services)
     {
-        services.AddSingleton<IIdeBridge, IdeInstanceBridge>();
-        services.AddSingleton<IDebuggerControl, DebuggerControlService>();
-        services.AddSingleton<IDebuggerApiClient, DebuggerApiImplementation>();
-        services.AddSingleton<IDebugOutputCapture, DebugOutputCaptureService>();
-        services.AddSingleton<IIDELauncher, IDELauncherService>();
-
-        // Phase 1: Foundation — Structured event capture, problem tracking, and client tracking
+        // Structured event capture and problem tracking.
         services.AddSingleton<DebuggerEventService>();
         services.AddSingleton<IDebuggerEventCapture>(sp => sp.GetRequiredService<DebuggerEventService>());
         services.AddSingleton<DebuggerProblemService>();
         services.AddSingleton<IDebuggerProblemCapture>(sp => sp.GetRequiredService<DebuggerProblemService>());
-        services.AddSingleton<IClientDebugContextService, ClientDebugContextService>();
 
         // Phase 2: Streaming endpoints and real-time event distribution
         services.AddSingleton<DebuggerEventStreamManager>(sp =>
@@ -346,53 +332,6 @@ internal static class ServiceRegistrationExtensions
         // Phase 4: Multi-client extension integration
         services.AddSingleton<ExtensionRegistryService>();
 
-        return services;
-    }
-
-    /// <summary>
-    ///     Registers the log helper facade. Allowed roots and the state directory follow the configured
-    ///     workspace root. Options and providers are resolved on first use.
-    /// </summary>
-    public static IServiceCollection AddLogHelperServices(this IServiceCollection services)
-    {
-        services.AddSingleton<LogHelperOptions>(sp =>
-        {
-            // Resolved per use: the workspace root is often only learned after startup, from the client's
-            // first call, so freezing it here would leave file logs and run snapshots permanently empty.
-            TokenSaverConfig config = sp.GetRequiredService<IOptions<TokenSaverConfig>>().Value;
-            return new LogHelperOptions { WorkspaceRootProvider = () => config.WorkspaceRoot };
-        });
-        services.AddSingleton<ILogSourceProvider>(sp => new FileLogSourceProvider(sp.GetRequiredService<LogHelperOptions>()));
-        services.AddSingleton<IIdeLogBridge, IdeLogBridge>();
-        services.AddSingleton<ILogSourceProvider>(_ => new VsCodeLogSourceProvider(() => VsInstanceRegistry.ListRunning()));
-        services.AddSingleton<ILogSourceProvider>(sp => new DebugSessionLogSourceProvider(sp.GetRequiredService<IIdeLogBridge>()));
-        services.AddSingleton<ILogSourceProvider>(sp => new VsOutputLogSourceProvider(sp.GetRequiredService<IIdeLogBridge>()));
-        services.AddSingleton<ILogSourceProvider>(_ => new SyslogSourceProvider(new ProcessRunner(), () => DateTimeOffset.UtcNow));
-        if (OperatingSystem.IsWindows())
-        {
-            services.AddSingleton<ILogSourceProvider>(sp => new EventLogSourceProvider(new ProcessRunner(), sp.GetRequiredService<LogHelperOptions>()));
-        }
-        services.AddSingleton<ILogService>(sp =>
-            new LogService(sp.GetServices<ILogSourceProvider>(), sp.GetRequiredService<LogHelperOptions>()));
-        return services;
-    }
-
-    /// <summary>Registers the log watcher and the log viewer host (a console tab that shows the log being watched).</summary>
-    public static IServiceCollection AddLogViewerServices(this IServiceCollection services)
-    {
-        services.AddSingleton(sp =>
-            new LogWatcher(sp.GetServices<ILogSourceProvider>(), sp.GetRequiredService<LogHelperOptions>()));
-        services.AddSingleton<IViewerLauncher>(sp =>
-        {
-            string configured = sp.GetRequiredService<IOptions<TokenSaverConfig>>().Value.LogViewer.ViewerPath;
-            return new WindowsTerminalViewerLauncher(
-                string.IsNullOrWhiteSpace(configured) ? Path.Combine(AppContext.BaseDirectory, "tokensaver-logview.exe") : configured);
-        });
-        services.AddSingleton(sp => new LogViewerHost(
-            sp.GetRequiredService<LogWatcher>(),
-            sp.GetRequiredService<LogHelperOptions>(),
-            sp.GetRequiredService<IViewerLauncher>(),
-            logger: sp.GetRequiredService<ILoggerFactory>().CreateLogger<LogViewerHost>()));
         return services;
     }
 

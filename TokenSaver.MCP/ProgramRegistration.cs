@@ -54,10 +54,7 @@ internal static class TokenSaverHostRegistration
             .WithTools<WslControlTools>()
             .WithTools<LanguageHelperTools>()
             .WithTools<InstructionTools>()
-            .WithTools<LogTools>()
-            .WithTools<LogViewerTools>()
             .WithTools<TerminalSessionTools>()
-            .WithTools<IdeTools>()
             .WithTools<ManagedProcessTools>()
             .WithResources<DocResourceService>()
             .WithPrompts<BuildConciseContextPrompt>();
@@ -82,8 +79,6 @@ internal static class TokenSaverHostRegistration
     internal static void MapTokenSaverEndpoints(this WebApplication app, Func<HttpContext, HealthReport, Task> healthWriter)
     {
         app.MapMcp("/mcp");
-
-        app.MapDebuggerEndpoints();
 
         app.MapAuthEndpoints();
 
@@ -160,8 +155,6 @@ internal static class TokenSaverHostRegistration
             .AddDebuggerServices()
             .AddWslControlServices()
             .AddLanguageHelperServices()
-            .AddLogHelperServices()
-            .AddLogViewerServices()
             .AddTerminalControlServices();
 
         builder.Services.AddTokenSaverHealthChecks();

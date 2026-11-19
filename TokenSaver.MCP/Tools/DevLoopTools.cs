@@ -15,9 +15,6 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using TokenSaver.LogHelper.Models;
-using TokenSaver.LogHelper.Parsing;
-using TokenSaver.LogHelper.Services;
 
 namespace TokenSaver.MCP.Tools;
 
@@ -435,21 +432,33 @@ internal sealed class DevLoopTools(
 
         string raw = string.Join('\n', newLines);
         string summary = raw.Length > 800
-            ? (await distill.DistillAsync(_config.WorkspaceRoot, "buildWatch", DistillRole.LogErrors, ReduceForDistill(raw), ct: ct)).Summary
+            ? (await distill.DistillAsync(_config.WorkspaceRoot, "buildWatch", DistillRole.LogErrors, CollapseBuildWatchOutput(raw), ct: ct)).Summary
             : raw;
 
         return JsonSerializer.Serialize(new { summary, last_line = lines.Length });
     }
 
-    // Collapses repeated lines into counted templates (errors first) before the distiller sees them.
-    // Same masking as the log helper's summary view; the distiller gets far fewer tokens for repetitive builds.
-    private static string ReduceForDistill(string raw)
+    // Collapse exact repeated lines and put error-like lines first before the distiller sees large build output.
+    private static string CollapseBuildWatchOutput(string raw)
     {
-        var options = new LogHelperOptions();
-        var entries = new LogParser(options).Parse(raw.Split('\n'));
-        var rows = TemplateAggregator.Aggregate(entries, options);
-        return SummaryFormatter.Format(rows, maxTokens: 400).Text;
+        var groups = raw.Split('\n')
+            .Select(line => line.TrimEnd('\r'))
+            .Where(line => line.Length > 0)
+            .GroupBy(line => line, StringComparer.Ordinal)
+            .OrderByDescending(group => IsErrorLine(group.Key))
+            .ThenByDescending(group => group.Count())
+            .Take(80);
+
+        return string.Join('\n', groups.Select(group => group.Count() == 1
+            ? group.Key
+            : $"{group.Key} (repeated {group.Count()} times)"));
     }
+
+    private static bool IsErrorLine(string line) =>
+        line.Contains("error", StringComparison.OrdinalIgnoreCase)
+        || line.Contains("failed", StringComparison.OrdinalIgnoreCase)
+        || line.Contains("exception", StringComparison.OrdinalIgnoreCase)
+        || line.Contains("warning", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
     ///     Confines the working directory to the workspace and the executable to the configured allowlist before

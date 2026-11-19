@@ -2,13 +2,12 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics;
 using TokenSaver.Common.Core.Contracts;
-using TokenSaver.MCP.Services;
 
 namespace TokenSaver.MCP.Middleware;
 
 /// <summary>
 /// Middleware that intercepts all requests to extract and log debug context.
-/// Associates each request with an extension client, captures timing, and records events.
+/// Captures request timing and records debugger telemetry events.
 /// </summary>
 internal sealed class DebuggerContextInterceptor
 {
@@ -23,9 +22,7 @@ internal sealed class DebuggerContextInterceptor
 
     public async Task InvokeAsync(
         HttpContext context,
-        IDebuggerEventCapture eventCapture,
-        IClientDebugContextService clientContextService,
-        ExtensionRegistryService extensionRegistry)
+        IDebuggerEventCapture eventCapture)
     {
         var startTime = Stopwatch.GetTimestamp();
         var requestPath = context.Request.Path.Value ?? "";
@@ -35,38 +32,14 @@ internal sealed class DebuggerContextInterceptor
             ? extType.ToString()
             : null;
 
-        var extensionVersion = context.Request.Headers.TryGetValue("X-Extension-Version", out var extVer)
-            ? extVer.ToString()
-            : null;
-
-        var modelHint = context.Request.Headers.TryGetValue("X-Model-Hint", out var model)
-            ? model.ToString()
-            : null;
-
-        // Get or create client context
-        var clientId = context.Request.Headers.TryGetValue("X-Client-Id", out var cid)
-            ? cid.ToString()
-            : null;
-
-        if (string.IsNullOrEmpty(clientId) && !string.IsNullOrEmpty(extensionType))
-        {
-            clientId = clientContextService.RegisterClient(extensionType, extensionVersion);
-            context.Response.Headers["X-Client-Id"] = clientId;
-        }
-
-        // Record activity if we have a client
-        if (!string.IsNullOrEmpty(clientId))
-        {
-            clientContextService.RecordActivity(clientId);
-        }
+        string? clientName = extensionType;
 
         // Log request start
         if (_logger.IsEnabled(LogLevel.Debug))
         {
             _logger.LogDebug(
-                "Debug request from {Extension} v{Version}: {Method} {Path}",
+                "Debug request from {Extension}: {Method} {Path}",
                 extensionType ?? "unknown",
-                extensionVersion ?? "unknown",
                 context.Request.Method,
                 requestPath);
         }
@@ -85,7 +58,7 @@ internal sealed class DebuggerContextInterceptor
                 value: elapsed.TotalMilliseconds,
                 unit: "ms",
                 toolName: GetToolNameFromPath(requestPath),
-                clientName: extensionType);
+                clientName: clientName);
         }
         catch (Exception ex)
         {
@@ -93,7 +66,7 @@ internal sealed class DebuggerContextInterceptor
             eventCapture.RecordException(
                 exception: ex,
                 toolName: GetToolNameFromPath(requestPath),
-                clientName: extensionType);
+                clientName: clientName);
 
             _logger.LogError(
                 ex,

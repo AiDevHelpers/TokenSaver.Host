@@ -8,7 +8,7 @@ using TokenSaver.MCP.Services;
 namespace TokenSaver.MCP.Tools;
 
 /// <summary>
-///     Lists and kills the processes this MCP server started (test runs, dev commands, IDE launches).
+///     Lists and kills the processes this MCP server started (test runs and dev commands).
 ///     Processes the server did not start cannot be killed through these tools.
 /// </summary>
 [McpServerToolType]

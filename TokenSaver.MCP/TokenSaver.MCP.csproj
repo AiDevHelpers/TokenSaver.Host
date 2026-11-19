@@ -19,9 +19,6 @@
     <ProjectReference Include="..\..\Core\TokenSaver.Config\TokenSaver.Config.csproj" />
     <ProjectReference Include="..\..\Core\TokenSaver.ContextHelper\TokenSaver.ContextHelper.csproj" />
     <ProjectReference Include="..\..\Core\TokenSaver.Docs\TokenSaver.Docs.csproj" />
-    <ProjectReference Include="..\..\Core\TokenSaver.LogHelper\TokenSaver.LogHelper.csproj" />
-    <ProjectReference Include="..\..\Core\TokenSaver.LogViewer\TokenSaver.LogViewer.csproj" />
-    <ProjectReference Include="..\..\Tooling\TokenSaver.LogViewer.App\TokenSaver.LogViewer.App.csproj" />
     <ProjectReference Include="..\..\Core\TokenSaver.OllamaIntegration\TokenSaver.OllamaIntegration.csproj" />
     <ProjectReference Include="..\..\Core\TokenSaver.TerminalControl\TokenSaver.TerminalControl.csproj" />
     <ProjectReference Include="..\..\Core\TokenSaver.TokenEconomy\TokenSaver.TokenEconomy.csproj" />
@@ -36,7 +33,6 @@
     <ProjectReference Include="..\..\AgentHelpers\TokenSaver.AgentHelpers.DeepSeek\TokenSaver.AgentHelpers.DeepSeek.csproj" />
     <ProjectReference Include="..\..\AgentHelpers\TokenSaver.AgentHelpers.OpenSource\TokenSaver.AgentHelpers.OpenSource.csproj" />
     <PackageReference Include="SperryDev.Logger" Version="$(SperryLoggerVersion)" />
-    <PackageReference Include="SperryDev.Ide.Bridge" Version="0.1.0" />
     <ProjectReference Include="..\..\Common\TokenSaver.Common.Installation\TokenSaver.Common.Installation.csproj" />
     <ProjectReference Include="..\..\Common\TokenSaver.Common.Models\TokenSaver.Common.Models.csproj" />
   </ItemGroup>
