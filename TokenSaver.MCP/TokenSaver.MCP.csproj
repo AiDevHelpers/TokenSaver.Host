@@ -20,7 +20,6 @@
     <ProjectReference Include="..\..\Core\TokenSaver.ContextHelper\TokenSaver.ContextHelper.csproj" />
     <ProjectReference Include="..\..\Core\TokenSaver.Docs\TokenSaver.Docs.csproj" />
     <ProjectReference Include="..\..\Core\TokenSaver.OllamaIntegration\TokenSaver.OllamaIntegration.csproj" />
-    <ProjectReference Include="..\..\Core\TokenSaver.TerminalControl\TokenSaver.TerminalControl.csproj" />
     <ProjectReference Include="..\..\Core\TokenSaver.TokenEconomy\TokenSaver.TokenEconomy.csproj" />
     <ProjectReference Include="..\..\Core\TokenSaver.Utilities\TokenSaver.Utilities.csproj" />
     <ProjectReference Include="..\..\Core\TokenSaver.WslControl\TokenSaver.WslControl.csproj" />
@@ -40,7 +39,6 @@
     <PackageReference Update="Nerdbank.GitVersioning" Version="3.10.94" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\..\Core\TokenSaver.TerminalControl\Scripts\tokensaver-tab.ps1" Link="Scripts\tokensaver-tab.ps1" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
   <ItemGroup>
     <!-- UnhandledFaultTracker, FaultTrackingMiddleware, UnhandledFaultHealthCheck, and

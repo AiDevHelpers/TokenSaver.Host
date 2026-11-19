@@ -54,7 +54,6 @@ internal static class TokenSaverHostRegistration
             .WithTools<WslControlTools>()
             .WithTools<LanguageHelperTools>()
             .WithTools<InstructionTools>()
-            .WithTools<TerminalSessionTools>()
             .WithTools<ManagedProcessTools>()
             .WithResources<DocResourceService>()
             .WithPrompts<BuildConciseContextPrompt>();
@@ -154,8 +153,7 @@ internal static class TokenSaverHostRegistration
             .AddWorkspaceSessionServices()
             .AddDebuggerServices()
             .AddWslControlServices()
-            .AddLanguageHelperServices()
-            .AddTerminalControlServices();
+            .AddLanguageHelperServices();
 
         builder.Services.AddTokenSaverHealthChecks();
 
