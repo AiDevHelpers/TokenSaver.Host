@@ -26,11 +26,7 @@
     <ProjectReference Include="..\..\Core\TokenSaver.LanguageHelpers.CSharp\TokenSaver.LanguageHelpers.CSharp.csproj" />
     <ProjectReference Include="..\..\Core\TokenSaver.LanguageHelpers.PowerShell\TokenSaver.LanguageHelpers.PowerShell.csproj" />
     <ProjectReference Include="..\..\Core\TokenSaver.LanguageHelpers.Python\TokenSaver.LanguageHelpers.Python.csproj" />
-    <ProjectReference Include="..\..\AgentHelpers\TokenSaver.AgentHelpers.Core\TokenSaver.AgentHelpers.Core.csproj" />
-    <ProjectReference Include="..\..\AgentHelpers\TokenSaver.AgentHelpers.Anthropic\TokenSaver.AgentHelpers.Anthropic.csproj" />
-    <ProjectReference Include="..\..\AgentHelpers\TokenSaver.AgentHelpers.Qwen\TokenSaver.AgentHelpers.Qwen.csproj" />
-    <ProjectReference Include="..\..\AgentHelpers\TokenSaver.AgentHelpers.DeepSeek\TokenSaver.AgentHelpers.DeepSeek.csproj" />
-    <ProjectReference Include="..\..\AgentHelpers\TokenSaver.AgentHelpers.OpenSource\TokenSaver.AgentHelpers.OpenSource.csproj" />
+    <PackageReference Include="AiDevHelpers.AgentHelpers" Version="1.0.1-alpha" />
     <PackageReference Include="SperryDev.Logger" Version="$(SperryLoggerVersion)" />
     <ProjectReference Include="..\..\Common\TokenSaver.Common.Installation\TokenSaver.Common.Installation.csproj" />
     <ProjectReference Include="..\..\Common\TokenSaver.Common.Models\TokenSaver.Common.Models.csproj" />
