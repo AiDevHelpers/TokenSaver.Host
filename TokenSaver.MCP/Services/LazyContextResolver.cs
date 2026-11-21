@@ -1,6 +1,6 @@
-using TokenSaver.AgentHelpers.Core.Contracts;
-using TokenSaver.AgentHelpers.Core.Models;
-using TokenSaver.AgentHelpers.Core.Services;
+using AiDevHelpers.AgentHelpers.Core.Contracts;
+using AiDevHelpers.AgentHelpers.Core.Models;
+using AiDevHelpers.AgentHelpers.Core.Services;
 using TokenSaver.Config;
 
 using Microsoft.AspNetCore.Http;
@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Http;
 namespace TokenSaver.MCP.Services;
 
 /// <summary>
-///     Bridges caller detection (<see cref="TokenSaver.AgentHelpers.Core" />) to the
+///     Bridges caller detection (<see cref="AiDevHelpers.AgentHelpers.Core" />) to the
 ///     <c>lazyContext</c> behavior-config section (<see cref="TokenSaver.Config" />) — same reason
 ///     this lives in the Host as <see cref="AgentConfigResolver" />: the two projects don't
 ///     reference each other.

@@ -1,6 +1,6 @@
-using TokenSaver.AgentHelpers.Core.Contracts;
-using TokenSaver.AgentHelpers.Core.Models;
-using TokenSaver.AgentHelpers.Core.Services;
+using AiDevHelpers.AgentHelpers.Core.Contracts;
+using AiDevHelpers.AgentHelpers.Core.Models;
+using AiDevHelpers.AgentHelpers.Core.Services;
 
 using TokenSaver.CodeHelper.Indexing;
 using TokenSaver.Config;

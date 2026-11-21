@@ -1,9 +1,9 @@
 #pragma warning disable CA2000 // Test factories hand disposables to the code under test; each test is short-lived.
 using System.Text;
 
-using TokenSaver.AgentHelpers.Core.Contracts;
-using TokenSaver.AgentHelpers.Core.Models;
-using TokenSaver.AgentHelpers.Core.Services;
+using AiDevHelpers.AgentHelpers.Core.Contracts;
+using AiDevHelpers.AgentHelpers.Core.Models;
+using AiDevHelpers.AgentHelpers.Core.Services;
 using TokenSaver.Config;
 using TokenSaver.Common.Core.Configuration;
 using TokenSaver.MCP.Middleware;

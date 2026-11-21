@@ -27,11 +27,11 @@ using TokenSaver.MCP.Security;
 using TokenSaver.LanguageHelpers.CSharp.Extensions;
 using TokenSaver.LanguageHelpers.PowerShell.Extensions;
 using TokenSaver.LanguageHelpers.Python.Extensions;
-using TokenSaver.AgentHelpers.Anthropic;
-using TokenSaver.AgentHelpers.Core.Extensions;
-using TokenSaver.AgentHelpers.DeepSeek;
-using TokenSaver.AgentHelpers.OpenSource;
-using TokenSaver.AgentHelpers.Qwen;
+using AiDevHelpers.AgentHelpers.Anthropic;
+using AiDevHelpers.AgentHelpers.Core.Extensions;
+using AiDevHelpers.AgentHelpers.DeepSeek;
+using AiDevHelpers.AgentHelpers.OpenSource;
+using AiDevHelpers.AgentHelpers.Qwen;
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
