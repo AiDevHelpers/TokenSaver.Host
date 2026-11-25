@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 
-namespace TokenSaver.MCP.Services;
+namespace AiDevTools.TokenSaver.MCP.Services;
 
 /// <summary>
 ///     Additively merges resolved absolute CLAUDE.md paths into Claude Code's own

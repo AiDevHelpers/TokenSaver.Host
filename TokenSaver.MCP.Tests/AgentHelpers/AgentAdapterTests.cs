@@ -7,7 +7,7 @@ using AiDevHelpers.AgentHelpers.Qwen;
 
 using Xunit;
 
-namespace TokenSaver.MCP.Tests.AgentHelpers;
+namespace AiDevTools.TokenSaver.MCP.Tests.AgentHelpers;
 
 /// <summary>
 ///     One behavioural test set per adapter: what it claims, which callers it accepts and refuses, and that the format

@@ -1,4 +1,4 @@
-namespace TokenSaver.MCP.Services;
+namespace AiDevTools.TokenSaver.MCP.Services;
 
 /// <summary>
 ///     Decides, for a given MCP <c>ClientName</c>, whether and where to sync the machine-global

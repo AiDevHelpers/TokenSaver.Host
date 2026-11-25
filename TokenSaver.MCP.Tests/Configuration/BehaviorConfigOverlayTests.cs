@@ -1,15 +1,15 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
-using TokenSaver.CodeHelper.Configuration;
-using TokenSaver.Config;
-using TokenSaver.Config.Contracts;
-using TokenSaver.ContextHelper.Configuration;
-using TokenSaver.Common.Core.Configuration;
+using AiDevTools.TokenSaver.CodeHelper.Configuration;
+using AiDevTools.TokenSaver.Config;
+using AiDevTools.TokenSaver.Config.Contracts;
+using AiDevTools.TokenSaver.ContextHelper.Configuration;
+using AiDevTools.TokenSaver.Common.Core.Configuration;
 
 using Xunit;
 
-namespace TokenSaver.MCP.Tests;
+namespace AiDevTools.TokenSaver.MCP.Tests;
 
 [Collection("GlobalConfigDirEnvVar")]
 public sealed class BehaviorConfigOverlayTests : IDisposable

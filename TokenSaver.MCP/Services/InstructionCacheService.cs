@@ -1,4 +1,4 @@
-using TokenSaver.ContextHelper.Models;
+using AiDevTools.TokenSaver.ContextHelper.Models;
 
 using Microsoft.Extensions.Logging;
 
@@ -8,7 +8,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 
-namespace TokenSaver.MCP.Services;
+namespace AiDevTools.TokenSaver.MCP.Services;
 
 /// <summary>
 ///     Maintains a per-workspace, hash-gated cache of the optimized instruction set at

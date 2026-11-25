@@ -1,9 +1,9 @@
-using TokenSaver.CodeHelper.Indexing;
-using TokenSaver.CodeHelper.Models.Index;
+using AiDevTools.TokenSaver.CodeHelper.Indexing;
+using AiDevTools.TokenSaver.CodeHelper.Models.Index;
 
 using System.Collections.Concurrent;
 
-namespace TokenSaver.MCP.Services;
+namespace AiDevTools.TokenSaver.MCP.Services;
 
 /// <summary>
 ///     Runs the workspace symbol scan (CodeIndex 'scan') detached from the calling MCP request. A scan

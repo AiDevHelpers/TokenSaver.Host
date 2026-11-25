@@ -1,10 +1,10 @@
 using System.ComponentModel;
 using System.Text.Json;
 using ModelContextProtocol.Server;
-using TokenSaver.Common.Core.Contracts;
-using TokenSaver.MCP.Services;
+using AiDevTools.TokenSaver.Common.Core.Contracts;
+using AiDevTools.TokenSaver.MCP.Services;
 
-namespace TokenSaver.MCP.Tools;
+namespace AiDevTools.TokenSaver.MCP.Tools;
 
 /// <summary>
 /// MCP tools for querying captured errors, problems, and debug events as JSON.

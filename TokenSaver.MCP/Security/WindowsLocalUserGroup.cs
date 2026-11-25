@@ -1,9 +1,9 @@
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 
-using static TokenSaver.MCP.Security.NativeMethods;
+using static AiDevTools.TokenSaver.MCP.Security.NativeMethods;
 
-namespace TokenSaver.MCP.Security;
+namespace AiDevTools.TokenSaver.MCP.Security;
 
 /// <summary>Local group management through netapi32 (no output parsing, no shell).</summary>
 [SupportedOSPlatform("windows")]

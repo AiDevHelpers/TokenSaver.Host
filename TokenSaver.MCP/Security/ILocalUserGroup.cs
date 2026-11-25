@@ -1,4 +1,4 @@
-namespace TokenSaver.MCP.Security;
+namespace AiDevTools.TokenSaver.MCP.Security;
 
 /// <summary>
 ///     The local Windows group whose members may read the endpoint token. The settings pickers in the VS Code

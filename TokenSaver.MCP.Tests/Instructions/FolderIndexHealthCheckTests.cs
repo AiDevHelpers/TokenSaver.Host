@@ -1,12 +1,12 @@
-using TokenSaver.Common.Core.Configuration;
-using TokenSaver.MCP.HealthChecks;
+using AiDevTools.TokenSaver.Common.Core.Configuration;
+using AiDevTools.TokenSaver.MCP.HealthChecks;
 
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
 
 using Xunit;
 
-namespace TokenSaver.MCP.Tests.Instructions;
+namespace AiDevTools.TokenSaver.MCP.Tests.Instructions;
 
 public sealed class FolderIndexHealthCheckTests : IDisposable
 {
@@ -46,7 +46,7 @@ public sealed class FolderIndexHealthCheckTests : IDisposable
     [Fact]
     public void CheckHealth_TableCurrent_ReportsHealthy()
     {
-        TokenSaver.MCP.Services.FolderFileTable.Generate(_root);
+        AiDevTools.TokenSaver.MCP.Services.FolderFileTable.Generate(_root);
 
         HealthCheckResult result = Run();
 

@@ -1,12 +1,12 @@
 using System.Text.RegularExpressions;
 
-namespace TokenSaver.MCP.Services;
+namespace AiDevTools.TokenSaver.MCP.Services;
 
 /// <summary>
 ///     Frontmatter extracted from a sub-doc rule file: <c>paths</c> (the glob list Claude Code's own
 ///     lazy-rule loader matches against — see <c>.claude/rules/*.md</c> in this repo for the
 ///     convention) and <c>taskTypes</c> (an additive, TokenSaver-specific field — a list of
-///     <see cref="TokenSaver.ContextHelper.Models.TaskType" /> names — that opts a sub-doc into
+///     <see cref="AiDevTools.TokenSaver.ContextHelper.Models.TaskType" /> names — that opts a sub-doc into
 ///     proactive injection by <see cref="InstructionCacheService.TryGetInjectableDoc" /> when
 ///     <c>PromptAssessor</c> classifies a request as that task type, independent of whether the
 ///     request touches a matching file path).

@@ -1,8 +1,8 @@
-using TokenSaver.MCP.Services;
+using AiDevTools.TokenSaver.MCP.Services;
 
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 
-namespace TokenSaver.MCP.HealthChecks;
+namespace AiDevTools.TokenSaver.MCP.HealthChecks;
 
 /// <summary>
 ///     Reports Degraded when <see cref="UnhandledFaultTracker" /> has a recent unhandled

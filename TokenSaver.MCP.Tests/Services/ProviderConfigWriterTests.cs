@@ -2,11 +2,11 @@
 using System.Text;
 using System.Text.Json.Nodes;
 
-using TokenSaver.Common.Models;
+using AiDevTools.TokenSaver.Common.Models;
 
 using Xunit;
 
-namespace TokenSaver.MCP.Tests;
+namespace AiDevTools.TokenSaver.MCP.Tests;
 
 /// <summary>
 ///     The provider config writer on a temporary profile. Nothing here touches a real client file: every path lives

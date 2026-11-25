@@ -1,10 +1,10 @@
-using TokenSaver.Common.Core.Configuration;
-using TokenSaver.MCP.Services;
+using AiDevTools.TokenSaver.Common.Core.Configuration;
+using AiDevTools.TokenSaver.MCP.Services;
 
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
 
-namespace TokenSaver.MCP.HealthChecks;
+namespace AiDevTools.TokenSaver.MCP.HealthChecks;
 
 /// <summary>
 ///     Reports Degraded when the generated folder/file table (docs/folder-index.md) is missing,

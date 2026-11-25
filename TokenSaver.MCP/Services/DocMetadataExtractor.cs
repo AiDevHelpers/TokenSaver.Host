@@ -1,4 +1,4 @@
-namespace TokenSaver.MCP.Services;
+namespace AiDevTools.TokenSaver.MCP.Services;
 
 /// <summary>Metadata-only view of a markdown document: never carries body text.</summary>
 internal sealed record DocMetadata(string Title, string Summary);

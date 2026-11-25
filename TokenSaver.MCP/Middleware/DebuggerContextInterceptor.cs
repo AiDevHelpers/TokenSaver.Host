@@ -1,9 +1,9 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics;
-using TokenSaver.Common.Core.Contracts;
+using AiDevTools.TokenSaver.Common.Core.Contracts;
 
-namespace TokenSaver.MCP.Middleware;
+namespace AiDevTools.TokenSaver.MCP.Middleware;
 
 /// <summary>
 /// Middleware that intercepts all requests to extract and log debug context.

@@ -11,21 +11,21 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 
 using SperryDev.Logger.Configuration;
-using TokenSaver.Common.Core.Configuration;
-using TokenSaver.Common.Installation;
-using TokenSaver.Common.Models;
-using TokenSaver.Config;
-using TokenSaver.Database.Context;
-using TokenSaver.Docs;
-using TokenSaver.Docs.Prompts;
-using TokenSaver.CodeHelper.Indexing;
-using TokenSaver.MCP.HealthChecks;
-using TokenSaver.MCP.Middleware;
-using TokenSaver.MCP.Services;
-using TokenSaver.MCP.Tools;
-using TokenSaver.MCP;
-using TokenSaver.MCP.Endpoints;
-using TokenSaver.OllamaIntegration.Services;
+using AiDevTools.TokenSaver.Common.Core.Configuration;
+using AiDevTools.TokenSaver.Common.Installation;
+using AiDevTools.TokenSaver.Common.Models;
+using AiDevTools.TokenSaver.Config;
+using AiDevTools.TokenSaver.Database.Context;
+using AiDevTools.TokenSaver.Docs;
+using AiDevTools.TokenSaver.Docs.Prompts;
+using AiDevTools.TokenSaver.CodeHelper.Indexing;
+using AiDevTools.TokenSaver.MCP.HealthChecks;
+using AiDevTools.TokenSaver.MCP.Middleware;
+using AiDevTools.TokenSaver.MCP.Services;
+using AiDevTools.TokenSaver.MCP.Tools;
+using AiDevTools.TokenSaver.MCP;
+using AiDevTools.TokenSaver.MCP.Endpoints;
+using AiDevTools.TokenSaver.OllamaIntegration.Services;
 
 // ── Stdio detection ──
 // When Claude Desktop (or any MCP host) launches this server as a command, stdin is a pipe.
@@ -208,7 +208,7 @@ internal partial class Program
     [LoggerMessage(Level = LogLevel.Warning, Message = "Model warm-up skipped")]
     internal static partial void LogContextWarmupSkipped(ILogger logger, Exception ex);
 
-    [LoggerMessage(Level = LogLevel.Critical, Message = "Port {Port} already in use — another TokenSaver.MCP instance is likely already running. Exiting.")]
+    [LoggerMessage(Level = LogLevel.Critical, Message = "Port {Port} already in use — another AiDevTools.TokenSaver.MCP instance is likely already running. Exiting.")]
     internal static partial void LogPortInUse(ILogger logger, int port);
 
     /// <summary>

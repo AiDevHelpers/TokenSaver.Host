@@ -1,4 +1,4 @@
-namespace TokenSaver.MCP.Services;
+namespace AiDevTools.TokenSaver.MCP.Services;
 
 /// <summary>One row of the folder/file index: metadata plus cross-links into the code and semantic indexes.</summary>
 internal sealed record FolderFileRow(

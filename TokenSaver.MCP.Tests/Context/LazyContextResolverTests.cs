@@ -3,12 +3,12 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 using AiDevHelpers.AgentHelpers.Core.Contracts;
 using AiDevHelpers.AgentHelpers.Core.Models;
-using TokenSaver.Config;
-using TokenSaver.MCP.Services;
+using AiDevTools.TokenSaver.Config;
+using AiDevTools.TokenSaver.MCP.Services;
 
 using Xunit;
 
-namespace TokenSaver.MCP.Tests;
+namespace AiDevTools.TokenSaver.MCP.Tests;
 
 public sealed class LazyContextResolverStaticResolveTests
 {

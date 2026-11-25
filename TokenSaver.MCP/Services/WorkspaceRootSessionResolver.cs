@@ -1,13 +1,13 @@
 using AiDevHelpers.AgentHelpers.Core.Models;
-using TokenSaver.CodeHelper.Configuration;
-using TokenSaver.CodeHelper.Indexing;
-using TokenSaver.CodeHelper.Models.Index;
-using TokenSaver.Config;
-using TokenSaver.ContextHelper.Configuration;
-using TokenSaver.Common.Core.Configuration;
-using TokenSaver.TokenEconomy.Models.Context;
-using TokenSaver.TokenEconomy.Services;
-using TokenSaver.OllamaIntegration.Services;
+using AiDevTools.TokenSaver.CodeHelper.Configuration;
+using AiDevTools.TokenSaver.CodeHelper.Indexing;
+using AiDevTools.TokenSaver.CodeHelper.Models.Index;
+using AiDevTools.TokenSaver.Config;
+using AiDevTools.TokenSaver.ContextHelper.Configuration;
+using AiDevTools.TokenSaver.Common.Core.Configuration;
+using AiDevTools.TokenSaver.TokenEconomy.Models.Context;
+using AiDevTools.TokenSaver.TokenEconomy.Services;
+using AiDevTools.TokenSaver.OllamaIntegration.Services;
 
 using Microsoft.Extensions.Options;
 
@@ -16,7 +16,7 @@ using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 
 
-namespace TokenSaver.MCP.Services;
+namespace AiDevTools.TokenSaver.MCP.Services;
 
 /// <summary>
 ///     Resolves the workspace root lazily, on the first tool call of an MCP session, instead of

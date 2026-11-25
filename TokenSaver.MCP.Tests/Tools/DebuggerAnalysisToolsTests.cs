@@ -1,11 +1,11 @@
-using TokenSaver.Common.Core.Contracts;
-using TokenSaver.MCP.Tools;
+using AiDevTools.TokenSaver.Common.Core.Contracts;
+using AiDevTools.TokenSaver.MCP.Tools;
 
 using System.Text.Json;
 
 using Xunit;
 
-namespace TokenSaver.MCP.Tests.Tools;
+namespace AiDevTools.TokenSaver.MCP.Tests.Tools;
 
 /// <summary>
 ///     Covers DebuggerAnalysisTools with fake problem and event capture stores. Nothing is captured

@@ -1,10 +1,10 @@
-using TokenSaver.Common.Core.Configuration;
-using TokenSaver.Common.Models;
-using TokenSaver.OllamaIntegration.Services;
+using AiDevTools.TokenSaver.Common.Core.Configuration;
+using AiDevTools.TokenSaver.Common.Models;
+using AiDevTools.TokenSaver.OllamaIntegration.Services;
 
 using Microsoft.Extensions.Options;
 
-namespace TokenSaver.MCP.Services;
+namespace AiDevTools.TokenSaver.MCP.Services;
 
 /// <summary>
 ///     Background service that periodically pings every configured Ollama endpoint's

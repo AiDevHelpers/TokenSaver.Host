@@ -1,15 +1,15 @@
 using System.ComponentModel;
 
-using TokenSaver.CodeHelper.Indexing;
-using TokenSaver.CodeHelper.Models.Index;
-using TokenSaver.Common.Core.Configuration;
-using TokenSaver.MCP.Services;
+using AiDevTools.TokenSaver.CodeHelper.Indexing;
+using AiDevTools.TokenSaver.CodeHelper.Models.Index;
+using AiDevTools.TokenSaver.Common.Core.Configuration;
+using AiDevTools.TokenSaver.MCP.Services;
 
 using Microsoft.Extensions.Options;
 
 using ModelContextProtocol.Server;
 
-namespace TokenSaver.MCP.Tools;
+namespace AiDevTools.TokenSaver.MCP.Tools;
 
 /// <summary>
 ///     Lets codegen and other out-of-band writers tell the index which files changed, instead of

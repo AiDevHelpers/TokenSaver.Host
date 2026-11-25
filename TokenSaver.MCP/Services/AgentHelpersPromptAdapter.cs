@@ -2,13 +2,13 @@ using AiDevHelpers.AgentHelpers.Core.Contracts;
 using AiDevHelpers.AgentHelpers.Core.Models;
 using AiDevHelpers.AgentHelpers.Core.Services;
 
-using TokenSaver.Common.Core.Configuration;
-using TokenSaver.OllamaIntegration.Services;
+using AiDevTools.TokenSaver.Common.Core.Configuration;
+using AiDevTools.TokenSaver.OllamaIntegration.Services;
 
 using Microsoft.Extensions.Options;
 
 
-namespace TokenSaver.MCP.Services;
+namespace AiDevTools.TokenSaver.MCP.Services;
 
 /// <summary>
 ///     <see cref="IPromptAdapter" /> implementation backed by <see cref="AgentAdapterRegistry" />.

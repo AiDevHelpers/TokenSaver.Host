@@ -7,27 +7,27 @@ using Microsoft.Extensions.Options;
 using AiDevHelpers.AgentHelpers.Core.Contracts;
 using AiDevHelpers.AgentHelpers.Core.Models;
 using AiDevHelpers.AgentHelpers.Core.Services;
-using TokenSaver.CodeHelper.Configuration;
-using TokenSaver.CodeHelper.Indexing;
-using TokenSaver.Config;
-using TokenSaver.ContextHelper.Calibration;
-using TokenSaver.ContextHelper.Configuration;
-using TokenSaver.ContextHelper.Pipeline;
-using TokenSaver.ContextHelper.Pipeline.Stages;
-using TokenSaver.Database.Context;
-using TokenSaver.Database.Context.Entities;
-using TokenSaver.Common.Core.Configuration;
-using TokenSaver.Common.Models;
-using TokenSaver.MCP.Services;
-using TokenSaver.MCP.Tools;
-using TokenSaver.OllamaIntegration.Services;
-using TokenSaver.TokenEconomy.Contracts;
-using TokenSaver.TokenEconomy.Services;
-using TokenSaver.Utilities.Services;
+using AiDevTools.TokenSaver.CodeHelper.Configuration;
+using AiDevTools.TokenSaver.CodeHelper.Indexing;
+using AiDevTools.TokenSaver.Config;
+using AiDevTools.TokenSaver.ContextHelper.Calibration;
+using AiDevTools.TokenSaver.ContextHelper.Configuration;
+using AiDevTools.TokenSaver.ContextHelper.Pipeline;
+using AiDevTools.TokenSaver.ContextHelper.Pipeline.Stages;
+using AiDevTools.TokenSaver.Database.Context;
+using AiDevTools.TokenSaver.Database.Context.Entities;
+using AiDevTools.TokenSaver.Common.Core.Configuration;
+using AiDevTools.TokenSaver.Common.Models;
+using AiDevTools.TokenSaver.MCP.Services;
+using AiDevTools.TokenSaver.MCP.Tools;
+using AiDevTools.TokenSaver.OllamaIntegration.Services;
+using AiDevTools.TokenSaver.TokenEconomy.Contracts;
+using AiDevTools.TokenSaver.TokenEconomy.Services;
+using AiDevTools.TokenSaver.Utilities.Services;
 
 using Xunit;
 
-namespace TokenSaver.MCP.Tests;
+namespace AiDevTools.TokenSaver.MCP.Tests;
 
 /// <summary>
 ///     Covers the pure/validation branches of LocalModelHelperTools that don't require a live

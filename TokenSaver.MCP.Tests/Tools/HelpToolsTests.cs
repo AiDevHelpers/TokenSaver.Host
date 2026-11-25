@@ -1,9 +1,9 @@
-using TokenSaver.MCP.Services;
-using TokenSaver.MCP.Tools;
+using AiDevTools.TokenSaver.MCP.Services;
+using AiDevTools.TokenSaver.MCP.Tools;
 
 using Xunit;
 
-namespace TokenSaver.MCP.Tests.Tools;
+namespace AiDevTools.TokenSaver.MCP.Tests.Tools;
 
 /// <summary>
 ///     Covers HelpTools against the static tool registry. Help reads no services at runtime.

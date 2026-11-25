@@ -1,15 +1,15 @@
 using AiDevHelpers.AgentHelpers.Core.Contracts;
 using AiDevHelpers.AgentHelpers.Core.Models;
 using AiDevHelpers.AgentHelpers.Core.Services;
-using TokenSaver.Config;
+using AiDevTools.TokenSaver.Config;
 
 using Microsoft.AspNetCore.Http;
 
-namespace TokenSaver.MCP.Services;
+namespace AiDevTools.TokenSaver.MCP.Services;
 
 /// <summary>
 ///     Bridges caller detection (<see cref="AiDevHelpers.AgentHelpers.Core" />) to the
-///     <c>lazyContext</c> behavior-config section (<see cref="TokenSaver.Config" />) — same reason
+///     <c>lazyContext</c> behavior-config section (<see cref="AiDevTools.TokenSaver.Config" />) — same reason
 ///     this lives in the Host as <see cref="AgentConfigResolver" />: the two projects don't
 ///     reference each other.
 ///     <para>

@@ -3,9 +3,9 @@ using System.Text.Json;
 
 using ModelContextProtocol.Server;
 
-using TokenSaver.MCP.Services;
+using AiDevTools.TokenSaver.MCP.Services;
 
-namespace TokenSaver.MCP.Tools;
+namespace AiDevTools.TokenSaver.MCP.Tools;
 
 /// <summary>
 ///     Lists and kills the processes this MCP server started (test runs and dev commands).

@@ -1,12 +1,12 @@
-using TokenSaver.Common.Core.Processes;
+using AiDevTools.TokenSaver.Common.Core.Processes;
 
-using TokenSaver.CodeHelper.Indexing;
-using TokenSaver.CodeHelper.Models.Index;
-using TokenSaver.Common.Core.Configuration;
+using AiDevTools.TokenSaver.CodeHelper.Indexing;
+using AiDevTools.TokenSaver.CodeHelper.Models.Index;
+using AiDevTools.TokenSaver.Common.Core.Configuration;
 
 using Microsoft.Extensions.Options;
 
-namespace TokenSaver.MCP.Services;
+namespace AiDevTools.TokenSaver.MCP.Services;
 
 /// <summary>
 ///     Watches the workspace's git directory for <c>HEAD</c> and <c>index</c> writes (checkout,

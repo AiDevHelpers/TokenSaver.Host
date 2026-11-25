@@ -1,10 +1,10 @@
-using TokenSaver.Common.Core.Configuration;
-using TokenSaver.Common.Contracts;
-using TokenSaver.TokenEconomy.Models.TokenEconomy;
-using TokenSaver.OllamaIntegration.Services;
-using TokenSaver.MCP.Services;
-using TokenSaver.TokenEconomy.Contracts;
-using TokenSaver.Utilities.Services;
+using AiDevTools.TokenSaver.Common.Core.Configuration;
+using AiDevTools.TokenSaver.Common.Contracts;
+using AiDevTools.TokenSaver.TokenEconomy.Models.TokenEconomy;
+using AiDevTools.TokenSaver.OllamaIntegration.Services;
+using AiDevTools.TokenSaver.MCP.Services;
+using AiDevTools.TokenSaver.TokenEconomy.Contracts;
+using AiDevTools.TokenSaver.Utilities.Services;
 
 using Microsoft.Extensions.Options;
 
@@ -13,7 +13,7 @@ using ModelContextProtocol.Server;
 using System.ComponentModel;
 using System.Text.Json;
 
-namespace TokenSaver.MCP.Tools;
+namespace AiDevTools.TokenSaver.MCP.Tools;
 
 /// <summary>
 ///     Measurement/routing tools for the token-economy design: TokenBudget (pure, no LLM),

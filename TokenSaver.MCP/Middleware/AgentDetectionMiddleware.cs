@@ -1,13 +1,13 @@
-using TokenSaver.Config;
-using TokenSaver.Common.Core.Configuration;
-using TokenSaver.MCP.Services;
+using AiDevTools.TokenSaver.Config;
+using AiDevTools.TokenSaver.Common.Core.Configuration;
+using AiDevTools.TokenSaver.MCP.Services;
 
 using Microsoft.Extensions.Options;
 
 using System.Text;
 using System.Text.Json.Nodes;
 
-namespace TokenSaver.MCP.Middleware;
+namespace AiDevTools.TokenSaver.MCP.Middleware;
 
 /// <summary>
 ///     Detects the calling AI model family on the MCP <c>initialize</c> handshake and, separately,

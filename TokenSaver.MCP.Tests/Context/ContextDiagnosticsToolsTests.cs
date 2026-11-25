@@ -1,30 +1,30 @@
 #pragma warning disable CA1506 // Test factories wire many services together by design; the coupling is intentional.
 #pragma warning disable CA2000 // Test factories hand disposables to the code under test; each test is short-lived.
-using TokenSaver.CodeHelper.Configuration;
-using TokenSaver.CodeHelper.Indexing;
-using TokenSaver.Config;
-using TokenSaver.ContextHelper.Calibration;
-using TokenSaver.ContextHelper.Configuration;
-using TokenSaver.ContextHelper.Models.Diagnostics;
-using TokenSaver.ContextHelper.Pipeline;
-using TokenSaver.ContextHelper.Pipeline.Stages;
-using TokenSaver.Database.Context;
-using TokenSaver.Database.Context.Entities;
-using TokenSaver.Common.Core.Configuration;
-using TokenSaver.MCP.Services;
-using TokenSaver.MCP.Tools;
-using TokenSaver.OllamaIntegration.Services;
-using TokenSaver.OllamaIntegration.Tests;
-using TokenSaver.TokenEconomy.Contracts;
-using TokenSaver.TokenEconomy.Services;
-using TokenSaver.Utilities.Services;
+using AiDevTools.TokenSaver.CodeHelper.Configuration;
+using AiDevTools.TokenSaver.CodeHelper.Indexing;
+using AiDevTools.TokenSaver.Config;
+using AiDevTools.TokenSaver.ContextHelper.Calibration;
+using AiDevTools.TokenSaver.ContextHelper.Configuration;
+using AiDevTools.TokenSaver.ContextHelper.Models.Diagnostics;
+using AiDevTools.TokenSaver.ContextHelper.Pipeline;
+using AiDevTools.TokenSaver.ContextHelper.Pipeline.Stages;
+using AiDevTools.TokenSaver.Database.Context;
+using AiDevTools.TokenSaver.Database.Context.Entities;
+using AiDevTools.TokenSaver.Common.Core.Configuration;
+using AiDevTools.TokenSaver.MCP.Services;
+using AiDevTools.TokenSaver.MCP.Tools;
+using AiDevTools.TokenSaver.OllamaIntegration.Services;
+using AiDevTools.TokenSaver.OllamaIntegration.Tests;
+using AiDevTools.TokenSaver.TokenEconomy.Contracts;
+using AiDevTools.TokenSaver.TokenEconomy.Services;
+using AiDevTools.TokenSaver.Utilities.Services;
 
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
 using Xunit;
 
-namespace TokenSaver.MCP.Tests;
+namespace AiDevTools.TokenSaver.MCP.Tests;
 
 /// <summary>
 ///     Closes the "zero tests" gap CLAUDE.md flags for ContextDiagnosticsTools. All four

@@ -1,15 +1,15 @@
-using TokenSaver.Common.Core.Configuration;
-using TokenSaver.CodeHelper.AutoWorkflow;
-using TokenSaver.CodeHelper.Calibration;
-using TokenSaver.CodeHelper.Configuration;
-using TokenSaver.MCP.Tools;
+using AiDevTools.TokenSaver.Common.Core.Configuration;
+using AiDevTools.TokenSaver.CodeHelper.AutoWorkflow;
+using AiDevTools.TokenSaver.CodeHelper.Calibration;
+using AiDevTools.TokenSaver.CodeHelper.Configuration;
+using AiDevTools.TokenSaver.MCP.Tools;
 
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
 using Xunit;
 
-namespace TokenSaver.MCP.Tests.Tools;
+namespace AiDevTools.TokenSaver.MCP.Tests.Tools;
 
 /// <summary>
 ///     Covers AutoWorkflowTools on its validation branches and on the Calibration toggle/stats/feedback

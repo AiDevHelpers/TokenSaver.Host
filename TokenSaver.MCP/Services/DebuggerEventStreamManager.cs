@@ -1,8 +1,8 @@
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
-using TokenSaver.Common.Core.Contracts;
+using AiDevTools.TokenSaver.Common.Core.Contracts;
 
-namespace TokenSaver.MCP.Services;
+namespace AiDevTools.TokenSaver.MCP.Services;
 
 /// <summary>
 /// Manages Server-Sent Events (SSE) subscriptions and broadcasts debug events

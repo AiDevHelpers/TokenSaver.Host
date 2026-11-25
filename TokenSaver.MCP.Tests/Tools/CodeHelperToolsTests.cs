@@ -1,12 +1,12 @@
-using TokenSaver.Common.Core.Configuration;
-using TokenSaver.CodeHelper.Planning;
-using TokenSaver.MCP.Tools;
+using AiDevTools.TokenSaver.Common.Core.Configuration;
+using AiDevTools.TokenSaver.CodeHelper.Planning;
+using AiDevTools.TokenSaver.MCP.Tools;
 
 using Microsoft.Extensions.Options;
 
 using Xunit;
 
-namespace TokenSaver.MCP.Tests.Tools;
+namespace AiDevTools.TokenSaver.MCP.Tests.Tools;
 
 /// <summary>
 ///     Covers CodeHelperTools on its argument-validation and unknown-action branches, plus the

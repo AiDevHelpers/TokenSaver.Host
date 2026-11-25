@@ -1,8 +1,8 @@
-using TokenSaver.MCP.Services;
+using AiDevTools.TokenSaver.MCP.Services;
 
 using Xunit;
 
-namespace TokenSaver.MCP.Tests;
+namespace AiDevTools.TokenSaver.MCP.Tests;
 
 /// <summary>
 ///     FindRepoRoot is pure (no shared state) and gets full coverage here.

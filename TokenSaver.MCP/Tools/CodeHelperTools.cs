@@ -2,18 +2,18 @@ using AiDevHelpers.AgentHelpers.Core.Contracts;
 using AiDevHelpers.AgentHelpers.Core.Models;
 using AiDevHelpers.AgentHelpers.Core.Services;
 
-using TokenSaver.CodeHelper.Indexing;
-using TokenSaver.CodeHelper.Models.Index;
-using TokenSaver.CodeHelper.Models.Patch;
-using TokenSaver.CodeHelper.Models.Planning;
-using TokenSaver.CodeHelper.Patching;
-using TokenSaver.CodeHelper.Planning;
-using TokenSaver.CodeHelper.Research;
-using TokenSaver.ContextHelper.Models;
-using TokenSaver.ContextHelper.Pipeline;
-using TokenSaver.Common.Core.Configuration;
-using TokenSaver.MCP.Services;
-using TokenSaver.TokenEconomy.Services;
+using AiDevTools.TokenSaver.CodeHelper.Indexing;
+using AiDevTools.TokenSaver.CodeHelper.Models.Index;
+using AiDevTools.TokenSaver.CodeHelper.Models.Patch;
+using AiDevTools.TokenSaver.CodeHelper.Models.Planning;
+using AiDevTools.TokenSaver.CodeHelper.Patching;
+using AiDevTools.TokenSaver.CodeHelper.Planning;
+using AiDevTools.TokenSaver.CodeHelper.Research;
+using AiDevTools.TokenSaver.ContextHelper.Models;
+using AiDevTools.TokenSaver.ContextHelper.Pipeline;
+using AiDevTools.TokenSaver.Common.Core.Configuration;
+using AiDevTools.TokenSaver.MCP.Services;
+using AiDevTools.TokenSaver.TokenEconomy.Services;
 
 using Microsoft.Extensions.Options;
 
@@ -23,7 +23,7 @@ using System.ComponentModel;
 using System.Globalization;
 using System.Text;
 
-namespace TokenSaver.MCP.Tools;
+namespace AiDevTools.TokenSaver.MCP.Tools;
 
 [McpServerToolType]
 internal sealed class CodeHelperTools

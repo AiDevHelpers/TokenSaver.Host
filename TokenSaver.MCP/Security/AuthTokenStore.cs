@@ -5,9 +5,9 @@ using System.Text;
 
 using Microsoft.Extensions.Options;
 
-using TokenSaver.Common.Core.Configuration;
+using AiDevTools.TokenSaver.Common.Core.Configuration;
 
-namespace TokenSaver.MCP.Security;
+namespace AiDevTools.TokenSaver.MCP.Security;
 
 /// <summary>
 ///     The per-install bearer token every client sends to /mcp and /api. Generated once, stored in a file

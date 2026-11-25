@@ -5,14 +5,14 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
-using TokenSaver.CodeHelper.Calibration;
-using TokenSaver.CodeHelper.Configuration;
-using TokenSaver.ContextHelper.Configuration;
-using TokenSaver.MCP.Middleware;
+using AiDevTools.TokenSaver.CodeHelper.Calibration;
+using AiDevTools.TokenSaver.CodeHelper.Configuration;
+using AiDevTools.TokenSaver.ContextHelper.Configuration;
+using AiDevTools.TokenSaver.MCP.Middleware;
 
 using Xunit;
 
-namespace TokenSaver.MCP.Tests;
+namespace AiDevTools.TokenSaver.MCP.Tests;
 
 /// <summary>
 ///     Which requests the intercept middleware touches at all. Every case here must reach the next middleware with the

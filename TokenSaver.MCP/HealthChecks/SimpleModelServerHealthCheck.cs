@@ -1,12 +1,12 @@
-using TokenSaver.OllamaIntegration.Models.Ollama;
-using TokenSaver.OllamaIntegration.Services;
+using AiDevTools.TokenSaver.OllamaIntegration.Models.Ollama;
+using AiDevTools.TokenSaver.OllamaIntegration.Services;
 
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 
 using System.Globalization;
 
 
-namespace TokenSaver.MCP.HealthChecks;
+namespace AiDevTools.TokenSaver.MCP.HealthChecks;
 
 /// <summary>
 ///     Health check that probes the SimpleModelServer router (via OllamaService) and reports

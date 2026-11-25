@@ -1,9 +1,9 @@
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 using System.Text.Json.Serialization;
-using TokenSaver.Common.Core.Contracts;
+using AiDevTools.TokenSaver.Common.Core.Contracts;
 
-namespace TokenSaver.MCP.Services;
+namespace AiDevTools.TokenSaver.MCP.Services;
 
 /// <summary>
 /// Captures and analyzes problems (errors, warnings, code issues) for code analysis,

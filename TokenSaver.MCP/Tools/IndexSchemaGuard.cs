@@ -1,6 +1,6 @@
 using System.Text.Json;
 
-namespace TokenSaver.MCP.Tools;
+namespace AiDevTools.TokenSaver.MCP.Tools;
 
 /// <summary>
 ///     A stored index whose schema is older than the code fails its queries with

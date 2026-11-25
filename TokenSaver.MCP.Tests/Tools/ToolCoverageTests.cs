@@ -5,7 +5,7 @@ using ModelContextProtocol.Server;
 
 using Xunit;
 
-namespace TokenSaver.MCP.Tests.Tools;
+namespace AiDevTools.TokenSaver.MCP.Tests.Tools;
 
 /// <summary>
 ///     Every chat-facing MCP tool method must be called by at least one test in this project.
@@ -16,7 +16,7 @@ public sealed class ToolCoverageTests
     [Fact]
     public void Every_McpServerTool_HasATestThatCallsIt()
     {
-        var toolNames = typeof(TokenSaver.MCP.Services.InstructionStoreService).Assembly.GetTypes()
+        var toolNames = typeof(AiDevTools.TokenSaver.MCP.Services.InstructionStoreService).Assembly.GetTypes()
             .Where(t => t.GetCustomAttribute<McpServerToolTypeAttribute>() is not null)
             .SelectMany(t => t.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly))
             .Where(m => m.GetCustomAttribute<McpServerToolAttribute>() is not null)
@@ -40,15 +40,15 @@ public sealed class ToolCoverageTests
         // Walk up from the test binary to the source tree. CallerFilePath is not used: CI's deterministic
         // path mapping rewrites it (D:\a\...\TokenSaver -> /_/), so it does not point at the checkout.
         string? dir = AppContext.BaseDirectory;
-        while (dir is not null && !File.Exists(Path.Combine(dir, "src", "Host", "TokenSaver.MCP.Tests", "TokenSaver.MCP.Tests.csproj")))
+        while (dir is not null && !File.Exists(Path.Combine(dir, "src", "Host", "AiDevTools.TokenSaver.MCP.Tests", "AiDevTools.TokenSaver.MCP.Tests.csproj")))
         {
             dir = Path.GetDirectoryName(dir);
         }
         if (dir is null)
         {
-            throw new InvalidOperationException("TokenSaver.MCP.Tests source tree not found above the test binary.");
+            throw new InvalidOperationException("AiDevTools.TokenSaver.MCP.Tests source tree not found above the test binary.");
         }
-        dir = Path.Combine(dir, "src", "Host", "TokenSaver.MCP.Tests");
+        dir = Path.Combine(dir, "src", "Host", "AiDevTools.TokenSaver.MCP.Tests");
 
         IEnumerable<string> files = Directory.EnumerateFiles(dir, "*.cs", SearchOption.AllDirectories)
             .Where(f => !f.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase)

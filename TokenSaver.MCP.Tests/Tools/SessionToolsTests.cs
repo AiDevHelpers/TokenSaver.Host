@@ -1,7 +1,7 @@
-using TokenSaver.Common.Core.Configuration;
-using TokenSaver.TokenEconomy.Contracts;
-using TokenSaver.TokenEconomy.Models.TokenEconomy;
-using TokenSaver.MCP.Tools;
+using AiDevTools.TokenSaver.Common.Core.Configuration;
+using AiDevTools.TokenSaver.TokenEconomy.Contracts;
+using AiDevTools.TokenSaver.TokenEconomy.Models.TokenEconomy;
+using AiDevTools.TokenSaver.MCP.Tools;
 
 using Microsoft.Extensions.Options;
 
@@ -9,7 +9,7 @@ using System.Text.Json;
 
 using Xunit;
 
-namespace TokenSaver.MCP.Tests.Tools;
+namespace AiDevTools.TokenSaver.MCP.Tests.Tools;
 
 /// <summary>
 ///     Covers SessionTools snapshot/restore against temp folders. Blobs stay under the 4000-character

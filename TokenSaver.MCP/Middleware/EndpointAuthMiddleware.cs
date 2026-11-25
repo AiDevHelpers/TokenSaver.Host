@@ -1,9 +1,9 @@
 using Microsoft.Extensions.Options;
 
-using TokenSaver.Common.Core.Configuration;
-using TokenSaver.MCP.Security;
+using AiDevTools.TokenSaver.Common.Core.Configuration;
+using AiDevTools.TokenSaver.MCP.Security;
 
-namespace TokenSaver.MCP.Middleware;
+namespace AiDevTools.TokenSaver.MCP.Middleware;
 
 /// <summary>
 ///     The trust boundary for the HTTP endpoint. For /mcp and /api/* it refuses, in order:

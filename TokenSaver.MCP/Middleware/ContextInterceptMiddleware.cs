@@ -1,18 +1,18 @@
-using TokenSaver.CodeHelper.Calibration;
-using TokenSaver.CodeHelper.AutoWorkflow;
-using TokenSaver.CodeHelper.Configuration;
-using TokenSaver.ContextHelper.Configuration;
-using TokenSaver.ContextHelper.Models;
-using TokenSaver.ContextHelper.Pipeline;
-using TokenSaver.Common.Core.Configuration;
-using TokenSaver.MCP.Services;
+using AiDevTools.TokenSaver.CodeHelper.Calibration;
+using AiDevTools.TokenSaver.CodeHelper.AutoWorkflow;
+using AiDevTools.TokenSaver.CodeHelper.Configuration;
+using AiDevTools.TokenSaver.ContextHelper.Configuration;
+using AiDevTools.TokenSaver.ContextHelper.Models;
+using AiDevTools.TokenSaver.ContextHelper.Pipeline;
+using AiDevTools.TokenSaver.Common.Core.Configuration;
+using AiDevTools.TokenSaver.MCP.Services;
 
 using Microsoft.Extensions.Options;
 
 using System.Text;
 using System.Text.Json.Nodes;
 
-namespace TokenSaver.MCP.Middleware;
+namespace AiDevTools.TokenSaver.MCP.Middleware;
 
 /// <summary>
 ///     Intercepts MCP tools/call requests for an allowlist of tools whose "prompt" argument is

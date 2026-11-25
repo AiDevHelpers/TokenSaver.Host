@@ -1,8 +1,8 @@
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
-using TokenSaver.Common.Core.Contracts;
+using AiDevTools.TokenSaver.Common.Core.Contracts;
 
-namespace TokenSaver.MCP.Services;
+namespace AiDevTools.TokenSaver.MCP.Services;
 
 /// <summary>
 /// Captures structured debug events (tool execution, exceptions, state changes, metrics)

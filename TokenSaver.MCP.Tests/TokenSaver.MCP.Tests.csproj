@@ -10,9 +10,6 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\TokenSaver.MCP\TokenSaver.MCP.csproj" />
-    <ProjectReference Include="..\..\Core\TokenSaver.OllamaIntegration.Tests\TokenSaver.OllamaIntegration.Tests.csproj" />
-    <ProjectReference Include="..\..\Core\TokenSaver.TokenEconomy.Tests\TokenSaver.TokenEconomy.Tests.csproj" />
-    <ProjectReference Include="..\..\Core\TokenSaver.Utilities.Tests\TokenSaver.Utilities.Tests.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.12.0" />

@@ -1,15 +1,15 @@
 using AiDevHelpers.AgentHelpers.Core.Contracts;
 using AiDevHelpers.AgentHelpers.Core.Models;
 using AiDevHelpers.AgentHelpers.Core.Services;
-using TokenSaver.Config;
+using AiDevTools.TokenSaver.Config;
 
 using Microsoft.AspNetCore.Http;
 
-namespace TokenSaver.MCP.Services;
+namespace AiDevTools.TokenSaver.MCP.Services;
 
 /// <summary>
 ///     Bridges caller detection (<see cref="AiDevHelpers.AgentHelpers.Core" />) to behavior config
-///     (<see cref="TokenSaver.Config" />) — the two projects don't reference each other, so this
+///     (<see cref="AiDevTools.TokenSaver.Config" />) — the two projects don't reference each other, so this
 ///     lives in the Host where both are already wired up.
 ///     Detects which AI model family is calling (Anthropic/DeepSeek/Qwen/OpenSource) via the same
 ///     <see cref="ICallerDetectionService" />/<see cref="AgentAdapterRegistry" /> pipeline the

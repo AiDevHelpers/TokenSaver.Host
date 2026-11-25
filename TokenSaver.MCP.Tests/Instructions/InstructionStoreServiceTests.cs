@@ -1,8 +1,8 @@
-using TokenSaver.MCP.Services;
+using AiDevTools.TokenSaver.MCP.Services;
 
 using Xunit;
 
-namespace TokenSaver.MCP.Tests.Instructions;
+namespace AiDevTools.TokenSaver.MCP.Tests.Instructions;
 
 public sealed class InstructionStoreServiceTests : IDisposable
 {

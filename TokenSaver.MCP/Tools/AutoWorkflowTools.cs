@@ -2,15 +2,15 @@ using AiDevHelpers.AgentHelpers.Core.Contracts;
 using AiDevHelpers.AgentHelpers.Core.Models;
 using AiDevHelpers.AgentHelpers.Core.Services;
 
-using TokenSaver.CodeHelper.AutoWorkflow;
-using TokenSaver.CodeHelper.Calibration;
-using TokenSaver.CodeHelper.Configuration;
-using TokenSaver.CodeHelper.Models.Calibration;
-using TokenSaver.CodeHelper.Research;
-using TokenSaver.ContextHelper.Models;
-using TokenSaver.ContextHelper.Pipeline;
-using TokenSaver.Common.Core.Configuration;
-using TokenSaver.MCP.Services;
+using AiDevTools.TokenSaver.CodeHelper.AutoWorkflow;
+using AiDevTools.TokenSaver.CodeHelper.Calibration;
+using AiDevTools.TokenSaver.CodeHelper.Configuration;
+using AiDevTools.TokenSaver.CodeHelper.Models.Calibration;
+using AiDevTools.TokenSaver.CodeHelper.Research;
+using AiDevTools.TokenSaver.ContextHelper.Models;
+using AiDevTools.TokenSaver.ContextHelper.Pipeline;
+using AiDevTools.TokenSaver.Common.Core.Configuration;
+using AiDevTools.TokenSaver.MCP.Services;
 
 using Microsoft.Extensions.Options;
 
@@ -20,7 +20,7 @@ using System.ComponentModel;
 using System.Globalization;
 using System.Text;
 
-namespace TokenSaver.MCP.Tools;
+namespace AiDevTools.TokenSaver.MCP.Tools;
 
 [McpServerToolType]
 internal sealed class AutoWorkflowTools(

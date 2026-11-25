@@ -1,32 +1,32 @@
-using TokenSaver.ContextHelper.Calibration;
-using TokenSaver.ContextHelper.Configuration;
-using TokenSaver.ContextHelper.Pipeline;
-using TokenSaver.ContextHelper.Pipeline.Stages;
-using TokenSaver.CodeHelper.AutoWorkflow;
-using TokenSaver.CodeHelper.Calibration;
-using TokenSaver.CodeHelper.Configuration;
-using TokenSaver.CodeHelper.Indexing;
-using TokenSaver.CodeHelper.Patching;
-using TokenSaver.CodeHelper.Planning;
-using TokenSaver.CodeHelper.Research;
-using TokenSaver.CodeHelper.Contracts;
-using TokenSaver.Config.Contracts;
-using TokenSaver.Common.Core.Configuration;
-using TokenSaver.Common.Core.Contracts;
-using TokenSaver.Common.Contracts;
-using TokenSaver.Common.Models;
-using TokenSaver.Config;
-using TokenSaver.Database.Context;
-using TokenSaver.OllamaIntegration.Services;
-using TokenSaver.TokenEconomy.Contracts;
-using TokenSaver.TokenEconomy.Services;
-using TokenSaver.Utilities.Services;
-using TokenSaver.WslControl;
-using TokenSaver.WslControl.Contracts;
-using TokenSaver.MCP.Security;
-using TokenSaver.LanguageHelpers.CSharp.Extensions;
-using TokenSaver.LanguageHelpers.PowerShell.Extensions;
-using TokenSaver.LanguageHelpers.Python.Extensions;
+using AiDevTools.TokenSaver.ContextHelper.Calibration;
+using AiDevTools.TokenSaver.ContextHelper.Configuration;
+using AiDevTools.TokenSaver.ContextHelper.Pipeline;
+using AiDevTools.TokenSaver.ContextHelper.Pipeline.Stages;
+using AiDevTools.TokenSaver.CodeHelper.AutoWorkflow;
+using AiDevTools.TokenSaver.CodeHelper.Calibration;
+using AiDevTools.TokenSaver.CodeHelper.Configuration;
+using AiDevTools.TokenSaver.CodeHelper.Indexing;
+using AiDevTools.TokenSaver.CodeHelper.Patching;
+using AiDevTools.TokenSaver.CodeHelper.Planning;
+using AiDevTools.TokenSaver.CodeHelper.Research;
+using AiDevTools.TokenSaver.CodeHelper.Contracts;
+using AiDevTools.TokenSaver.Config.Contracts;
+using AiDevTools.TokenSaver.Common.Core.Configuration;
+using AiDevTools.TokenSaver.Common.Core.Contracts;
+using AiDevTools.TokenSaver.Common.Contracts;
+using AiDevTools.TokenSaver.Common.Models;
+using AiDevTools.TokenSaver.Config;
+using AiDevTools.TokenSaver.Database.Context;
+using AiDevTools.TokenSaver.OllamaIntegration.Services;
+using AiDevTools.TokenSaver.TokenEconomy.Contracts;
+using AiDevTools.TokenSaver.TokenEconomy.Services;
+using AiDevTools.TokenSaver.Utilities.Services;
+using AiDevTools.TokenSaver.WslControl;
+using AiDevTools.TokenSaver.WslControl.Contracts;
+using AiDevTools.TokenSaver.MCP.Security;
+using AiDevTools.TokenSaver.LanguageHelpers.CSharp.Extensions;
+using AiDevTools.TokenSaver.LanguageHelpers.PowerShell.Extensions;
+using AiDevTools.TokenSaver.LanguageHelpers.Python.Extensions;
 using AiDevHelpers.AgentHelpers.Anthropic;
 using AiDevHelpers.AgentHelpers.Core.Extensions;
 using AiDevHelpers.AgentHelpers.DeepSeek;
@@ -37,7 +37,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Configuration;
 
-namespace TokenSaver.MCP.Services;
+namespace AiDevTools.TokenSaver.MCP.Services;
 
 /// <summary>
 /// Extension methods for registering TokenSaver MCP services.
@@ -336,7 +336,7 @@ internal static class ServiceRegistrationExtensions
     }
 
     /// <summary>
-    ///     Registers the WSL provider stack (TokenSaver.WslControl) plus the host-side adapter that
+    ///     Registers the WSL provider stack (AiDevTools.TokenSaver.WslControl) plus the host-side adapter that
     ///     binds its <see cref="IWslCommandModel" /> seam to the local model (OllamaService), so the
     ///     natural-language planner can route command synthesis through the SimpleModelServer/Ollama router.
     /// </summary>
@@ -350,7 +350,7 @@ internal static class ServiceRegistrationExtensions
     }
 
     /// <summary>
-    ///     Registers the per-language code-quality helpers (TokenSaver.LanguageHelpers.*) and their shared
+    ///     Registers the per-language code-quality helpers (AiDevTools.TokenSaver.LanguageHelpers.*) and their shared
     ///     Core services (process runner + <c>ILanguageHelperRegistry</c>). Each <c>Add*LanguageHelper</c>
     ///     adds the Core layer idempotently, so the registry aggregates all three helpers.
     /// </summary>

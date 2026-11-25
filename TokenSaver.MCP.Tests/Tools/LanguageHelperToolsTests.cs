@@ -1,13 +1,13 @@
-using TokenSaver.Common.Core.Configuration;
-using TokenSaver.LanguageHelpers.Core.Contracts;
-using TokenSaver.LanguageHelpers.Core.Models;
-using TokenSaver.MCP.Tools;
+using AiDevTools.TokenSaver.Common.Core.Configuration;
+using AiDevTools.TokenSaver.LanguageHelpers.Core.Contracts;
+using AiDevTools.TokenSaver.LanguageHelpers.Core.Models;
+using AiDevTools.TokenSaver.MCP.Tools;
 
 using Microsoft.Extensions.Options;
 
 using Xunit;
 
-namespace TokenSaver.MCP.Tests.Tools;
+namespace AiDevTools.TokenSaver.MCP.Tests.Tools;
 
 /// <summary>
 ///     Covers LanguageHelperTools on its argument-resolution and unknown-operation branches. A fake

@@ -1,10 +1,10 @@
 using Microsoft.Extensions.Logging.Abstractions;
 
-using TokenSaver.Config;
+using AiDevTools.TokenSaver.Config;
 
 using Xunit;
 
-namespace TokenSaver.MCP.Tests;
+namespace AiDevTools.TokenSaver.MCP.Tests;
 
 [Collection("GlobalConfigDirEnvVar")]
 public sealed class ConfigUpgradeServiceTests : IDisposable

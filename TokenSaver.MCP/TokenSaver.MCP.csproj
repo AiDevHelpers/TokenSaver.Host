@@ -14,22 +14,22 @@
     <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="10.0.9" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\Core\TokenSaver.CodeHelper\TokenSaver.CodeHelper.csproj" />
-    <ProjectReference Include="..\..\Core\TokenSaver.Common.Core\TokenSaver.Common.Core.csproj" />
-    <ProjectReference Include="..\..\Core\TokenSaver.Config\TokenSaver.Config.csproj" />
-    <ProjectReference Include="..\..\Core\TokenSaver.ContextHelper\TokenSaver.ContextHelper.csproj" />
-    <ProjectReference Include="..\..\Core\TokenSaver.Docs\TokenSaver.Docs.csproj" />
-    <ProjectReference Include="..\..\Core\TokenSaver.OllamaIntegration\TokenSaver.OllamaIntegration.csproj" />
-    <ProjectReference Include="..\..\Core\TokenSaver.TokenEconomy\TokenSaver.TokenEconomy.csproj" />
-    <ProjectReference Include="..\..\Core\TokenSaver.Utilities\TokenSaver.Utilities.csproj" />
-    <ProjectReference Include="..\..\Core\TokenSaver.WslControl\TokenSaver.WslControl.csproj" />
-    <ProjectReference Include="..\..\Core\TokenSaver.LanguageHelpers.CSharp\TokenSaver.LanguageHelpers.CSharp.csproj" />
-    <ProjectReference Include="..\..\Core\TokenSaver.LanguageHelpers.PowerShell\TokenSaver.LanguageHelpers.PowerShell.csproj" />
-    <ProjectReference Include="..\..\Core\TokenSaver.LanguageHelpers.Python\TokenSaver.LanguageHelpers.Python.csproj" />
+    <PackageReference Include="AiDevTools.TokenSaver.CodeHelper" Version="1.0.4-alpha" />
+    <PackageReference Include="AiDevTools.TokenSaver.Common.Core" Version="1.0.5-alpha" />
+    <PackageReference Include="AiDevTools.TokenSaver.Config" Version="1.0.4-alpha" />
+    <PackageReference Include="AiDevTools.TokenSaver.ContextHelper" Version="1.0.5-alpha" />
+    <PackageReference Include="AiDevTools.TokenSaver.Docs" Version="1.0.4-alpha" />
+    <PackageReference Include="AiDevTools.TokenSaver.OllamaIntegration" Version="1.0.4-alpha" />
+    <PackageReference Include="AiDevTools.TokenSaver.TokenEconomy" Version="1.0.4-alpha" />
+    <PackageReference Include="AiDevTools.TokenSaver.Utilities" Version="1.0.4-alpha" />
+    <PackageReference Include="AiDevTools.TokenSaver.WslControl" Version="1.0.4-alpha" />
+    <PackageReference Include="AiDevTools.TokenSaver.LanguageHelpers.CSharp" Version="1.0.4-alpha" />
+    <PackageReference Include="AiDevTools.TokenSaver.LanguageHelpers.PowerShell" Version="1.0.4-alpha" />
+    <PackageReference Include="AiDevTools.TokenSaver.LanguageHelpers.Python" Version="1.0.4-alpha" />
     <PackageReference Include="AiDevHelpers.AgentHelpers" Version="1.0.1-alpha" />
     <PackageReference Include="SperryDev.Logger" Version="$(SperryLoggerVersion)" />
-    <ProjectReference Include="..\..\Common\TokenSaver.Common.Installation\TokenSaver.Common.Installation.csproj" />
-    <ProjectReference Include="..\..\Common\TokenSaver.Common.Models\TokenSaver.Common.Models.csproj" />
+    <PackageReference Include="AiDevTools.TokenSaver.Common.Installation" Version="1.0.5-alpha" />
+    <PackageReference Include="AiDevTools.TokenSaver.Common.Models" Version="1.0.5-alpha" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Update="Nerdbank.GitVersioning" Version="3.10.94" />

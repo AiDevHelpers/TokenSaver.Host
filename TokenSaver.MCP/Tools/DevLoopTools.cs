@@ -1,11 +1,11 @@
-using TokenSaver.Common.Core.Configuration;
-using TokenSaver.Common.Core.Processes;
-using TokenSaver.Common.Contracts;
-using TokenSaver.TokenEconomy.Models.TokenEconomy;
-using TokenSaver.TokenEconomy.Contracts;
-using TokenSaver.OllamaIntegration.Services;
-using TokenSaver.Utilities.Services;
-using TokenSaver.MCP.Services;
+using AiDevTools.TokenSaver.Common.Core.Configuration;
+using AiDevTools.TokenSaver.Common.Core.Processes;
+using AiDevTools.TokenSaver.Common.Contracts;
+using AiDevTools.TokenSaver.TokenEconomy.Models.TokenEconomy;
+using AiDevTools.TokenSaver.TokenEconomy.Contracts;
+using AiDevTools.TokenSaver.OllamaIntegration.Services;
+using AiDevTools.TokenSaver.Utilities.Services;
+using AiDevTools.TokenSaver.MCP.Services;
 
 using Microsoft.Extensions.Options;
 
@@ -16,7 +16,7 @@ using System.Diagnostics;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 
-namespace TokenSaver.MCP.Tools;
+namespace AiDevTools.TokenSaver.MCP.Tools;
 
 /// <summary>
 ///     Dev-loop shell-out tools whose raw output is usually pure noise: container logs, test

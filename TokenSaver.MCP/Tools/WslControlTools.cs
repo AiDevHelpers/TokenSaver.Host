@@ -4,10 +4,10 @@ using System.Text;
 
 using ModelContextProtocol.Server;
 
-using TokenSaver.WslControl.Contracts;
-using TokenSaver.WslControl.Models;
+using AiDevTools.TokenSaver.WslControl.Contracts;
+using AiDevTools.TokenSaver.WslControl.Models;
 
-namespace TokenSaver.MCP.Tools;
+namespace AiDevTools.TokenSaver.MCP.Tools;
 
 /// <summary>
 ///     MCP surface for the Windows Subsystem for Linux (WSL). The headline capability is

@@ -6,13 +6,13 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
-using TokenSaver.CodeHelper.Configuration;
-using TokenSaver.ContextHelper.Configuration;
-using TokenSaver.MCP.Middleware;
+using AiDevTools.TokenSaver.CodeHelper.Configuration;
+using AiDevTools.TokenSaver.ContextHelper.Configuration;
+using AiDevTools.TokenSaver.MCP.Middleware;
 
 using Xunit;
 
-namespace TokenSaver.MCP.Tests;
+namespace AiDevTools.TokenSaver.MCP.Tests;
 
 /// <summary>
 ///     Malformed or non-tool-call JSON-RPC bodies must pass through to the next middleware
@@ -116,7 +116,7 @@ public sealed class ContextInterceptMiddlewareTests
     public void DraftInterceptionIsOffByDefault()
     {
         Assert.False(new CodeHelperConfig().AutoEnabled);
-        Assert.NotEqual(true, TokenSaver.Config.CodeHelperBehaviorConfig.Defaults().AutoEnabled);
+        Assert.NotEqual(true, AiDevTools.TokenSaver.Config.CodeHelperBehaviorConfig.Defaults().AutoEnabled);
     }
 
     [Fact]

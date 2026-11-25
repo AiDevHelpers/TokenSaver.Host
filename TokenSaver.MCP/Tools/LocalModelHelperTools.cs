@@ -2,18 +2,18 @@ using AiDevHelpers.AgentHelpers.Core.Contracts;
 using AiDevHelpers.AgentHelpers.Core.Models;
 using AiDevHelpers.AgentHelpers.Core.Services;
 
-using TokenSaver.CodeHelper.Indexing;
-using TokenSaver.Config;
-using TokenSaver.ContextHelper.Models;
-using TokenSaver.ContextHelper.Models.Diagnostics;
-using TokenSaver.ContextHelper.Pipeline;
-using TokenSaver.Common.Core.Configuration;
-using TokenSaver.Common.Models;
-using TokenSaver.TokenEconomy.Models.Context;
-using TokenSaver.OllamaIntegration.Services;
-using TokenSaver.MCP.Services;
-using ContextBuildResult = TokenSaver.TokenEconomy.Models.Context.BuildContextResult;
-using ContextHygieneRpt = TokenSaver.TokenEconomy.Models.Context.ContextHygieneReport;
+using AiDevTools.TokenSaver.CodeHelper.Indexing;
+using AiDevTools.TokenSaver.Config;
+using AiDevTools.TokenSaver.ContextHelper.Models;
+using AiDevTools.TokenSaver.ContextHelper.Models.Diagnostics;
+using AiDevTools.TokenSaver.ContextHelper.Pipeline;
+using AiDevTools.TokenSaver.Common.Core.Configuration;
+using AiDevTools.TokenSaver.Common.Models;
+using AiDevTools.TokenSaver.TokenEconomy.Models.Context;
+using AiDevTools.TokenSaver.OllamaIntegration.Services;
+using AiDevTools.TokenSaver.MCP.Services;
+using ContextBuildResult = AiDevTools.TokenSaver.TokenEconomy.Models.Context.BuildContextResult;
+using ContextHygieneRpt = AiDevTools.TokenSaver.TokenEconomy.Models.Context.ContextHygieneReport;
 
 using Microsoft.Extensions.Options;
 
@@ -23,11 +23,11 @@ using System.ComponentModel;
 using System.Text;
 using System.Globalization;
 
-using TokenSaver.TokenEconomy.Contracts;
-using TokenSaver.TokenEconomy.Services;
-using TokenSaver.Utilities.Services;
+using AiDevTools.TokenSaver.TokenEconomy.Contracts;
+using AiDevTools.TokenSaver.TokenEconomy.Services;
+using AiDevTools.TokenSaver.Utilities.Services;
 
-namespace TokenSaver.MCP.Tools;
+namespace AiDevTools.TokenSaver.MCP.Tools;
 
 [McpServerToolType]
 internal sealed class LocalModelHelperTools

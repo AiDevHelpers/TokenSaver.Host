@@ -1,7 +1,7 @@
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 
-namespace TokenSaver.MCP.Security;
+namespace AiDevTools.TokenSaver.MCP.Security;
 
 /// <summary>netapi32 entry points for local group management.</summary>
 [SupportedOSPlatform("windows")]

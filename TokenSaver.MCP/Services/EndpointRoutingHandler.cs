@@ -1,8 +1,8 @@
-using TokenSaver.Common.Models;
-using TokenSaver.OllamaIntegration.Services;
+using AiDevTools.TokenSaver.Common.Models;
+using AiDevTools.TokenSaver.OllamaIntegration.Services;
 
 
-namespace TokenSaver.MCP.Services;
+namespace AiDevTools.TokenSaver.MCP.Services;
 
 /// <summary>
 ///     DelegatingHandler that routes every request through <see cref="OllamaEndpointRegistry" />

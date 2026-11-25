@@ -1,24 +1,24 @@
 #pragma warning disable CA1506 // Test factories wire many services together by design; the coupling is intentional.
 #pragma warning disable CA2000 // Test factories hand disposables to the code under test; each test is short-lived.
-using TokenSaver.CodeHelper.Configuration;
-using TokenSaver.CodeHelper.Indexing;
-using TokenSaver.Config;
-using TokenSaver.ContextHelper.Calibration;
-using TokenSaver.ContextHelper.Configuration;
-using TokenSaver.ContextHelper.Pipeline;
-using TokenSaver.ContextHelper.Pipeline.Stages;
-using TokenSaver.Database.Context;
-using TokenSaver.Common.Core.Configuration;
-using TokenSaver.MCP.Services;
-using TokenSaver.OllamaIntegration.Services;
-using TokenSaver.TokenEconomy.Contracts;
-using TokenSaver.TokenEconomy.Services;
-using TokenSaver.Utilities.Services;
+using AiDevTools.TokenSaver.CodeHelper.Configuration;
+using AiDevTools.TokenSaver.CodeHelper.Indexing;
+using AiDevTools.TokenSaver.Config;
+using AiDevTools.TokenSaver.ContextHelper.Calibration;
+using AiDevTools.TokenSaver.ContextHelper.Configuration;
+using AiDevTools.TokenSaver.ContextHelper.Pipeline;
+using AiDevTools.TokenSaver.ContextHelper.Pipeline.Stages;
+using AiDevTools.TokenSaver.Database.Context;
+using AiDevTools.TokenSaver.Common.Core.Configuration;
+using AiDevTools.TokenSaver.MCP.Services;
+using AiDevTools.TokenSaver.OllamaIntegration.Services;
+using AiDevTools.TokenSaver.TokenEconomy.Contracts;
+using AiDevTools.TokenSaver.TokenEconomy.Services;
+using AiDevTools.TokenSaver.Utilities.Services;
 
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
-namespace TokenSaver.MCP.Tests;
+namespace AiDevTools.TokenSaver.MCP.Tests;
 
 /// <summary>
 ///     Builds a real (not mocked — no mocking library per repo convention), fully-wired

@@ -1,11 +1,11 @@
 #pragma warning disable CA2000 // Test factories hand disposables to the tool under test; each test is short-lived.
-using TokenSaver.Common.Core.Configuration;
-using TokenSaver.Database.Context;
-using TokenSaver.TokenEconomy.Models.TokenEconomy;
-using TokenSaver.TokenEconomy.Contracts;
-using TokenSaver.TokenEconomy.Services;
-using TokenSaver.MCP.Services;
-using TokenSaver.MCP.Tools;
+using AiDevTools.TokenSaver.Common.Core.Configuration;
+using AiDevTools.TokenSaver.Database.Context;
+using AiDevTools.TokenSaver.TokenEconomy.Models.TokenEconomy;
+using AiDevTools.TokenSaver.TokenEconomy.Contracts;
+using AiDevTools.TokenSaver.TokenEconomy.Services;
+using AiDevTools.TokenSaver.MCP.Services;
+using AiDevTools.TokenSaver.MCP.Tools;
 
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -14,17 +14,17 @@ using System.Text.Json;
 
 using Xunit;
 
-namespace TokenSaver.MCP.Tests;
+namespace AiDevTools.TokenSaver.MCP.Tests;
 
 /// <summary>
 ///     Covers SemanticGrep's JSON-shape wiring only — the abstain/conditional-rerank decision
 ///     logic itself lives in <c>IConditionalRetrievalService</c> and is exercised at that level in
-///     ConditionalRetrievalServiceTests (TokenSaver.Library.Tests). This file just checks that an
+///     ConditionalRetrievalServiceTests (AiDevTools.TokenSaver.Library.Tests). This file just checks that an
 ///     abstained <c>RetrievalOutcome</c> serializes to <c>{"match":"none", best_candidate,
 ///     confidence}</c> and a normal one to a plain hit array — the fix for the 100% negative-query
 ///     false-positive rate measured in docs/retrieval-benchmark/PRODUCTION-EVAL.md. IndexRepo
 ///     itself needs a live Ollama process and is exercised at the service level (RepoIndexerTests
-///     in TokenSaver.Library.Tests), so this file only wires a no-op IRepoIndexer.
+///     in AiDevTools.TokenSaver.Library.Tests), so this file only wires a no-op IRepoIndexer.
 /// </summary>
 public class SemanticIndexToolsTests
 {

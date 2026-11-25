@@ -3,14 +3,14 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
-using TokenSaver.Common.Core.Configuration;
-using TokenSaver.MCP.Endpoints;
-using TokenSaver.MCP.Middleware;
-using TokenSaver.MCP.Security;
+using AiDevTools.TokenSaver.Common.Core.Configuration;
+using AiDevTools.TokenSaver.MCP.Endpoints;
+using AiDevTools.TokenSaver.MCP.Middleware;
+using AiDevTools.TokenSaver.MCP.Security;
 
 using Xunit;
 
-namespace TokenSaver.MCP.Tests;
+namespace AiDevTools.TokenSaver.MCP.Tests;
 
 public sealed class EndpointAuthTests : IDisposable
 {

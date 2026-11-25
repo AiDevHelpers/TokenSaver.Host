@@ -1,16 +1,16 @@
-using TokenSaver.CodeHelper.Indexing;
-using TokenSaver.Config;
-using TokenSaver.Config.Contracts;
-using TokenSaver.OllamaIntegration.Services; using TokenSaver.Common.Models;
-using TokenSaver.MCP.Services;
-using TokenSaver.Utilities.Services;
+using AiDevTools.TokenSaver.CodeHelper.Indexing;
+using AiDevTools.TokenSaver.Config;
+using AiDevTools.TokenSaver.Config.Contracts;
+using AiDevTools.TokenSaver.OllamaIntegration.Services; using AiDevTools.TokenSaver.Common.Models;
+using AiDevTools.TokenSaver.MCP.Services;
+using AiDevTools.TokenSaver.Utilities.Services;
 
 using ModelContextProtocol.Server;
 
 using System.ComponentModel;
 using System.Text.Json;
 
-namespace TokenSaver.MCP.Tools;
+namespace AiDevTools.TokenSaver.MCP.Tools;
 
 [McpServerToolType]
 internal sealed class ManageConfigTools(
@@ -136,7 +136,7 @@ internal sealed class ManageConfigTools(
 
     private string SetLazyContext(string workspaceRoot, string? clientName, string? value, string? scope)
     {
-        if (!TryParseScope(scope, out TokenSaver.Config.Contracts.ConfigScope configScope))
+        if (!TryParseScope(scope, out AiDevTools.TokenSaver.Config.Contracts.ConfigScope configScope))
         {
             return "set-lazy-context requires 'scope' to be 'local' or 'global'.";
         }
@@ -226,7 +226,7 @@ internal sealed class ManageConfigTools(
         "numCtx",
     };
 
-    private string SetKvCacheQuantization(string workspaceRoot, TokenSaver.Config.Contracts.ConfigScope configScope, string fam, string? value, bool clear)
+    private string SetKvCacheQuantization(string workspaceRoot, AiDevTools.TokenSaver.Config.Contracts.ConfigScope configScope, string fam, string? value, bool clear)
     {
         if (!string.Equals(fam, "openSource", StringComparison.OrdinalIgnoreCase))
         {
@@ -252,7 +252,7 @@ internal sealed class ManageConfigTools(
             return "set-agent requires 'field'.";
         }
 
-        if (!TryParseScope(scope, out TokenSaver.Config.Contracts.ConfigScope configScope))
+        if (!TryParseScope(scope, out AiDevTools.TokenSaver.Config.Contracts.ConfigScope configScope))
         {
             return "set-agent requires 'scope' to be 'local' or 'global'.";
         }
@@ -428,7 +428,7 @@ internal sealed class ManageConfigTools(
             return "set requires 'field'.";
         }
 
-        if (!TryParseScope(scope, out TokenSaver.Config.Contracts.ConfigScope configScope))
+        if (!TryParseScope(scope, out AiDevTools.TokenSaver.Config.Contracts.ConfigScope configScope))
         {
             return "set requires 'scope' to be 'local' or 'global'.";
         }
@@ -577,7 +577,7 @@ internal sealed class ManageConfigTools(
             return "set-gitignore-pref requires 'add' (true or false).";
         }
 
-        if (!TryParseScope(scope, out TokenSaver.Config.Contracts.ConfigScope configScope))
+        if (!TryParseScope(scope, out AiDevTools.TokenSaver.Config.Contracts.ConfigScope configScope))
         {
             return "set-gitignore-pref requires 'scope' to be 'local' or 'global'.";
         }
@@ -616,18 +616,18 @@ internal sealed class ManageConfigTools(
             : $"Added {added.Count} {label} pattern(s) to {Path.GetFileName(filePath)}: {string.Join(", ", added)}.";
     }
 
-    private static bool TryParseScope(string? scope, out TokenSaver.Config.Contracts.ConfigScope configScope)
+    private static bool TryParseScope(string? scope, out AiDevTools.TokenSaver.Config.Contracts.ConfigScope configScope)
     {
         switch (scope?.Trim().ToUpperInvariant())
         {
             case "LOCAL":
-                configScope = TokenSaver.Config.Contracts.ConfigScope.Local;
+                configScope = AiDevTools.TokenSaver.Config.Contracts.ConfigScope.Local;
                 return true;
             case "GLOBAL":
-                configScope = TokenSaver.Config.Contracts.ConfigScope.Global;
+                configScope = AiDevTools.TokenSaver.Config.Contracts.ConfigScope.Global;
                 return true;
             default:
-                configScope = TokenSaver.Config.Contracts.ConfigScope.Local;
+                configScope = AiDevTools.TokenSaver.Config.Contracts.ConfigScope.Local;
                 return false;
         }
     }

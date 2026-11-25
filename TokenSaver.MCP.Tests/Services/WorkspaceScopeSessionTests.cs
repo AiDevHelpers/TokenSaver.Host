@@ -12,13 +12,13 @@ using ModelContextProtocol.Client;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 
-using TokenSaver.Common.Core.Configuration;
-using TokenSaver.MCP.Middleware;
-using TokenSaver.MCP.Services;
+using AiDevTools.TokenSaver.Common.Core.Configuration;
+using AiDevTools.TokenSaver.MCP.Middleware;
+using AiDevTools.TokenSaver.MCP.Services;
 
 using Xunit;
 
-namespace TokenSaver.MCP.Tests;
+namespace AiDevTools.TokenSaver.MCP.Tests;
 
 /// <summary>
 ///     Two MCP clients on one server: each session must see only its own workspace root. The probe tools

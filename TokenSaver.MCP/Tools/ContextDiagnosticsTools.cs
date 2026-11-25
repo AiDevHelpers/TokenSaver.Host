@@ -1,13 +1,13 @@
-using TokenSaver.CodeHelper.Indexing;
-using TokenSaver.Config;
-using TokenSaver.ContextHelper.Calibration;
-using TokenSaver.ContextHelper.Models.Calibration;
-using TokenSaver.ContextHelper.Models.Diagnostics;
-using TokenSaver.ContextHelper.Pipeline;
-using TokenSaver.OllamaIntegration.Services; using TokenSaver.Common.Models;
-using TokenSaver.MCP.Services;
-using TokenSaver.TokenEconomy.Services;
-using TokenSaver.Utilities.Services;
+using AiDevTools.TokenSaver.CodeHelper.Indexing;
+using AiDevTools.TokenSaver.Config;
+using AiDevTools.TokenSaver.ContextHelper.Calibration;
+using AiDevTools.TokenSaver.ContextHelper.Models.Calibration;
+using AiDevTools.TokenSaver.ContextHelper.Models.Diagnostics;
+using AiDevTools.TokenSaver.ContextHelper.Pipeline;
+using AiDevTools.TokenSaver.OllamaIntegration.Services; using AiDevTools.TokenSaver.Common.Models;
+using AiDevTools.TokenSaver.MCP.Services;
+using AiDevTools.TokenSaver.TokenEconomy.Services;
+using AiDevTools.TokenSaver.Utilities.Services;
 
 using ModelContextProtocol.Server;
 
@@ -15,7 +15,7 @@ using System.ComponentModel;
 using System.Globalization;
 using System.Text;
 
-namespace TokenSaver.MCP.Tools;
+namespace AiDevTools.TokenSaver.MCP.Tools;
 
 [McpServerToolType]
 internal sealed class ContextDiagnosticsTools(

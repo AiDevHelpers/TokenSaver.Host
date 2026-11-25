@@ -1,7 +1,7 @@
-using TokenSaver.Common.Core.Configuration;
-using TokenSaver.MCP.Services;
+using AiDevTools.TokenSaver.Common.Core.Configuration;
+using AiDevTools.TokenSaver.MCP.Services;
 
-namespace TokenSaver.MCP.Middleware;
+namespace AiDevTools.TokenSaver.MCP.Middleware;
 
 /// <summary>
 ///     Opens a <see cref="WorkspaceScope" /> for every request, seeded with the root the request's MCP

@@ -1,6 +1,6 @@
 using Xunit;
 
-namespace TokenSaver.MCP.Tests;
+namespace AiDevTools.TokenSaver.MCP.Tests;
 
 /// <summary>
 ///     Groups every test class that sets the process-wide <c>TOKENSAVER_GLOBAL_CONFIG_DIR</c> env

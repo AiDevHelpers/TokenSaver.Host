@@ -7,21 +7,21 @@ using Serilog.Events;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using SperryDev.Logger.Configuration;
-using TokenSaver.Common.Core.Configuration;
-using TokenSaver.Common.Installation;
-using TokenSaver.Common.Models;
-using TokenSaver.Config;
-using TokenSaver.Database.Context;
-using TokenSaver.Docs;
-using TokenSaver.Docs.Prompts;
-using TokenSaver.CodeHelper.Indexing;
-using TokenSaver.MCP.HealthChecks;
-using TokenSaver.MCP.Middleware;
-using TokenSaver.MCP.Services;
-using TokenSaver.MCP.Tools;
-using TokenSaver.MCP;
-using TokenSaver.MCP.Endpoints;
-using TokenSaver.OllamaIntegration.Services;
+using AiDevTools.TokenSaver.Common.Core.Configuration;
+using AiDevTools.TokenSaver.Common.Installation;
+using AiDevTools.TokenSaver.Common.Models;
+using AiDevTools.TokenSaver.Config;
+using AiDevTools.TokenSaver.Database.Context;
+using AiDevTools.TokenSaver.Docs;
+using AiDevTools.TokenSaver.Docs.Prompts;
+using AiDevTools.TokenSaver.CodeHelper.Indexing;
+using AiDevTools.TokenSaver.MCP.HealthChecks;
+using AiDevTools.TokenSaver.MCP.Middleware;
+using AiDevTools.TokenSaver.MCP.Services;
+using AiDevTools.TokenSaver.MCP.Tools;
+using AiDevTools.TokenSaver.MCP;
+using AiDevTools.TokenSaver.MCP.Endpoints;
+using AiDevTools.TokenSaver.OllamaIntegration.Services;
 
 
 /// <summary>Registers the MCP server, health checks and HTTP endpoints for the host (kept out of Program's top-level statements).</summary>
@@ -198,7 +198,7 @@ internal static class TokenSaverHostBootstrap
         }
 
         // ── Configure logging ──
-        // Serilog-backed logging via TokenSaver.Common.Logging (shared with SimpleModelServer).
+        // Serilog-backed logging via AiDevTools.TokenSaver.Common.Logging (shared with SimpleModelServer).
         // Providers: Console (single-line) + File (%ProgramData%\TokenSaver\logs) + EventLog + VS Code JSON
         if (isWindowsService && OperatingSystem.IsWindows())
         {

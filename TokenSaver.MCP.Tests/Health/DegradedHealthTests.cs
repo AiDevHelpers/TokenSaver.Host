@@ -3,10 +3,10 @@ using System.Text.Json;
 
 using Xunit;
 
-namespace TokenSaver.MCP.Tests;
+namespace AiDevTools.TokenSaver.MCP.Tests;
 
 /// <summary>
-///     Covers the two ways TokenSaver.MCP's /health can report degraded status: an unhandled
+///     Covers the two ways AiDevTools.TokenSaver.MCP's /health can report degraded status: an unhandled
 ///     exception recorded by FaultTrackingMiddleware/UnhandledFaultTracker, and a failing
 ///     SelfTestHealthCheck check. Mirrors SimpleModelServer.Tests's DegradedHealthTests — same
 ///     two mechanisms, same "shouldn't affect /health/ready" boundary, adapted to this project's

@@ -2,9 +2,9 @@ using System.Text.RegularExpressions;
 
 using Microsoft.AspNetCore.Mvc;
 
-using TokenSaver.MCP.Security;
+using AiDevTools.TokenSaver.MCP.Security;
 
-namespace TokenSaver.MCP.Endpoints;
+namespace AiDevTools.TokenSaver.MCP.Endpoints;
 
 /// <summary>
 ///     Manage who may read the endpoint token: the members of the local TokenSaver group. Used by the user

@@ -1,4 +1,4 @@
-namespace TokenSaver.MCP.Services;
+namespace AiDevTools.TokenSaver.MCP.Services;
 
 /// <summary>
 ///     Tracks the most recent unhandled exception thrown while processing a request (MCP

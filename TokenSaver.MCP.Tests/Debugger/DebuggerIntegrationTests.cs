@@ -1,8 +1,8 @@
 using Microsoft.Extensions.Logging.Abstractions;
-using TokenSaver.MCP.Services;
+using AiDevTools.TokenSaver.MCP.Services;
 using Xunit;
 
-namespace TokenSaver.MCP.Tests;
+namespace AiDevTools.TokenSaver.MCP.Tests;
 
 public sealed class DebuggerIntegrationTests
 {

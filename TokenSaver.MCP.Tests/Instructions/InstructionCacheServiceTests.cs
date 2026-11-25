@@ -1,11 +1,11 @@
-using TokenSaver.ContextHelper.Models;
-using TokenSaver.MCP.Services;
+using AiDevTools.TokenSaver.ContextHelper.Models;
+using AiDevTools.TokenSaver.MCP.Services;
 
 using Microsoft.Extensions.Logging.Abstractions;
 
 using Xunit;
 
-namespace TokenSaver.MCP.Tests;
+namespace AiDevTools.TokenSaver.MCP.Tests;
 
 [Collection("GlobalConfigDirEnvVar")]
 public sealed class InstructionCacheServiceTests : IDisposable

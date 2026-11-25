@@ -1,8 +1,8 @@
-using TokenSaver.CodeHelper.ContextSegmentation;
-using TokenSaver.CodeHelper.Indexing;
-using TokenSaver.CodeHelper.Planning;
-using TokenSaver.Common.Core.Configuration;
-using TokenSaver.MCP.Services;
+using AiDevTools.TokenSaver.CodeHelper.ContextSegmentation;
+using AiDevTools.TokenSaver.CodeHelper.Indexing;
+using AiDevTools.TokenSaver.CodeHelper.Planning;
+using AiDevTools.TokenSaver.Common.Core.Configuration;
+using AiDevTools.TokenSaver.MCP.Services;
 
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -14,7 +14,7 @@ using System.Text;
 
 using CultureInfo = System.Globalization.CultureInfo;
 
-namespace TokenSaver.MCP.Tools;
+namespace AiDevTools.TokenSaver.MCP.Tools;
 
 /// <summary>
 /// Intelligent context loading that splits codebase into task-relevant segments.

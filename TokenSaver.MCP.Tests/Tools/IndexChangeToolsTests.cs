@@ -1,13 +1,13 @@
-using TokenSaver.CodeHelper.Indexing;
-using TokenSaver.Common.Core.Configuration;
-using TokenSaver.MCP.Services;
-using TokenSaver.MCP.Tools;
+using AiDevTools.TokenSaver.CodeHelper.Indexing;
+using AiDevTools.TokenSaver.Common.Core.Configuration;
+using AiDevTools.TokenSaver.MCP.Services;
+using AiDevTools.TokenSaver.MCP.Tools;
 
 using Microsoft.Extensions.Options;
 
 using Xunit;
 
-namespace TokenSaver.MCP.Tests.Tools;
+namespace AiDevTools.TokenSaver.MCP.Tests.Tools;
 
 public sealed class IndexChangeToolsTests
 {

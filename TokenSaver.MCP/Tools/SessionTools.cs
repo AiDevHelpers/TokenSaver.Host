@@ -1,9 +1,9 @@
-using TokenSaver.Common.Core.Configuration;
-using TokenSaver.Common.Contracts;
-using TokenSaver.TokenEconomy.Models.TokenEconomy;
-using TokenSaver.TokenEconomy.Contracts;
-using TokenSaver.MCP.Services;
-using TokenSaver.Utilities.Services;
+using AiDevTools.TokenSaver.Common.Core.Configuration;
+using AiDevTools.TokenSaver.Common.Contracts;
+using AiDevTools.TokenSaver.TokenEconomy.Models.TokenEconomy;
+using AiDevTools.TokenSaver.TokenEconomy.Contracts;
+using AiDevTools.TokenSaver.MCP.Services;
+using AiDevTools.TokenSaver.Utilities.Services;
 
 using Microsoft.Extensions.Options;
 
@@ -12,7 +12,7 @@ using ModelContextProtocol.Server;
 using System.ComponentModel;
 using System.Text.Json;
 
-namespace TokenSaver.MCP.Tools;
+namespace AiDevTools.TokenSaver.MCP.Tools;
 
 /// <summary>
 ///     Session context snapshot/restore, extending the existing CONTEXT.md pattern. A large

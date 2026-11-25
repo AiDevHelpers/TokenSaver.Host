@@ -1,6 +1,6 @@
 using System.Collections.Concurrent;
 
-namespace TokenSaver.MCP.Services;
+namespace AiDevTools.TokenSaver.MCP.Services;
 
 /// <summary>
 ///     The workspace root each MCP session (<c>Mcp-Session-Id</c>) has resolved. Lets a later request

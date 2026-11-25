@@ -1,17 +1,17 @@
 using System.ComponentModel;
 using System.Text.Json;
 
-using TokenSaver.Common.Core.Configuration;
-using TokenSaver.MCP.Tools;
-using TokenSaver.TokenEconomy.Contracts;
-using TokenSaver.TokenEconomy.Models.TokenEconomy;
-using TokenSaver.Utilities.Services;
+using AiDevTools.TokenSaver.Common.Core.Configuration;
+using AiDevTools.TokenSaver.MCP.Tools;
+using AiDevTools.TokenSaver.TokenEconomy.Contracts;
+using AiDevTools.TokenSaver.TokenEconomy.Models.TokenEconomy;
+using AiDevTools.TokenSaver.Utilities.Services;
 
 using Microsoft.Extensions.Options;
 
 using Xunit;
 
-namespace TokenSaver.MCP.Tests.Tools;
+namespace AiDevTools.TokenSaver.MCP.Tests.Tools;
 
 /// <summary>
 ///     Covers DevLoopTools without starting docker, git, dotnet or any other CLI. Container tools

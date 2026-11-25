@@ -1,4 +1,4 @@
-namespace TokenSaver.MCP.Services;
+namespace AiDevTools.TokenSaver.MCP.Services;
 
 /// <summary>
 ///     Read-only drift checks for the global instruction layers: source (<c>claude_rules</c>),

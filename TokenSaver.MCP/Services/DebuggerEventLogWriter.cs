@@ -2,9 +2,9 @@ using Microsoft.Extensions.Logging;
 using System.Globalization;
 using System.Text.Json;
 using System.Threading.Channels;
-using TokenSaver.Common.Core.Contracts;
+using AiDevTools.TokenSaver.Common.Core.Contracts;
 
-namespace TokenSaver.MCP.Services;
+namespace AiDevTools.TokenSaver.MCP.Services;
 
 /// <summary>
 /// Persists debug events to disk in JSONL format with automatic rotation and retention.

@@ -1,11 +1,11 @@
 using System.Text.Json;
 
-using TokenSaver.CodeHelper.Configuration;
-using TokenSaver.Common.Core.Configuration;
+using AiDevTools.TokenSaver.CodeHelper.Configuration;
+using AiDevTools.TokenSaver.Common.Core.Configuration;
 
 using Microsoft.Extensions.Options;
 
-namespace TokenSaver.MCP.Services;
+namespace AiDevTools.TokenSaver.MCP.Services;
 
 /// <summary>
 ///     Read-only startup check with two jobs:

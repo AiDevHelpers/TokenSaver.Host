@@ -1,9 +1,9 @@
 #pragma warning disable CA1506 // Test factories wire many services together by design; the coupling is intentional.
-using TokenSaver.Common.Core.Configuration;
-using TokenSaver.MCP.HealthChecks;
-using TokenSaver.MCP.Middleware;
-using TokenSaver.MCP.Services;
-using TokenSaver.OllamaIntegration.Services;
+using AiDevTools.TokenSaver.Common.Core.Configuration;
+using AiDevTools.TokenSaver.MCP.HealthChecks;
+using AiDevTools.TokenSaver.MCP.Middleware;
+using AiDevTools.TokenSaver.MCP.Services;
+using AiDevTools.TokenSaver.OllamaIntegration.Services;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
@@ -17,7 +17,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-namespace TokenSaver.MCP.Tests;
+namespace AiDevTools.TokenSaver.MCP.Tests;
 
 /// <summary>
 ///     Minimal, purpose-built ASP.NET Core test host for the degraded-health/self-test feature —

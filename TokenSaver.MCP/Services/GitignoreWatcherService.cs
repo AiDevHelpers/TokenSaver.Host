@@ -1,10 +1,10 @@
-using TokenSaver.CodeHelper.Indexing;
-using TokenSaver.CodeHelper.Models.Index;
-using TokenSaver.Common.Core.Configuration;
+using AiDevTools.TokenSaver.CodeHelper.Indexing;
+using AiDevTools.TokenSaver.CodeHelper.Models.Index;
+using AiDevTools.TokenSaver.Common.Core.Configuration;
 
 using Microsoft.Extensions.Options;
 
-namespace TokenSaver.MCP.Services;
+namespace AiDevTools.TokenSaver.MCP.Services;
 
 /// <summary>
 ///     Watches <c>.gitignore</c> plus the two <c>.tokensaver</c> ignore overrides

@@ -1,12 +1,12 @@
 using Microsoft.AspNetCore.Http;
 
-using TokenSaver.Common.Core.Configuration;
-using TokenSaver.MCP.Middleware;
-using TokenSaver.MCP.Services;
+using AiDevTools.TokenSaver.Common.Core.Configuration;
+using AiDevTools.TokenSaver.MCP.Middleware;
+using AiDevTools.TokenSaver.MCP.Services;
 
 using Xunit;
 
-namespace TokenSaver.MCP.Tests;
+namespace AiDevTools.TokenSaver.MCP.Tests;
 
 public sealed class WorkspaceScopeTests
 {

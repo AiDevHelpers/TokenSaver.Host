@@ -1,7 +1,7 @@
-using TokenSaver.CodeHelper.Indexing;
-using TokenSaver.TokenEconomy.Models.Accuracy;
-using TokenSaver.OllamaIntegration.Services; using TokenSaver.Common.Models;
-using TokenSaver.MCP.Services;
+using AiDevTools.TokenSaver.CodeHelper.Indexing;
+using AiDevTools.TokenSaver.TokenEconomy.Models.Accuracy;
+using AiDevTools.TokenSaver.OllamaIntegration.Services; using AiDevTools.TokenSaver.Common.Models;
+using AiDevTools.TokenSaver.MCP.Services;
 
 using ModelContextProtocol.Server;
 
@@ -9,10 +9,10 @@ using System.ComponentModel;
 using System.Globalization;
 using System.Text;
 using System.Text.Json;
-using TokenSaver.TokenEconomy.Services;
+using AiDevTools.TokenSaver.TokenEconomy.Services;
 
 
-namespace TokenSaver.MCP.Tools;
+namespace AiDevTools.TokenSaver.MCP.Tools;
 
 /// <summary>
 ///     Workflow: AgentConfig(action: 'test') → AgentConfig(action: 'get') → AgentConfig(action: 'update')

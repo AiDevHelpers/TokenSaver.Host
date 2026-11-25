@@ -1,15 +1,15 @@
 #pragma warning disable CA2000 // Test factories hand disposables to the tool under test; each test is short-lived.
-using TokenSaver.Common.Core.Configuration;
-using TokenSaver.CodeHelper.Indexing;
-using TokenSaver.MCP.Tools;
-using TokenSaver.OllamaIntegration.Services;
+using AiDevTools.TokenSaver.Common.Core.Configuration;
+using AiDevTools.TokenSaver.CodeHelper.Indexing;
+using AiDevTools.TokenSaver.MCP.Tools;
+using AiDevTools.TokenSaver.OllamaIntegration.Services;
 
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
 using Xunit;
 
-namespace TokenSaver.MCP.Tests.Tools;
+namespace AiDevTools.TokenSaver.MCP.Tests.Tools;
 
 /// <summary>
 ///     Covers AccuracyTestTools on its input-validation and setup-question branches. The paths that

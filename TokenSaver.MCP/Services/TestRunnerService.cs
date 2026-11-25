@@ -1,15 +1,15 @@
-using TokenSaver.Common.Core.Contracts;
-using TokenSaver.Common.Core.Configuration;
+using AiDevTools.TokenSaver.Common.Core.Contracts;
+using AiDevTools.TokenSaver.Common.Core.Configuration;
 
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 using System.Diagnostics;
-using TokenSaver.Common.Core.Processes;
+using AiDevTools.TokenSaver.Common.Core.Processes;
 using System.Globalization;
 using System.Text.RegularExpressions;
 
-namespace TokenSaver.MCP.Services;
+namespace AiDevTools.TokenSaver.MCP.Services;
 
 /// <summary>
 /// Runs tests via dotnet test and Visual Studio test adapters.

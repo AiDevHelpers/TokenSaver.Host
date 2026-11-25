@@ -1,4 +1,4 @@
-using TokenSaver.MCP.Services;
+using AiDevTools.TokenSaver.MCP.Services;
 
 using ModelContextProtocol.Server;
 
@@ -6,7 +6,7 @@ using System.ComponentModel;
 using System.Globalization;
 using System.Text;
 
-namespace TokenSaver.MCP.Tools;
+namespace AiDevTools.TokenSaver.MCP.Tools;
 
 [McpServerToolType]
 internal sealed class InstructionTools(InstructionStoreService store)

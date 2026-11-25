@@ -12,14 +12,14 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
-using TokenSaver.Common.Core.Configuration;
-using TokenSaver.MCP.Endpoints;
-using TokenSaver.MCP.Middleware;
-using TokenSaver.MCP.Security;
+using AiDevTools.TokenSaver.Common.Core.Configuration;
+using AiDevTools.TokenSaver.MCP.Endpoints;
+using AiDevTools.TokenSaver.MCP.Middleware;
+using AiDevTools.TokenSaver.MCP.Security;
 
 using Xunit;
 
-namespace TokenSaver.MCP.Tests;
+namespace AiDevTools.TokenSaver.MCP.Tests;
 
 /// <summary>The /api/auth routes through the real pipeline: the token gate, route binding and validation.</summary>
 public sealed class AuthEndpointsTests : IDisposable

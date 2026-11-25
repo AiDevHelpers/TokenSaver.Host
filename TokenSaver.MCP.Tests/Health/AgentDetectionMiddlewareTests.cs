@@ -4,10 +4,10 @@ using System.Text;
 using AiDevHelpers.AgentHelpers.Core.Contracts;
 using AiDevHelpers.AgentHelpers.Core.Models;
 using AiDevHelpers.AgentHelpers.Core.Services;
-using TokenSaver.Config;
-using TokenSaver.Common.Core.Configuration;
-using TokenSaver.MCP.Middleware;
-using TokenSaver.MCP.Services;
+using AiDevTools.TokenSaver.Config;
+using AiDevTools.TokenSaver.Common.Core.Configuration;
+using AiDevTools.TokenSaver.MCP.Middleware;
+using AiDevTools.TokenSaver.MCP.Services;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -20,7 +20,7 @@ using Microsoft.Extensions.Options;
 
 using Xunit;
 
-namespace TokenSaver.MCP.Tests;
+namespace AiDevTools.TokenSaver.MCP.Tests;
 
 /// <summary>
 ///     Covers <see cref="AgentDetectionMiddleware" />'s contract: only acts on POST /mcp under the

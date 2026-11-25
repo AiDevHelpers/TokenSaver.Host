@@ -6,16 +6,16 @@ using Microsoft.Extensions.Options;
 
 using ModelContextProtocol.Server;
 
-using TokenSaver.Utilities.Services;
-using TokenSaver.Common.Core.Configuration;
-using TokenSaver.LanguageHelpers.Core.Contracts;
-using TokenSaver.LanguageHelpers.Core.Models;
-using TokenSaver.MCP.Services;
+using AiDevTools.TokenSaver.Utilities.Services;
+using AiDevTools.TokenSaver.Common.Core.Configuration;
+using AiDevTools.TokenSaver.LanguageHelpers.Core.Contracts;
+using AiDevTools.TokenSaver.LanguageHelpers.Core.Models;
+using AiDevTools.TokenSaver.MCP.Services;
 
-namespace TokenSaver.MCP.Tools;
+namespace AiDevTools.TokenSaver.MCP.Tools;
 
 /// <summary>
-///     MCP surface for the per-language code-quality helpers (TokenSaver.LanguageHelpers.*). Exposes the
+///     MCP surface for the per-language code-quality helpers (AiDevTools.TokenSaver.LanguageHelpers.*). Exposes the
 ///     seven operations as two action-dispatch tools split by side effect: <see cref="CheckCode" /> is
 ///     read-only (syntax check, lint) and <see cref="FixCode" /> mutates files (enable analysis config,
 ///     fix syntax/imports/namespace, format). Language is auto-detected from the target's extension —

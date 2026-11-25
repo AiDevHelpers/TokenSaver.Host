@@ -1,10 +1,10 @@
-using TokenSaver.MCP.Tools;
-using TokenSaver.WslControl.Contracts;
-using TokenSaver.WslControl.Models;
+using AiDevTools.TokenSaver.MCP.Tools;
+using AiDevTools.TokenSaver.WslControl.Contracts;
+using AiDevTools.TokenSaver.WslControl.Models;
 
 using Xunit;
 
-namespace TokenSaver.MCP.Tests.Tools;
+namespace AiDevTools.TokenSaver.MCP.Tests.Tools;
 
 /// <summary>
 ///     Exercises WslControlTools through hand-written fakes for the WSL contracts. No WSL process

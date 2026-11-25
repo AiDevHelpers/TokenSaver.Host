@@ -1,10 +1,10 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Mvc;
-using TokenSaver.Common.Core.Contracts;
-using TokenSaver.MCP.Services;
+using AiDevTools.TokenSaver.Common.Core.Contracts;
+using AiDevTools.TokenSaver.MCP.Services;
 
-namespace TokenSaver.MCP.Endpoints;
+namespace AiDevTools.TokenSaver.MCP.Endpoints;
 
 /// <summary>
 /// HTTP endpoints for streaming debug events and problems as Server-Sent Events (SSE)

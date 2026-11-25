@@ -1,18 +1,18 @@
 #pragma warning disable CA2000 // Test factories hand disposables to the tool under test; each test is short-lived.
-using TokenSaver.Common.Core.Configuration;
-using TokenSaver.CodeHelper.ContextSegmentation;
-using TokenSaver.CodeHelper.Configuration;
-using TokenSaver.CodeHelper.Indexing;
-using TokenSaver.CodeHelper.Planning;
-using TokenSaver.Config;
-using TokenSaver.MCP.Tools;
+using AiDevTools.TokenSaver.Common.Core.Configuration;
+using AiDevTools.TokenSaver.CodeHelper.ContextSegmentation;
+using AiDevTools.TokenSaver.CodeHelper.Configuration;
+using AiDevTools.TokenSaver.CodeHelper.Indexing;
+using AiDevTools.TokenSaver.CodeHelper.Planning;
+using AiDevTools.TokenSaver.Config;
+using AiDevTools.TokenSaver.MCP.Tools;
 
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
 using Xunit;
 
-namespace TokenSaver.MCP.Tests.Tools;
+namespace AiDevTools.TokenSaver.MCP.Tests.Tools;
 
 /// <summary>
 ///     Covers AdaptiveContextLoaderTools against real segmentation, pattern tracking and loader

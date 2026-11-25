@@ -1,6 +1,6 @@
-using TokenSaver.MCP.Services;
+using AiDevTools.TokenSaver.MCP.Services;
 
-namespace TokenSaver.MCP.Middleware;
+namespace AiDevTools.TokenSaver.MCP.Middleware;
 
 /// <summary>
 ///     Wraps every request in a try/catch that records unhandled exceptions into

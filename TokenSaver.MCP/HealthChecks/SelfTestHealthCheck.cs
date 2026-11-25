@@ -1,12 +1,12 @@
-using TokenSaver.Common.Core.Configuration;
-using TokenSaver.MCP.Services;
-using TokenSaver.OllamaIntegration.Services;
+using AiDevTools.TokenSaver.Common.Core.Configuration;
+using AiDevTools.TokenSaver.MCP.Services;
+using AiDevTools.TokenSaver.OllamaIntegration.Services;
 
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
 
 
-namespace TokenSaver.MCP.HealthChecks;
+namespace AiDevTools.TokenSaver.MCP.HealthChecks;
 
 /// <summary>
 ///     Exercises a handful of the server's own lightweight, in-process code paths (no network

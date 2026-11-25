@@ -1,11 +1,11 @@
 #pragma warning disable CA2000 // Test factories hand disposables to the tool under test; each test is short-lived.
-using TokenSaver.Common.Core.Configuration;
-using TokenSaver.Database.Context;
-using TokenSaver.MCP.Services;
-using TokenSaver.MCP.Tools;
-using TokenSaver.OllamaIntegration.Services;
-using TokenSaver.TokenEconomy.Services;
-using TokenSaver.Utilities.Services;
+using AiDevTools.TokenSaver.Common.Core.Configuration;
+using AiDevTools.TokenSaver.Database.Context;
+using AiDevTools.TokenSaver.MCP.Services;
+using AiDevTools.TokenSaver.MCP.Tools;
+using AiDevTools.TokenSaver.OllamaIntegration.Services;
+using AiDevTools.TokenSaver.TokenEconomy.Services;
+using AiDevTools.TokenSaver.Utilities.Services;
 
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -14,7 +14,7 @@ using System.Text.Json;
 
 using Xunit;
 
-namespace TokenSaver.MCP.Tests;
+namespace AiDevTools.TokenSaver.MCP.Tests;
 
 /// <summary>
 ///     TokenBudget is the one method on TokenEconomyTools that never calls Ollama (pure
@@ -22,7 +22,7 @@ namespace TokenSaver.MCP.Tests;
 ///     a live model — exactly the gap CLAUDE.md's "Known gaps" section flags for every existing
 ///     Tools/*.cs class (zero tests today). ModelRoute/TokenSavingsReport/WorthKeeping need a
 ///     live Ollama process and/or a populated savings history and are covered instead at the
-///     service level (DistillationServiceTests, SavingsTrackerTests in TokenSaver.Library.Tests).
+///     service level (DistillationServiceTests, SavingsTrackerTests in AiDevTools.TokenSaver.Library.Tests).
 /// </summary>
 public class TokenEconomyToolsTests
 {

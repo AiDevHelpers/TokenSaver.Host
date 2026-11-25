@@ -1,4 +1,4 @@
-namespace TokenSaver.MCP.Services;
+namespace AiDevTools.TokenSaver.MCP.Services;
 
 /// <summary>One sub-doc entry recorded in <see cref="InstructionManifest" /> — mirrors <see cref="DiscoveredSubDoc" /> minus the content, which lives alongside the manifest on disk.</summary>
 internal sealed record InstructionManifestSubDoc(

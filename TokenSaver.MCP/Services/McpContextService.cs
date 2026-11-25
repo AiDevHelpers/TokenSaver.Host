@@ -1,9 +1,9 @@
-using TokenSaver.ContextHelper.Models;
+using AiDevTools.TokenSaver.ContextHelper.Models;
 
 using System.Globalization;
 using System.Text;
 
-namespace TokenSaver.MCP.Services;
+namespace AiDevTools.TokenSaver.MCP.Services;
 
 /// <summary>
 ///     Generates MCP tool context summaries at three verbosity levels based on
