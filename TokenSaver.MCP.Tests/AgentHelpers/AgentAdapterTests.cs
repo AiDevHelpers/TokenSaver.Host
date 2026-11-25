@@ -1,9 +1,9 @@
-using AiDevHelpers.AgentHelpers.Anthropic;
-using AiDevHelpers.AgentHelpers.Core.Contracts;
-using AiDevHelpers.AgentHelpers.Core.Models;
-using AiDevHelpers.AgentHelpers.DeepSeek;
-using AiDevHelpers.AgentHelpers.OpenSource;
-using AiDevHelpers.AgentHelpers.Qwen;
+using TokenSaver.AgentHelpers.Anthropic;
+using TokenSaver.AgentHelpers.Core.Contracts;
+using TokenSaver.AgentHelpers.Core.Models;
+using TokenSaver.AgentHelpers.DeepSeek;
+using TokenSaver.AgentHelpers.OpenSource;
+using TokenSaver.AgentHelpers.Qwen;
 
 using Xunit;
 

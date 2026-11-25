@@ -50,7 +50,7 @@ internal static class InstructionSyncResolver
     ///     Short, tool-specific "how this client actually uses instructions" tips, prepended by
     ///     callers that want to hint at best practices for the client an instruction file is being
     ///     synced to. Mirrors the researched-quirks style already used in
-    ///     <c>AiDevHelpers.AgentHelpers.OpenSource.CursorClientAdapter</c>'s doc comments (a
+    ///     <c>TokenSaver.AgentHelpers.OpenSource.CursorClientAdapter</c>'s doc comments (a
     ///     different concern — that class formats <em>context</em>, not instruction files — hence
     ///     this lives here rather than folding instruction-writing guidance into
     ///     <c>IAgentAdapter</c>). Returns <see langword="null" /> for unrecognized clients.
