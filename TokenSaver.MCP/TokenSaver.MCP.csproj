@@ -26,7 +26,7 @@
     <PackageReference Include="AiDevTools.TokenSaver.LanguageHelpers.CSharp" Version="1.0.4-alpha" />
     <PackageReference Include="AiDevTools.TokenSaver.LanguageHelpers.PowerShell" Version="1.0.4-alpha" />
     <PackageReference Include="AiDevTools.TokenSaver.LanguageHelpers.Python" Version="1.0.4-alpha" />
-    <PackageReference Include="AiDevHelpers.AgentHelpers" Version="1.0.1-alpha" />
+    <PackageReference Include="AiDevHelpers.AgentHelpers" Version="1.0.4-alpha" />
     <PackageReference Include="SperryDev.Logger" Version="$(SperryLoggerVersion)" />
     <PackageReference Include="AiDevTools.TokenSaver.Common.Installation" Version="1.0.6-alpha" />
     <PackageReference Include="AiDevTools.TokenSaver.Common.Models" Version="1.0.6-alpha" />
