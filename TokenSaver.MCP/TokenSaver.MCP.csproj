@@ -15,9 +15,9 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="AiDevTools.TokenSaver.CodeHelper" Version="1.0.4-alpha" />
-    <PackageReference Include="AiDevTools.TokenSaver.Common.Core" Version="1.0.5-alpha" />
+    <PackageReference Include="AiDevTools.TokenSaver.Common.Core" Version="1.0.6-alpha" />
     <PackageReference Include="AiDevTools.TokenSaver.Config" Version="1.0.4-alpha" />
-    <PackageReference Include="AiDevTools.TokenSaver.ContextHelper" Version="1.0.5-alpha" />
+    <PackageReference Include="AiDevTools.TokenSaver.ContextHelper" Version="1.0.6-alpha" />
     <PackageReference Include="AiDevTools.TokenSaver.Docs" Version="1.0.4-alpha" />
     <PackageReference Include="AiDevTools.TokenSaver.OllamaIntegration" Version="1.0.4-alpha" />
     <PackageReference Include="AiDevTools.TokenSaver.TokenEconomy" Version="1.0.4-alpha" />
@@ -28,8 +28,8 @@
     <PackageReference Include="AiDevTools.TokenSaver.LanguageHelpers.Python" Version="1.0.4-alpha" />
     <PackageReference Include="AiDevHelpers.AgentHelpers" Version="1.0.1-alpha" />
     <PackageReference Include="SperryDev.Logger" Version="$(SperryLoggerVersion)" />
-    <PackageReference Include="AiDevTools.TokenSaver.Common.Installation" Version="1.0.5-alpha" />
-    <PackageReference Include="AiDevTools.TokenSaver.Common.Models" Version="1.0.5-alpha" />
+    <PackageReference Include="AiDevTools.TokenSaver.Common.Installation" Version="1.0.6-alpha" />
+    <PackageReference Include="AiDevTools.TokenSaver.Common.Models" Version="1.0.6-alpha" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Update="Nerdbank.GitVersioning" Version="3.10.94" />
