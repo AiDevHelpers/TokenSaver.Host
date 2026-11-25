@@ -40,7 +40,7 @@ public sealed class ToolCoverageTests
         // Walk up from the test binary to the source tree. CallerFilePath is not used: CI's deterministic
         // path mapping rewrites it (D:\a\...\TokenSaver -> /_/), so it does not point at the checkout.
         string? dir = AppContext.BaseDirectory;
-        while (dir is not null && !File.Exists(Path.Combine(dir, "src", "Host", "AiDevTools.TokenSaver.MCP.Tests", "AiDevTools.TokenSaver.MCP.Tests.csproj")))
+        while (dir is not null && !File.Exists(Path.Combine(dir, "TokenSaver.MCP.Tests", "TokenSaver.MCP.Tests.csproj")))
         {
             dir = Path.GetDirectoryName(dir);
         }
@@ -48,7 +48,7 @@ public sealed class ToolCoverageTests
         {
             throw new InvalidOperationException("AiDevTools.TokenSaver.MCP.Tests source tree not found above the test binary.");
         }
-        dir = Path.Combine(dir, "src", "Host", "AiDevTools.TokenSaver.MCP.Tests");
+        dir = Path.Combine(dir, "TokenSaver.MCP.Tests");
 
         IEnumerable<string> files = Directory.EnumerateFiles(dir, "*.cs", SearchOption.AllDirectories)
             .Where(f => !f.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase)

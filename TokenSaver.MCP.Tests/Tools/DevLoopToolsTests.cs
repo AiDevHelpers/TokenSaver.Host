@@ -241,7 +241,7 @@ public sealed class DevLoopToolsTests : IDisposable
 
         Assert.NotNull(distill.LastRaw);
         Assert.True(distill.LastRaw!.Length * 4 < big.Length, $"distilled input {distill.LastRaw.Length} chars of {big.Length}");
-        Assert.Contains("x60", distill.LastRaw, StringComparison.Ordinal);
+        Assert.Contains("(repeated 60 times)", distill.LastRaw, StringComparison.Ordinal);
     }
 
     [Fact]
